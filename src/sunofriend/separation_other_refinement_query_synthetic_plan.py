@@ -19,15 +19,14 @@ from .separation_other_refinement_query_load_contract import (
     QUERY_BANDIT_SOURCE_REVISION,
     QUERY_PROFILE_ID,
 )
-
-
-QUERY_SYNTHETIC_PLAN_SCHEMA = (
-    "sunofriend.other-refinement-query-synthetic-inference-plan.v1"
+from .separation_other_refinement_query_synthetic_report import (
+    MODEL_LOAD_REPORT_SHA256,
+    QUERY_SYNTHETIC_PLAN_SCHEMA,
+    build_query_synthetic_report_contract,
 )
+
+
 QUERY_SYNTHETIC_PLAN_STATUS = "blocked_pending_explicit_synthetic_inference_approval"
-MODEL_LOAD_REPORT_SHA256 = (
-    "12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced"
-)
 
 
 def query_synthetic_plan_sha256(value: dict[str, Any]) -> str:
@@ -49,6 +48,7 @@ def build_query_synthetic_plan() -> dict[str, Any]:
     """Build the immutable plan without performing any approved action."""
 
     forward_contract = build_query_forward_contract()
+    report_contract = build_query_synthetic_report_contract()
     plan: dict[str, Any] = {
         "schema": QUERY_SYNTHETIC_PLAN_SCHEMA,
         "document_sha256": "",
@@ -65,6 +65,10 @@ def build_query_synthetic_plan() -> dict[str, Any]:
             "checkpoints": EXPECTED_CHECKPOINTS,
             "forward_contract_schema": forward_contract["schema"],
             "forward_contract_document_sha256": forward_contract[
+                "document_sha256"
+            ],
+            "report_contract_schema": report_contract["schema"],
+            "report_contract_document_sha256": report_contract[
                 "document_sha256"
             ],
         },
@@ -86,6 +90,12 @@ def build_query_synthetic_plan() -> dict[str, Any]:
                 "reusable_effects_guard": (
                     "separation_other_refinement_query_execution_guard.py"
                 ),
+                "synthetic_report_contract": (
+                    "separation_other_refinement_query_synthetic_report.py"
+                ),
+                "synthetic_report_receipt_cli": (
+                    "record-separation-other-refinement-query-synthetic.py"
+                ),
                 "guarded_evidence_cli": (
                     "verify-separation-other-refinement-query-model-load.py"
                 ),
@@ -93,7 +103,6 @@ def build_query_synthetic_plan() -> dict[str, Any]:
             "next_implementation_must_separate": [
                 "forward_math_implementation",
                 "synthetic_forward_runner",
-                "synthetic_report_validation",
             ],
             "upstream_cli_allowed": False,
             "upstream_download_or_checkpoint_loader_allowed": False,
@@ -104,25 +113,15 @@ def build_query_synthetic_plan() -> dict[str, Any]:
             "remediation_cycle_limit": 1,
             "device": "cpu",
             "torch_context": "torch.inference_mode()",
-            "random_seed": 0,
+            "random_seed": report_contract["generated_inputs"]["random_seed"],
             "network_denial": "operating_system_and_python_guards",
             "checkpoint_load_contract": (
                 "reload the two exact local checkpoints using the already-verified "
                 "weights-only CPU contract"
             ),
-            "input_origin": "generated_in_memory_fixed_oscillators",
-            "mixture": {
-                "shape": [1, 2, 88_200],
-                "dtype": "float32",
-                "sample_rate_hz": 44_100,
-                "duration_seconds": 2.0,
-            },
-            "query": {
-                "shape": [1, 2, 441_000],
-                "dtype": "float32",
-                "sample_rate_hz": 44_100,
-                "duration_seconds": 10.0,
-            },
+            "input_origin": report_contract["generated_inputs"]["origin"],
+            "mixture": report_contract["generated_inputs"]["mixture"],
+            "query": report_contract["generated_inputs"]["query"],
             "audio_files_read": 0,
             "audio_files_written": 0,
             "only_persisted_output": "JSON objective report",
@@ -134,12 +133,18 @@ def build_query_synthetic_plan() -> dict[str, Any]:
             "target_and_residual_peaks_are_recorded": True,
             "residual_definition": "generated_mixture - requested_target",
             "target_plus_residual_reconstructs_generated_mixture": True,
-            "maximum_in_memory_reconstruction_error": 1e-6,
+            "maximum_in_memory_reconstruction_error": report_contract["ceilings"][
+                "maximum_reconstruction_error"
+            ],
             "network_attempts": 0,
             "unapproved_checkpoint_open_attempts": 0,
             "audio_open_attempts": 0,
-            "timeout_seconds": 180,
-            "peak_resident_set_bytes_ceiling": 12_884_901_888,
+            "timeout_seconds": report_contract["ceilings"][
+                "maximum_elapsed_seconds"
+            ],
+            "peak_resident_set_bytes_ceiling": report_contract["ceilings"][
+                "maximum_peak_resident_set_bytes"
+            ],
             "musical_usefulness_gate": False,
         },
         "stop_conditions": [

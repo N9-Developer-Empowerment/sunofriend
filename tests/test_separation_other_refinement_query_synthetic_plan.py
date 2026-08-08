@@ -32,6 +32,10 @@ def test_synthetic_plan_is_bounded_and_has_no_effects() -> None:
         "sunofriend.other-refinement-query-forward-contract.v1"
     )
     assert len(plan["evidence_binding"]["forward_contract_document_sha256"]) == 64
+    assert plan["evidence_binding"]["report_contract_schema"] == (
+        "sunofriend.other-refinement-query-synthetic-report-contract.v1"
+    )
+    assert len(plan["evidence_binding"]["report_contract_document_sha256"]) == 64
     assert (
         plan["implementation_boundary"]["load_adapter_has_forward_method"] is False
     )
@@ -83,3 +87,9 @@ def test_public_capability_binds_the_exact_synthetic_plan() -> None:
         "authorizes_inference_runs"
     ]
     assert published["synthetic_plan_uses_private_audio"] is False
+    assert published["synthetic_report_contract_document_sha256"] == plan[
+        "evidence_binding"
+    ]["report_contract_document_sha256"]
+    assert published["synthetic_report_accepts_objective_failure"] is True
+    assert published["synthetic_report_allows_subjective_feedback"] is False
+    assert published["synthetic_report_grants_retry_or_activation"] is False

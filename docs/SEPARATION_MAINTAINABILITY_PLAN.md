@@ -66,4 +66,7 @@ execution guard now owns network, audio and exact-checkpoint enforcement. A
 separate pure forward contract binds the proposed math and exact setup-C values
 to nine pinned upstream source/configuration hashes. Forward math implementation,
 synthetic execution and report validation remain distinct boundaries before any
-inference begins.
+inference begins. The synthetic-result validator and receipt writer are now
+implemented as a pure pass-or-retained-failure contract: they accept no
+subjective rating, grant no automatic retry and cannot activate a profile,
+source or MIDI path.

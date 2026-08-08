@@ -602,7 +602,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.synthetic_plan_document_sha256,
-    "94e88409dfd475e4a87ed231f60be0de73f441f97ce6724c9aea8ba1a0f4266f",
+    "301f4cbc6c3e6ec33be9459deacb049d9a004d94298402c8a7da63d8dc19926a",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -622,6 +622,26 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.synthetic_plan_uses_private_audio,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_report_contract_document_sha256,
+    "dd72e21b28734d5b2a2590e2751999a2cc76a78ced440b0c02b29974fe11a2a2",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_report_accepts_objective_failure,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_report_allows_subjective_feedback,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_report_grants_retry_or_activation,
     false,
   );
   assert.equal(

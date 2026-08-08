@@ -207,6 +207,7 @@ Inspect the next no-effects query-challenger plan with:
 ```bash
 .venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py
 .venv/bin/python scripts/plan-separation-other-refinement-query-forward.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-synthetic-report.py
 .venv/bin/python scripts/plan-separation-other-refinement-query-synthetic.py
 ```
 
@@ -228,10 +229,12 @@ checkpoint, establishing SHA-256
   loaded both checkpoints under network denial. Do not use the upstream
   downloader or loader. The second command prints a pure forward contract bound
   to nine pinned upstream source/configuration hashes; it contains no executable
-  forward method. The third command prints the immutable synthetic-forward plan
-  and exact next approval. These planning commands construct no model, perform
-  no inference and read no audio. Do not run inference or process audio until
-  that exact synthetic gate is explicitly approved.
+  forward method. The third command prints the pure pass-or-retained-failure
+  report contract; a failed attempt grants no retry or activation. The fourth
+  command prints the immutable synthetic-forward plan and exact next approval.
+  These planning commands construct no model, perform no inference and read no
+  audio. Do not run inference or process audio until that exact synthetic gate
+  is explicitly approved.
 
 ## Inspect before installing
 

@@ -278,6 +278,9 @@ bounded gate now has a pure forward contract and an immutable, no-effects plan:
   scripts/plan-separation-other-refinement-query-forward.py
 
 .venv/bin/python \
+  scripts/plan-separation-other-refinement-query-synthetic-report.py
+
+.venv/bin/python \
   scripts/plan-separation-other-refinement-query-synthetic.py
 ```
 
@@ -288,8 +291,13 @@ nine files at source revision
 It describes STFT, 64-band splitting, sixteen alternating residual GRUs,
 PaSST query embedding, FiLM conditioning, complex-mask overlap-add and exact-
 length inverse STFT. It is design data only: no executable forward method was
-added. The synthetic plan document SHA-256 is
-`94e88409dfd475e4a87ed231f60be0de73f441f97ce6724c9aea8ba1a0f4266f`.
+added. The separate result contract has document SHA-256
+`dd72e21b28734d5b2a2590e2751999a2cc76a78ced440b0c02b29974fe11a2a2`.
+It validates either a complete objective pass or a retained objective failure,
+requires the exact output clock, peaks, reconstruction and resource gates, and
+rejects subjective feedback, automatic retry and product authority. The
+synthetic plan document SHA-256 is
+`301f4cbc6c3e6ec33be9459deacb049d9a004d94298402c8a7da63d8dc19926a`.
 It proposes one CPU-only forward with a generated two-second stereo mixture and
 generated ten-second stereo query, both held in memory, seed `0`, network
 denial, a 180-second timeout and a 12 GiB memory ceiling. It writes only an
@@ -308,7 +316,9 @@ separate reusable modules; a fresh network-denied load produced a byte-identical
 report with zero network attempts, audio opens or inference runs. The one-way
 network/audio/checkpoint enforcement is now a reusable execution guard rather
 than inline CLI logic, and the proposed forward is a pure source-bound contract
-rather than an inference implementation.
+rather than an inference implementation. Synthetic-result validation and its
+exclusive receipt writer are also pure, reusable boundaries. A failed first
+attempt remains evidence and cannot authorize an automatic remediation run.
 
 The wider incremental restructuring sequence is recorded in
 [Separation maintainability plan](SEPARATION_MAINTAINABILITY_PLAN.md).

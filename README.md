@@ -127,6 +127,9 @@ hunt. Inspect the no-effects plan with:
   scripts/plan-separation-other-refinement-query-forward.py
 
 .venv/bin/python \
+  scripts/plan-separation-other-refinement-query-synthetic-report.py
+
+.venv/bin/python \
   scripts/plan-separation-other-refinement-query-synthetic.py
 ```
 
@@ -155,11 +158,13 @@ OpenMIC PaSST keys, shapes and dtypes matched before strict loading, with no
 missing or unexpected keys, network attempt or audio open. No inference ran.
 The second command prints the immutable forward contract bound to nine exact
 files from the pinned upstream revision and its setup-C configuration. The
-third command is the immutable, no-effects synthetic-forward plan. It binds
-both that contract and the verified load report, then proposes one CPU run on
-generated in-memory tensors only, with one remediation at most, a 180-second
-timeout and a 12 GiB memory ceiling. None of these commands constructs a model,
-runs inference or reads audio.
+third prints the pure result validator contract: an objective failure must be
+retained and grants neither automatic retry nor activation. The fourth command
+is the immutable, no-effects synthetic-forward plan. It binds those contracts
+and the verified load report, then proposes one CPU run on generated in-memory
+tensors only, with one remediation at most, a 180-second timeout and a 12 GiB
+memory ceiling. None of these commands constructs a model, runs inference or
+reads audio.
 The challenger remains blocked, unregistered and non-executable pending the
 explicit approval printed by that plan. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).

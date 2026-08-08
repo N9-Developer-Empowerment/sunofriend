@@ -163,7 +163,10 @@ export default function SeparationResearch() {
                 an executable forward path. The no-effects synthetic plan binds
                 that contract and limits the next gate to one CPU run on
                 generated in-memory tensors, with one remediation at most, a
-                180-second timeout, a 12 GiB ceiling and no song audio. Its
+                180-second timeout, a 12 GiB ceiling and no song audio. A
+                separate pure result validator accepts either an objective pass
+                or a retained objective failure; it rejects subjective ratings,
+                automatic retry and product activation. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
               </p>
