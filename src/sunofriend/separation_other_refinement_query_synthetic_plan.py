@@ -19,7 +19,7 @@ from .separation_other_refinement_query_load_contract import (
     QUERY_BANDIT_SOURCE_REVISION,
     QUERY_PROFILE_ID,
 )
-from .separation_other_refinement_query_synthetic_report import (
+from .separation_other_refinement_query_synthetic_report_contract import (
     MODEL_LOAD_REPORT_SHA256,
     QUERY_SYNTHETIC_PLAN_SCHEMA,
     build_query_synthetic_report_contract,
@@ -91,6 +91,15 @@ def build_query_synthetic_plan() -> dict[str, Any]:
                     "separation_other_refinement_query_execution_guard.py"
                 ),
                 "synthetic_report_contract": (
+                    "separation_other_refinement_query_synthetic_report_contract.py"
+                ),
+                "synthetic_report_validation": (
+                    "separation_other_refinement_query_synthetic_report_validation.py"
+                ),
+                "synthetic_report_receipt": (
+                    "separation_other_refinement_query_synthetic_report_receipt.py"
+                ),
+                "synthetic_report_compatibility_facade": (
                     "separation_other_refinement_query_synthetic_report.py"
                 ),
                 "synthetic_report_receipt_cli": (

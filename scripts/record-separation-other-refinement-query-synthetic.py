@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 
-from sunofriend.separation_other_refinement_query_synthetic_report import (
+from sunofriend.separation_other_refinement_query_synthetic_report_receipt import (
     build_query_synthetic_receipt,
 )
 

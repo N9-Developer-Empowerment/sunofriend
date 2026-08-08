@@ -135,6 +135,39 @@ def test_report_contract_has_no_effects_and_forbids_feedback_gating() -> None:
     assert validate_query_synthetic_report_contract(contract) == contract
 
 
+def test_report_contract_validation_and_receipt_layers_are_separate() -> None:
+    module_root = ROOT / "src" / "sunofriend"
+    facade = (
+        module_root / "separation_other_refinement_query_synthetic_report.py"
+    ).read_text(encoding="utf-8")
+    contract = (
+        module_root
+        / "separation_other_refinement_query_synthetic_report_contract.py"
+    ).read_text(encoding="utf-8")
+    validation = (
+        module_root
+        / "separation_other_refinement_query_synthetic_report_validation.py"
+    ).read_text(encoding="utf-8")
+    receipt = (
+        module_root
+        / "separation_other_refinement_query_synthetic_report_receipt.py"
+    ).read_text(encoding="utf-8")
+
+    assert len(facade.splitlines()) < 100
+    assert len(contract.splitlines()) < 300
+    assert len(validation.splitlines()) < 350
+    assert len(receipt.splitlines()) < 100
+    assert "def validate_query_synthetic_report(" not in contract
+    assert "def build_query_synthetic_receipt(" not in contract
+    assert "def validate_query_synthetic_report(" in validation
+    assert "def build_query_synthetic_receipt(" in receipt
+    assert "synthetic_report_validation" in receipt
+    for source in (facade, contract, validation, receipt):
+        assert "import torch" not in source
+        assert "import torchaudio" not in source
+        assert "import numpy" not in source
+
+
 def test_report_contract_rejects_authority_expansion() -> None:
     contract = copy.deepcopy(build_query_synthetic_report_contract())
     contract["decision_policy"]["automatic_retry_or_remediation"] = True

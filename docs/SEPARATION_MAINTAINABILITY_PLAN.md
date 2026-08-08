@@ -69,4 +69,8 @@ synthetic execution and report validation remain distinct boundaries before any
 inference begins. The synthetic-result validator and receipt writer are now
 implemented as a pure pass-or-retained-failure contract: they accept no
 subjective rating, grant no automatic retry and cannot activate a profile,
-source or MIDI path.
+source or MIDI path. The initial combined implementation has been split again:
+immutable contract construction, objective projection/validation and receipt
+creation are separate one-way modules, with a small compatibility facade for
+the earlier import surface. This preserves the published contract identity
+while preventing the next inference runner from becoming another monolith.

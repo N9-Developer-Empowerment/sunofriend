@@ -297,7 +297,7 @@ It validates either a complete objective pass or a retained objective failure,
 requires the exact output clock, peaks, reconstruction and resource gates, and
 rejects subjective feedback, automatic retry and product authority. The
 synthetic plan document SHA-256 is
-`301f4cbc6c3e6ec33be9459deacb049d9a004d94298402c8a7da63d8dc19926a`.
+`6812891c1dd24badc6937b84c82c3aa2025389ed9f26022b132d82077bdb9001`.
 It proposes one CPU-only forward with a generated two-second stereo mixture and
 generated ten-second stereo query, both held in memory, seed `0`, network
 denial, a 180-second timeout and a 12 GiB memory ceiling. It writes only an

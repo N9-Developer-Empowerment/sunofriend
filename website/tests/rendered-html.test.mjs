@@ -602,7 +602,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.synthetic_plan_document_sha256,
-    "301f4cbc6c3e6ec33be9459deacb049d9a004d94298402c8a7da63d8dc19926a",
+    "6812891c1dd24badc6937b84c82c3aa2025389ed9f26022b132d82077bdb9001",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

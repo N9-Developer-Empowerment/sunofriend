@@ -525,7 +525,7 @@
           "forward_contract_source_revision": "79ed5bb75e5c3a40cd319d9d990cee913fc65c26",
           "forward_contract_implemented": false,
           "synthetic_plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-synthetic.py",
-          "synthetic_plan_document_sha256": "301f4cbc6c3e6ec33be9459deacb049d9a004d94298402c8a7da63d8dc19926a",
+          "synthetic_plan_document_sha256": "6812891c1dd24badc6937b84c82c3aa2025389ed9f26022b132d82077bdb9001",
           "synthetic_plan_run_limit": 1,
           "synthetic_plan_remediation_limit": 1,
           "synthetic_plan_uses_private_audio": false,

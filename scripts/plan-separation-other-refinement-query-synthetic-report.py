@@ -11,7 +11,7 @@ import sys
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from sunofriend.separation_other_refinement_query_synthetic_report import (  # noqa: E402
+from sunofriend.separation_other_refinement_query_synthetic_report_contract import (  # noqa: E402
     build_query_synthetic_report_contract,
 )
 
