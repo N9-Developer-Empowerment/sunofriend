@@ -612,7 +612,7 @@
         "next_synth_challenger": {
           "scope_id": "other-synth-refinement-v1",
           "proposed_profile_id": "bs-roformer-mega-53-synth-v1",
-          "status": "artifact_evidence_verified_runtime_not_authorized",
+          "status": "runtime_closure_verified_install_not_authorized",
           "registered": false,
           "executable": false,
           "priority": ["synth", "guitar", "wind"],
@@ -648,9 +648,19 @@
           "remediation_cycle_limit": 1,
           "inference_attempt_limit": 4,
           "plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-next-challenger.py",
-          "plan_document_sha256": "91376b3e5edf6e9abb247497de6486771928adbbee307625b19eb519ccea10df",
+          "plan_document_sha256": "01e935139f558a8b1c2f3a879faced4678864efb4300d0c6adfc90ec3fc60f5e",
           "plan_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md",
           "artifact_download_authorized": false,
+          "runtime_wheel_evidence": {
+            "status": "complete_authority_consumed",
+            "target": "CPython 3.12 on macOS 14+ arm64",
+            "package_count": 29,
+            "wheel_bytes": 127527173,
+            "evidence_sha256": "d8488079a9c82961056e296fa1050e07f2d341602293b01ed3e5b1de32ae5327",
+            "requirements_sha256": "284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b",
+            "installed": false,
+            "imported": false
+          },
           "dependency_install_authorized": false,
           "checkpoint_loading_authorized": false,
           "inference_authorized": false,
@@ -661,7 +671,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "verify the declared Mega-53 checkpoint and config under a capped evidence-only, network-denied gate; synth is first, guitar and wind follow, and piano is only an optional control"
+        "next_gate": "install the exact local 29-wheel Mega-53 closure into a fresh isolated environment and verify imports under network denial only after separate explicit approval; do not load checkpoints or construct a model"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

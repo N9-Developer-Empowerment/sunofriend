@@ -200,8 +200,13 @@ presence from model usefulness, and permits one configuration with no
 post-feedback tuning loop. The approved evidence-only gate locally verified the
 1,368,919,887-byte checkpoint and 4,184-byte configuration against their exact
 published SHA-256 values, then inspected the checkpoint under network denial
-without loading it. Its checkpoint terms remain unreviewed and the profile
-remains non-executable. Inspect the current plan without effects:
+without loading it. A later evidence-only gate resolved and statically
+inspected 29 exact CPython 3.12/macOS 14+ arm64 wheels (127,527,173 bytes)
+without installing or importing them. The committed lock SHA-256 is
+`284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b`.
+Its checkpoint terms remain unreviewed and the profile remains non-executable;
+isolated install and import verification is the next separately approved gate.
+Inspect the current plan without effects:
 
 ```bash
 .venv/bin/python \

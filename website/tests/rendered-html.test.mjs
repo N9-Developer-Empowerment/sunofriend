@@ -782,7 +782,17 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_synth_challenger.plan_document_sha256,
-    "91376b3e5edf6e9abb247497de6486771928adbbee307625b19eb519ccea10df",
+    "01e935139f558a8b1c2f3a879faced4678864efb4300d0c6adfc90ec3fc60f5e",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.runtime_wheel_evidence.package_count,
+    29,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.runtime_wheel_evidence.installed,
+    false,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

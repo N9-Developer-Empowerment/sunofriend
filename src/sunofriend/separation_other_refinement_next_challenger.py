@@ -35,7 +35,7 @@ def build_next_challenger_plan() -> dict[str, Any]:
     plan: dict[str, Any] = {
         "schema": NEXT_CHALLENGER_SCHEMA,
         "document_sha256": "",
-        "status": "artifact_evidence_verified_runtime_not_authorized",
+        "status": "runtime_closure_verified_install_not_authorized",
         "checked_on": "2026-08-08",
         "scope_id": "other-synth-refinement-v1",
         "proposed_profile_id": "bs-roformer-mega-53-synth-v1",
@@ -175,6 +175,64 @@ def build_next_challenger_plan() -> dict[str, Any]:
                 "hosted_service_or_redistribution_allowed": False,
             },
         },
+        "runtime_wheel_evidence": {
+            "status": "complete_authority_consumed",
+            "target": {
+                "platform": "macosx_14_0_arm64",
+                "minimum_macos": "14.0",
+                "python": "3.12",
+                "implementation": "cp",
+                "abi": "cp312",
+                "only_binary": True,
+            },
+            "approved_cap_bytes": 1_610_612_736,
+            "peak_staged_bytes": 128_346_422,
+            "package_count": 29,
+            "wheel_bytes": 127_527_173,
+            "evidence_sha256": (
+                "d8488079a9c82961056e296fa1050e07f2d341602293b01ed3e5b1de32ae5327"
+            ),
+            "requirements_file": (
+                "separation-other-refinement-next-runtime-requirements.txt"
+            ),
+            "requirements_sha256": (
+                "284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b"
+            ),
+            "direct_requirements": {
+                "beartype": "0.22.9",
+                "einops": "0.8.2",
+                "ml-collections": "1.1.0",
+                "mlx": "0.31.2",
+                "mlx-spectro": "0.7.0",
+                "numpy": "1.26.4",
+                "packaging": "26.3",
+                "pyyaml": "6.0.3",
+                "requests": "2.34.2",
+                "rotary-embedding-torch": "0.8.9",
+                "soundfile": "0.14.0",
+                "torch": "2.2.2",
+                "tqdm": "4.70.0",
+            },
+            "resolution_notes": [
+                "MLX 0.31.2 requires a macOS 14-or-later arm64 wheel target",
+                "rotary-embedding-torch 0.9.1 requires Torch 2.4 or later",
+                "0.8.9 is the newest published rotary release compatible with Torch 2.2.2",
+            ],
+            "licence_evidence": {
+                "all_29_wheels_accounted_for": True,
+                "metadata_and_bundled_licence_file_hashes_recorded": True,
+                "private_local_evaluation_contradiction_found": False,
+                "binary_redistribution_review_required": True,
+                "checkpoint_terms_covered": False,
+                "legal_advice": False,
+            },
+            "dependency_installed": False,
+            "package_imported": False,
+            "checkpoint_loaded": False,
+            "model_constructed": False,
+            "inference_runs": 0,
+            "audio_reads": 0,
+        },
         "evaluation": {
             "configuration_count": 1,
             "remediation_cycle_limit": 1,
@@ -226,10 +284,11 @@ def build_next_challenger_plan() -> dict[str, Any]:
         "completed_gates": [
             "capped evidence-only checkpoint and config download with exact hash verification",
             "network-denied non-loading static pickle/config inspection",
+            "fully hash-locked macOS-arm64 dependency closure",
         ],
         "next_gate": {
-            "kind": "hash_locked_macos_arm64_dependency_closure_evidence",
-            "maximum_download_bytes": None,
+            "kind": "isolated_install_and_import_verification",
+            "maximum_download_bytes": 0,
             "artifact_download": False,
             "runtime_wheel_download": False,
             "dependency_installation": False,

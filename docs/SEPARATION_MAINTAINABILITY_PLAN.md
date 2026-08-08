@@ -93,3 +93,10 @@ not become false failures and do not trigger replacement-window hunting. Any
 future Mega-53 adapter must keep artifact verification, restricted loading,
 model math, PCM24 accounting, review and activation in separate modules rather
 than extending one of the legacy orchestration files.
+
+The Mega-53 runtime-evidence increment follows the same separation: one
+download-only helper owns resolver and aggregate-cap enforcement, one
+stdlib-only module owns wheel ZIP/METADATA/licence inspection, and the setup
+shell only binds approval, network denial and atomic publication. The exact
+29-wheel lock is committed separately. No model/runtime imports were added to
+the plan, evidence or documentation modules.

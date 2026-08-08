@@ -1486,21 +1486,35 @@ commission must never affect a quality result.
 
 ### Wide-taxonomy models
 
-Reports of an MVSep “Mega 53 Stems” BS-RoFormer release describe roles including
+The public MVSep “Mega 53 Stems” BS-RoFormer release describes roles including
 lead/backing vocals, drum families, keys, piano, synth, guitars, strings,
-brass and wind. It is attractive because its vocabulary resembles
-Sunofriend's desired role graph, but it is not a safe default:
+brass and wind. Its vocabulary resembles Sunofriend's desired role graph, so a
+bounded synth-first challenger now pins the exact public release artifacts and
+the MLX backend at `openmirlab/bs-roformer-infer` revision
+`de35ada5817b878da0194ee2860253dda3a9c2b2`.
 
-- this research has not established a stable primary model-card or release
-  URL, exact checkpoint hash or licence;
+The evidence-only gates established the 1,368,919,887-byte checkpoint SHA-256
+`c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f`,
+the 4,184-byte config SHA-256
+`7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103`
+and a 29-wheel, 127,527,173-byte CPython 3.12/macOS 14+ arm64 dependency
+closure. The wheel lock SHA-256 is
+`284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b`.
+No dependency was installed or imported.
+
+It is still not a safe default or runnable profile:
+
 - the release guidance expects high GPU memory;
 - many output categories overlap and do not sum cleanly to the source;
-- an Apple runtime has not yet been proven for the supported contract;
-- each role needs its own accuracy evidence; and
-- the checkpoint licence/provenance requires explicit confirmation.
+- each role needs its own accuracy evidence;
+- the checkpoint registry still says `not-reviewed`, so evaluation remains
+  within the explicitly acknowledged provisional local-noncommercial boundary;
+  and
+- installation, import, restricted loading and inference remain separate
+  unapproved gates.
 
-Treat it as an **unverified lead**, not a runnable candidate, until those
-missing facts are recorded.
+Treat it as a **verified static research candidate**, not an available
+separator. Synth comes first; guitar and wind need later independent evidence.
 
 ### Narrow drum separation
 
