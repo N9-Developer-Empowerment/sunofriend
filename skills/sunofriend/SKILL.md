@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-08.1 -->
+<!-- sunofriend-interface-contract: 2026-08-08.3 -->
 
 # Sunofriend
 
@@ -61,10 +61,10 @@ on.
   guitar extraction nor successful piano extraction. Keep the technically
   valid profile reproducible in Studio, but do not promote it, describe it as
   a working guitar/keys capability or send it to MIDI. The next read-only
-  candidate plan is `docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md`; it
+  candidate is documented in `docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md`; it
   targets guitar plus broad `keyboard_synth`. Its approved evidence-only
-  checkpoint download and static inspection grant no dependency installation,
-  model load, inference or audio processing. The completed source audit found
+  checkpoint download and static inspection did not themselves grant model
+  loading, inference or audio processing. The completed source audit found
   a second required 341,546,630-byte OpenMIC PaSST checkpoint and forbids both
   upstream automatic/unrestricted loaders. Use
   `scripts/plan-separation-other-refinement-query-runtime.py` for the current
@@ -76,8 +76,19 @@ on.
   cap. Their 99,354,620-byte closure and licence metadata were inspected under
   network denial without installation or import; the committed lock SHA-256 is
   `28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92`.
-  Do not install or import dependencies, load either checkpoint or run
-  inference without a new reviewed plan and explicit approval.
+  A later separately approved gate installed those exact wheels into a fresh
+  CPython 3.12.10/macOS-arm64 environment and imported the eight relevant
+  modules under network denial. It recorded zero network attempts, checkpoint
+  opens, `torch.load` calls and audio opens. A later explicit approval completed
+  the restricted construction/load gate: the real 64-band adapter and both
+  download-disabled PaSST variants matched all 1,228 combined checkpoint keys,
+  shapes and dtypes before strict loading, with no missing or unexpected keys,
+  network or audio access. The separately approved, single-use synthetic
+  forward then passed its objective tensor, resource and reconstruction gates
+  with zero audio or network access. That one-attempt authority is consumed and
+  the very quiet target is not musical evidence. Do not process reference
+  audio, run further inference, activate a source or create MIDI without a new
+  rights-bound plan and explicit approval.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -198,22 +209,44 @@ Inspect the next no-effects query-challenger plan with:
 
 ```bash
 .venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-forward.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-synthetic-report.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-synthetic.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-reference.py
 ```
 
-It proposes Banquet under a CC BY-NC-SA 4.0 local-noncommercial boundary. The
+It records Banquet under a CC BY-NC-SA 4.0 local-noncommercial boundary. The
 approved capped evidence-only download established the exact checkpoint
-SHA-256 and a network-denied, non-deserializing opcode report. It did not
-authorize dependency installation, checkpoint loading, model inference,
-private-song processing, public activation, source selection or MIDI. Require
-a new reviewed plan and explicit approval before any of those actions. The
+SHA-256 and a network-denied, non-deserializing opcode report. The later
+restricted load approval authorized only construction and strict weights-only
+loading; it did not authorize model inference, private-song processing, public
+activation, source selection or MIDI. Require a new reviewed plan and explicit
+approval before any of those actions. The
 audit found and separately inspected the second required OpenMIC PaSST
 checkpoint, establishing SHA-256
 `dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`
-without loading it. Both model-artifact identities and the 28-wheel runtime
-hash closure are complete. The wheel step installed and imported nothing. Do
-not use the upstream downloader or loader, and do not install or import the
-dependencies until a new isolated-runtime plan is reviewed and explicitly
-approved.
+  without loading it. Both model-artifact identities and the 28-wheel runtime
+  hash closure are complete. A separately approved isolated gate installed the
+  closure from the local cache and verified the relevant imports under network
+  denial. The approved restricted loader then constructed PaSST with
+  `pretrained=False`, verified every state key, shape and dtype and strictly
+  loaded both checkpoints under network denial. Do not use the upstream
+  downloader or loader. The second command prints a pure forward contract bound
+  to nine pinned upstream source/configuration hashes; it contains no executable
+  forward method. The third command prints the pure pass-or-retained-failure
+  report contract; a failed attempt grants no retry or activation. The fourth
+  command prints the immutable synthetic-forward plan whose one-attempt
+  authority is now consumed. The approved network-denied CPU run used only the
+  fixed generated two-second mixture and ten-second query. It passed the shape,
+  clock, finite-sample, reconstruction, time and memory gates with zero audio or
+  network access. That proves adapter execution only: the very quiet synthetic
+  target does not establish guitar or keyboard/synth usefulness. The profile
+  remains unregistered and non-executable. The fifth command prints the pure
+  rights-bound plan for one frozen song-disjoint guitar, keyboard and synth
+  query bank against three owner-authorised mixtures. It permits no
+  feedback-driven query hunt. Require the exact approval printed by that plan
+  before any reference-query audio or further inference; public activation,
+  source selection and MIDI remain outside it.
 
 ## Inspect before installing
 

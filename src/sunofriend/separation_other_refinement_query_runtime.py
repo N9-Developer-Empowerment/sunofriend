@@ -1,8 +1,8 @@
-"""No-effects runtime audit for the Banquet query challenger.
+"""Runtime and restricted-load audit for the Banquet challenger.
 
-This module records what was learned from static source and checkpoint
-inspection.  It deliberately does not import a model dependency, inspect a
-private audio file, download an artifact or make the challenger executable.
+This module records completed static, isolated-import and strict model-load
+evidence. Building the document itself does not import a model dependency,
+inspect audio, load a checkpoint or make the challenger executable.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
     audit: dict[str, Any] = {
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
-        "status": "blocked_pending_isolated_install_and_restricted_import_plan",
+        "status": "synthetic_objective_pass_one_attempt_consumed",
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
         "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
@@ -90,7 +90,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 ),
                 "license": "CC-BY-NC-SA-4.0",
                 "evidence_complete": True,
-                "loaded": False,
+                "loaded": True,
             },
             "passt_openmic": {
                 "file": "openmic-passt-s-f128-10sec-p16-s10-ap.85.pt",
@@ -108,7 +108,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 "evidence_complete": True,
                 "evidence_only_download_approved": True,
                 "network_denied_static_inspection_complete": True,
-                "loaded": False,
+                "loaded": True,
             },
         },
         "observed_upstream_hazards": [
@@ -154,7 +154,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
             "passt_construction": "pretrained=False with explicit local weights",
             "network_denied_for_import_construction_and_load": True,
             "explicit_local_cache_only": True,
-            "state_dict_keys_and_tensor_shapes_verified_before_strict_load": True,
+            "state_dict_keys_shapes_and_dtypes_verified_before_strict_load": True,
             "no_audio_during_first_restricted_load": True,
             "dependency_artifacts_require_sha256": True,
             "runtime_environment_isolated": True,
@@ -203,26 +203,166 @@ def build_query_runtime_audit() -> dict[str, Any]:
             },
             "model_artifact_hashes_complete": True,
             "runtime_dependency_hashes_complete": True,
-            "installation_approved": False,
-            "apple_silicon_import_verified": False,
+            "installation_approved": True,
+            "installation_complete": True,
+            "apple_silicon_import_verified": True,
+            "restricted_model_load_approved": True,
+            "restricted_model_load_complete": True,
+            "import_evidence": {
+                "status": (
+                    "isolated_hash_locked_runtime_imports_verified_network_denied"
+                ),
+                "target": "CPython 3.12.10, macOS arm64",
+                "locked_package_count": 28,
+                "bootstrap_package": "pip==25.0.1",
+                "runtime_file_count": 21_493,
+                "runtime_logical_file_bytes": 511_510_119,
+                "imported_modules": [
+                    "numpy",
+                    "torch",
+                    "torchaudio",
+                    "torchvision",
+                    "timm",
+                    "hear21passt",
+                    "hear21passt.models.passt",
+                    "hear21passt.base",
+                ],
+                "import_report_sha256": (
+                    "8f0b23e9943aa4e3f520f599479e575589102c07fa1c199424690cff0711768a"
+                ),
+                "import_report_file_sha256": (
+                    "369c7f63b4cb93591d8060d76043ab9f3509e42b26c0c57cc1ca5f7bbf41657d"
+                ),
+                "approval_receipt_file_sha256": (
+                    "ffd25870b284126925f9f8f1a46577882f7e35442bc45a68c2ade9f58c2ec39b"
+                ),
+                "network_denied": True,
+                "network_attempts": 0,
+                "checkpoint_open_attempts": 0,
+                "torch_load_calls": 0,
+                "audio_open_attempts": 0,
+                "dependency_installed": True,
+                "checkpoint_loaded": False,
+                "model_constructed": False,
+                "inference_runs": 0,
+                "audio_reads": 0,
+            },
+            "model_load_evidence": {
+                "status": (
+                    "two_exact_models_constructed_and_strictly_loaded_network_denied"
+                ),
+                "target": "CPython 3.12.10, macOS arm64",
+                "source_revision": (
+                    "79ed5bb75e5c3a40cd319d9d990cee913fc65c26"
+                ),
+                "model_load_report_sha256": (
+                    "12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced"
+                ),
+                "model_load_report_file_sha256": (
+                    "6707d71ac08abf884e050921d1ee5e6b973b9e33c87d2905eb1acf2120809843"
+                ),
+                "approval_receipt_file_sha256": (
+                    "0dc27808000cd2a8afc6ff5a15aee8f31671c223e5ec84da8b16a172b5df4bdc"
+                ),
+                "banquet": {
+                    "state_key_count": 1_069,
+                    "total_numel": 111_234_333,
+                    "inventory_sha256": (
+                        "c562cc6f0b6807470d4d36ee4f6a048870e917afac9d7f92b2e35d7b9efec27f"
+                    ),
+                    "keys_equal": True,
+                    "shapes_equal": True,
+                    "dtypes_equal": True,
+                    "strict_load_missing_keys": [],
+                    "strict_load_unexpected_keys": [],
+                },
+                "passt": {
+                    "state_key_count": 159,
+                    "total_numel": 85_373_992,
+                    "inventory_sha256": (
+                        "ed94f5ea73d96f5965b1f67f11e84264f0afadd2efbbfad4d22783a4fc2aef96"
+                    ),
+                    "keys_equal": True,
+                    "shapes_equal": True,
+                    "dtypes_equal": True,
+                    "strict_load_missing_keys": [],
+                    "strict_load_unexpected_keys": [],
+                },
+                "torch_load_contract": (
+                    "two calls using weights_only=True and map_location='cpu'"
+                ),
+                "network_denied": True,
+                "network_attempts": 0,
+                "audio_open_attempts": 0,
+                "unapproved_checkpoint_open_attempts": 0,
+                "checkpoint_loaded": True,
+                "model_constructed": True,
+                "inference_runs": 0,
+                "audio_reads": 0,
+                "audio_writes": 0,
+            },
+            "synthetic_forward_evidence": {
+                "status": "objective_pass",
+                "report_sha256": (
+                    "bd5fa57716267488cfd9a0d1d69bc1627da6244d283fdaec5a5592234d51cec8"
+                ),
+                "report_file_sha256": (
+                    "397293bb60d9bf658632cdb7526ece03ffb6007de5e1d86883d6cedb1408699a"
+                ),
+                "synthetic_plan_document_sha256": (
+                    "0c2e83e0e55f40a8c38a6d103aae81a6443f1c935f5c1f08e35cdbb241426356"
+                ),
+                "attempts_authorized": 1,
+                "attempts_consumed": 1,
+                "inference_completions": 1,
+                "elapsed_seconds": 2.853968958137557,
+                "peak_resident_set_bytes": 2_052_014_080,
+                "output_shape": [1, 2, 88_200],
+                "output_dtype": "float32",
+                "output_sample_rate_hz": 44_100,
+                "all_output_samples_finite": True,
+                "target_peak": 4.118360084248707e-05,
+                "residual_peak": 0.15990281105041504,
+                "maximum_reconstruction_error": 7.450580596923828e-09,
+                "network_attempts": 0,
+                "audio_open_attempts": 0,
+                "unapproved_checkpoint_open_attempts": 0,
+                "private_audio_processed": False,
+                "audio_persisted": False,
+                "musical_usefulness_established": False,
+                "automatic_retry_authorized": False,
+                "public_activation_authorized": False,
+                "source_selection_authorized": False,
+                "midi_authorized": False,
+            },
         },
         "next_gate": {
-            "kind": "review_isolated_install_and_restricted_import_plan",
+            "kind": "review_bounded_authorised_reference_query_plan",
             "next_action": (
-                "review an isolated hash-locked installation and network-denied "
-                "package-import plan without loading either checkpoint"
+                "design a separately approved, rights-bound reference-query canary "
+                "for guitar and broad keyboard/synth classes; the successful "
+                "synthetic gate grants no song-processing authority"
             ),
+            "plan_command": (
+                "python3 scripts/plan-separation-other-refinement-query-reference.py"
+            ),
+            "plan_document_sha256": (
+                "abfebe4f3eddfa3d891c8972edcbfd2dc62b968dc71e6c20dfb4311068059c76"
+            ),
+            "rights_category": "owned",
+            "song_disjoint_inference_attempt_limit": 9,
             "dependency_artifact_download_approved": True,
             "dependency_artifact_download_complete": True,
-            "dependency_installation": False,
-            "package_import": False,
-            "model_loading": False,
-            "model_construction": False,
-            "inference": False,
+            "dependency_installation": True,
+            "package_import": True,
+            "model_loading": True,
+            "model_construction": True,
+            "synthetic_inference_complete": True,
+            "further_inference": False,
             "audio_processing": False,
             "public_activation": False,
             "source_or_midi_activation": False,
-            "requires_separate_approval_before_install_or_import": True,
+            "requires_separate_approval_before_further_inference_or_audio_processing": True,
         },
         "effects": {
             "network_used_by_plan": False,

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import importlib.util
+import os
 from pathlib import Path
+import subprocess
 import zipfile
 
 import pytest
@@ -116,6 +119,79 @@ def test_runtime_wheel_setup_is_download_only_capped_and_network_denied() -> Non
     assert '"pip",\n        "download"' in downloader
     assert '"pip",\n        "install"' not in downloader
     assert "torch.load" not in setup
+
+
+def test_isolated_runtime_route_requires_specific_acceptance(tmp_path: Path) -> None:
+    setup = (
+        ROOT
+        / "scripts"
+        / "setup-separation-other-refinement-query-runtime-macos.sh"
+    )
+    result = subprocess.run(
+        [str(setup), "--install-runtime"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={
+            **os.environ,
+            "SUNOFRIEND_SEPARATION_ROOT": str(tmp_path / "separation"),
+        },
+    )
+
+    assert result.returncode == 2
+    assert "requires --accept-runtime-install-and-import" in result.stderr
+    assert not (tmp_path / "separation").exists()
+
+
+def test_isolated_runtime_route_is_offline_hash_locked_and_import_only() -> None:
+    setup = (
+        ROOT
+        / "scripts"
+        / "setup-separation-other-refinement-query-runtime-macos.sh"
+    ).read_text(encoding="utf-8")
+    worker = (
+        ROOT
+        / "scripts"
+        / "verify-separation-other-refinement-query-runtime-imports.py"
+    ).read_text(encoding="utf-8")
+
+    acceptance = setup.index('if [ "$ACCEPTED_RUNTIME_INSTALL_AND_IMPORT" != true ]')
+    first_install_write = setup.index('mkdir -p "$RUNTIME_IMPORT_PARENT"')
+    assert acceptance < first_install_write
+    assert "--install-runtime" in setup
+    assert "--accept-runtime-install-and-import" in setup
+    assert "--no-index" in setup
+    assert "--find-links" in setup
+    assert "--require-hashes" in setup
+    assert "(deny network*)" in setup
+    assert '"$STAGING/runtime/bin/python" -I -B "$RUNTIME_IMPORT_SCRIPT"' in setup
+    assert "torch.load = deny_torch_load" in worker
+    assert "checkpoint file open forbidden" in worker
+    assert "audio file open forbidden" in worker
+    assert "importlib.import_module(module_name)" in worker
+    assert "get_basic_model(" not in worker
+    assert "load_model(" not in worker
+
+
+def test_import_worker_parses_the_exact_28_package_lock() -> None:
+    worker_path = (
+        ROOT
+        / "scripts"
+        / "verify-separation-other-refinement-query-runtime-imports.py"
+    )
+    spec = importlib.util.spec_from_file_location("query_runtime_import_worker", worker_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    packages = module._requirements(
+        ROOT / "separation-other-refinement-query-runtime-requirements.txt"
+    )
+
+    assert len(packages) == 28
+    assert packages["torch"] == "2.2.2"
+    assert packages["hear21passt"] == "0.0.26"
+    assert packages["numpy"] == "1.26.4"
 
 
 def test_committed_runtime_wheel_lock_matches_completed_evidence() -> None:

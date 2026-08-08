@@ -239,7 +239,12 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /five-song, ten-report review demonstrated neither/);
   assert.match(html, /keyboard_synth/);
   assert.match(html, /99,354,620 bytes/);
-  assert.match(html, /imported or installed nothing/);
+  assert.match(html, /Eight relevant modules/);
+  assert.match(html, /zero network attempts/);
+  assert.match(html, /strict weights-only loading/);
+  assert.match(html, /one-attempt authority is consumed/);
+  assert.match(html, /passed all objective gates in 2.85 seconds/);
+  assert.match(html, /rights-bound reference-query canary/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
@@ -592,7 +597,52 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.status,
-    "blocked_pending_isolated_install_and_restricted_import_plan",
+    "synthetic_objective_pass_one_attempt_consumed",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_plan_document_sha256,
+    "0c2e83e0e55f40a8c38a6d103aae81a6443f1c935f5c1f08e35cdbb241426356",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.forward_contract_document_sha256,
+    "886a88dd511ac4075a90536360d91181338a81df58b51c86c7290d7c7d57e36c",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.forward_contract_implemented,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_plan_run_limit,
+    1,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_plan_uses_private_audio,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_report_contract_document_sha256,
+    "81b11e5a85fc8fce656ba78657f359169930871daa824beb6d12595da1328ae5",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_report_accepts_objective_failure,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_report_allows_subjective_feedback,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_report_grants_retry_or_activation,
+    false,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -613,7 +663,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.required_passt_checkpoint.deserialized,
-    false,
+    true,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -639,6 +689,37 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.runtime_wheel_evidence.packages_imported,
     false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_import_evidence.locked_package_count,
+    28,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_import_evidence.network_attempts,
+    0,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_import_evidence.checkpoint_loaded,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.restricted_model_load_evidence.report_sha256,
+    "12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.restricted_model_load_evidence
+      .keys_shapes_and_dtypes_equal,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.restricted_model_load_evidence.inference_runs,
+    0,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-08.1"
+INTERFACE_CONTRACT_VERSION = "2026-08-08.3"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -197,9 +197,9 @@ def render_skill_interface_reference() -> str:
         "to the unchanged result and grants no selection, activation or promotion.",
         "The completed five-song, ten-report round demonstrated neither useful guitar",
         "extraction nor successful piano extraction. The profile remains reproducible",
-        "but is not a working guitar/keyboard claim. A separate read-only Banquet plan",
+        "but is not a working guitar/keyboard claim. A separate Banquet audit",
         "targets guitar and broad `keyboard_synth`; its approved evidence-only download",
-        "and network-denied opcode inspection did not deserialize or authorize loading.",
+        "and network-denied opcode inspection preceded a restricted loading gate.",
         "Its source audit found a second required 341,546,630-byte OpenMIC PaSST",
         "checkpoint and rejected the upstream automatic and unrestricted loaders. The",
         "separately approved non-loading inspection established SHA-256",
@@ -209,9 +209,19 @@ def render_skill_interface_reference() -> str:
         "their licence metadata under network denial without installation or import.",
         "The lock SHA-256 is",
         "`28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92`.",
-        "It is not registered or executable, installation/import still require separate",
-        "approval, and its CC BY-NC-SA checkpoint permits no hosted or",
-        "commercial-default claim.",
+        "A later separately approved gate installed that exact closure into a fresh",
+        "CPython 3.12.10/macOS-arm64 environment and imported the eight relevant",
+        "modules under network denial with zero network attempts, checkpoint opens,",
+        "`torch.load` calls or audio opens. A further explicit approval constructed the",
+        "real 64-band adapter and both download-disabled PaSST variants, verified all",
+        "1,228 combined state keys, shapes and dtypes, and strictly loaded both exact",
+        "checkpoints with no missing or unexpected keys, network or audio access. A",
+        "separately approved single-use generated-tensor forward then passed every",
+        "objective gate in 2.85 seconds at about 2.05 GB peak RSS, with zero network",
+        "or audio access. The very quiet target is not musical evidence, and the",
+        "one-attempt authority is consumed. It is not registered or executable;",
+        "reference audio and further inference require new rights-bound approval.",
+        "Its CC BY-NC-SA checkpoint permits no hosted or commercial-default claim.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

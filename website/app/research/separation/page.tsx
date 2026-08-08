@@ -131,7 +131,7 @@ export default function SeparationResearch() {
                 source selection or MIDI.
               </p>
               <p>
-                The next no-effects plan audits the music-specific Banquet
+                The next bounded audit tracks the music-specific Banquet
                 query separator for guitar plus broad <code>keyboard_synth</code>:
                 electric piano, organ, synth pad and synth lead. Its approved
                 evidence-only checkpoint download matched the published MD5,
@@ -145,10 +145,27 @@ export default function SeparationResearch() {
                 dependency step then resolved and hashed 28 exact
                 CPython-3.12/macOS-arm64 wheels (99,354,620 bytes) under a
                 1 GiB cap. Licence metadata inspection ran with network denied
-                and imported or installed nothing. The challenger remains
-                blocked, unregistered and non-executable pending a separately
-                approved isolated install/import plan and Apple-silicon
-                qualification. Its
+                and imported or installed nothing during that evidence step. A
+                later separately approved gate installed the exact closure from
+                the local cache into a fresh CPython 3.12.10 environment with
+                <code> --no-index --require-hashes</code>. Eight relevant modules
+                imported under network denial with zero network attempts,
+                checkpoint opens, <code>torch.load</code> calls or audio opens.
+                A further explicitly approved gate constructed the real
+                64-band adapter and both download-disabled PaSST variants. It
+                verified all 1,228 combined keys, shapes and dtypes before
+                strict weights-only loading, with no missing or unexpected
+                keys, network attempt or audio open. The separately approved
+                single-use generated-tensor forward then passed all objective
+                gates in 2.85 seconds at about 2.05 GB peak RSS, with finite
+                stereo float32 output and zero network or audio access. The
+                target was very quiet, so this is adapter evidence rather than
+                musical-quality evidence. The one-attempt authority is consumed.
+                The challenger remains unregistered and non-executable; a
+                rights-bound reference-query canary requires separate approval.
+                The pure result validator accepts either an objective pass or a
+                retained objective failure and rejects subjective ratings,
+                automatic retry and product activation. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
               </p>

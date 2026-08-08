@@ -122,13 +122,24 @@ hunt. Inspect the no-effects plan with:
 ```bash
 .venv/bin/python \
   scripts/plan-separation-other-refinement-query-runtime.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-forward.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-synthetic-report.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-synthetic.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-reference.py
 ```
 
-It downloads or installs nothing. The approved private evidence-only checkpoint
-step has now established SHA-256
+It downloads, loads and executes nothing. The approved private checkpoint
+evidence established SHA-256
 `657295888781e62ef50593002720d2edb3858b9e5bbfabf0c54f715a0da4b9e2`
-and a network-denied, non-deserializing static structure report; dependency
-installation, loading and inference remain unapproved. The source audit also
+and a network-denied static structure report. The source audit also
 found the required 341,546,630-byte OpenMIC PaSST checkpoint and rejected the
 upstream automatic download and unrestricted loaders. Its separately approved
 evidence-only download established SHA-256
@@ -138,9 +149,37 @@ then resolved 28 exact CPython 3.12/macOS-arm64 wheels (99,354,620 bytes),
 recorded every SHA-256 and licence metadata under network-denied non-importing
 inspection, and committed the 2,800-byte lock with SHA-256
 `28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92`.
-Nothing was installed or imported. The challenger remains blocked pending a
-separately approved isolated install/import plan. See
+A later separately approved gate installed those exact 28 packages from the
+local cache into a fresh CPython 3.12.10/macOS-arm64 environment using
+`--no-index --require-hashes`. Eight relevant package modules imported under
+network denial with zero checkpoint opens, `torch.load` calls, network
+attempts or audio opens. A further explicitly approved gate then constructed
+the real 64-band Banquet adapter and both download-disabled PaSST variants and
+loaded the two exact local checkpoints with
+`torch.load(weights_only=True, map_location="cpu")`. All 1,069 Banquet and 159
+OpenMIC PaSST keys, shapes and dtypes matched before strict loading, with no
+missing or unexpected keys, network attempt or audio open. The later approved
+single synthetic inference attempt then passed every objective gate under
+network denial: 2.85 seconds, 2,052,014,080-byte peak RSS, finite stereo
+float32 output at 44.1 kHz and `7.450580596923828e-09` maximum in-memory
+reconstruction error. It used only generated tensors and opened no audio.
+The second command prints the immutable forward contract bound to nine exact
+files from the pinned upstream revision and its setup-C configuration. The
+third prints the pure result validator contract: an objective failure must be
+retained and grants neither automatic retry nor activation. The fourth command
+is the immutable plan that bound the now-consumed one-attempt authority. The
+planning commands still construct no model, run no inference and read no
+audio. The retained report SHA-256 is
+`bd5fa57716267488cfd9a0d1d69bc1627da6244d283fdaec5a5592234d51cec8`.
+The very quiet synthetic target peak (`4.118360084248707e-05`) is explicitly
+not musical evidence. The challenger remains unregistered and non-executable;
+the next gate is the separately approved, rights-bound reference-query canary
+printed by the fifth command. It freezes one song-disjoint query bank for
+guitar, keyboard and synth against three owner-authorised test mixtures: nine
+attempts, one configuration and no feedback-driven query hunt. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
+The incremental code-structure work is tracked in
+[Separation maintainability plan](docs/SEPARATION_MAINTAINABILITY_PLAN.md).
 
 After the local page exports your listening JSON, bind it to the exact result
 without selecting a source or starting MIDI:

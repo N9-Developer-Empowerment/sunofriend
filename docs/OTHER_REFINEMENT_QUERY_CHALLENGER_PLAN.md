@@ -50,10 +50,10 @@ A network-denied, non-deserializing inspection found a 3,491-member PyTorch ZIP
 and parsed its 452,701-byte protocol-2 pickle metadata stream. Its four GLOBAL
 references were limited to `OrderedDict`, Torch float/double storage and the
 standard tensor rebuild helper; no application model class was observed. The
-inspection did not read tensor-storage payloads, import a dependency, construct
-a model or establish loading safety. Exact runtime pins and Apple-silicon
-resource behaviour remain unknown. Consequently the candidate is still not
-registered, executable or approved for model loading.
+inspection did not read tensor-storage payloads, import a dependency or
+construct a model. Later bounded gates established the exact runtime and the
+restricted loading result described below. The candidate is still not
+registered or executable and has no inference authority.
 
 ## Runtime audit: a second checkpoint is required
 
@@ -90,7 +90,7 @@ local noncommercial research only.
 Sunofriend will not run either upstream loader. The proposed adapter must
 construct PaSST with `pretrained=False`, load both explicit local checkpoints
 with `torch.load(weights_only=True, map_location="cpu")`, verify state-dict keys
-and tensor shapes before strict loading, and deny network access for import,
+and tensor shapes and dtypes before strict loading, and deny network access for import,
 construction, loading and inference. Lightning, TorchMetrics, pandas,
 TorchAudioMentations and OmegaConf are excluded from the inference adapter.
 
@@ -145,10 +145,11 @@ evidence shows that it actually extracts target content.
 ## Objective gates
 
 - exact source, checkpoint and runtime identities;
-- checkpoint SHA-256 and weights-only static inspection before model loading
-  (**passed as non-authorising evidence**);
+- checkpoint SHA-256, weights-only static inspection and exact state-contract
+  verification before strict model loading (**passed**);
 - hash-locked dependencies;
-- network-denied model construction and inference;
+- network-denied model construction (**passed**) and inference (**pending a
+  separate approval**);
 - finite stereo 44.1 kHz samples on the parent clock;
 - target-plus-residual reconstruction within two PCM24 LSBs;
 - declared timeout and memory ceilings on the first supported Mac; and
@@ -211,10 +212,147 @@ scripts/setup-separation-other-refinement-query-runtime-macos.sh \
   --accept-runtime-wheel-evidence
 ```
 
-The wheels were downloaded but not installed. ZIP metadata inspection ran
-under network denial and imported no downloaded package. The exact public lock
-is `separation-other-refinement-query-runtime-requirements.txt`. The next
-bounded gate is a separately reviewed isolated installation and
-network-denied package-import plan that still must not load either checkpoint.
-Installation, imports, checkpoint loading, model construction, inference,
-audio processing, activation, source selection and MIDI remain unapproved.
+The wheels were downloaded but not installed during that evidence-only step.
+ZIP metadata inspection ran under network denial and imported no downloaded
+package. The exact public lock is
+`separation-other-refinement-query-runtime-requirements.txt`.
+
+The separately approved isolated installation and import gate completed on
+2026-08-08:
+
+```bash
+scripts/setup-separation-other-refinement-query-runtime-macos.sh \
+  --install-runtime \
+  --accept-runtime-install-and-import
+```
+
+The command created a fresh CPython 3.12.10/macOS-arm64 virtual environment,
+installed the exact 28 packages from the approved local wheel cache with
+`--no-index --require-hashes`, and ran package imports under operating-system
+network denial and Python isolated mode. `pip check` reported no broken
+requirements. The eight relevant imports were NumPy, Torch, TorchAudio,
+TorchVision, timm, `hear21passt`, `hear21passt.models.passt` and
+`hear21passt.base`. The import gate recorded zero network attempts, checkpoint
+opens, `torch.load` calls and audio opens. Its canonical import report SHA-256
+is `8f0b23e9943aa4e3f520f599479e575589102c07fa1c199424690cff0711768a`.
+
+This installation did not make the challenger registered or executable.
+
+The separately approved restricted construction and load gate then completed
+on 2026-08-08:
+
+```bash
+scripts/setup-separation-other-refinement-query-runtime-macos.sh \
+  --construct-and-load-models \
+  --accept-restricted-model-load
+```
+
+The gate used the isolated CPython 3.12.10/macOS-arm64 runtime and operating
+system network denial. It constructed the pinned 64-musical-band Banquet
+setup-C topology with sixteen bidirectional GRUs, 64 mask heads, FiLM and its
+embedded 527-class PaSST, plus the separate 20-class OpenMIC PaSST. Both PaSST
+instances were constructed with `pretrained=False`; neither upstream loader
+ran.
+
+Before strict loading, Sunofriend compared every state key, tensor shape and
+dtype:
+
+| Model state | Verified result |
+| --- | --- |
+| Banquet checkpoint | 1,069 keys, 111,234,333 values, inventory SHA-256 `c562cc6f0b6807470d4d36ee4f6a048870e917afac9d7f92b2e35d7b9efec27f` |
+| Standalone OpenMIC PaSST | 159 keys, 85,373,992 values, inventory SHA-256 `ed94f5ea73d96f5965b1f67f11e84264f0afadd2efbbfad4d22783a4fc2aef96` |
+| Strict loads | zero missing keys and zero unexpected keys for both models |
+| Effects boundary | zero network attempts, zero audio opens and zero inference runs |
+
+The canonical load-report SHA-256 is
+`12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced`.
+This result proves architecture/checkpoint compatibility under the restricted
+loader. It did not by itself prove separation quality, runtime resources or a
+working forward adapter; those objective adapter questions were handled by the
+separate synthetic gate below.
+
+The challenger remains unregistered and non-executable. Its first bounded gate
+used a pure forward contract and an immutable one-attempt plan:
+
+```bash
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-forward.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-synthetic-report.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-synthetic.py
+```
+
+The forward contract binds the exact setup-C topology and forward sequence to
+nine files at source revision
+`79ed5bb75e5c3a40cd319d9d990cee913fc65c26`; its document SHA-256 is
+`886a88dd511ac4075a90536360d91181338a81df58b51c86c7290d7c7d57e36c`.
+It describes STFT, 64-band splitting, sixteen alternating residual GRUs,
+PaSST query embedding, FiLM conditioning, complex-mask overlap-add and exact-
+length inverse STFT. The audited load adapter still has no forward method; the
+approved math lives in a separate single-use tensor adapter. The separate
+result contract has document SHA-256
+`81b11e5a85fc8fce656ba78657f359169930871daa824beb6d12595da1328ae5`.
+It validates either a complete objective pass or a retained objective failure,
+requires the exact output clock, peaks, reconstruction and resource gates, and
+rejects subjective feedback, automatic retry and product authority. The
+synthetic plan document SHA-256 is
+`0c2e83e0e55f40a8c38a6d103aae81a6443f1c935f5c1f08e35cdbb241426356`.
+It authorised one CPU-only forward with a generated two-second stereo mixture and
+generated ten-second stereo query, both held in memory, seed `0`, network
+denial, a 180-second timeout and a 12 GiB memory ceiling. It writes only an
+objective JSON report. One remediation was the absolute limit. No listening or
+minimum usefulness rating can block recording the objective result.
+
+The large setup shell previously duplicated validation and receipt-building
+logic in an embedded Python block. That logic is now a pure standard-library
+contract in
+`src/sunofriend/separation_other_refinement_query_load_contract.py`, with a
+small exclusive-write receipt command. Model identity, topology/loading,
+synthetic execution and report validation are separate maintenance boundaries.
+The refactor validates the already-recorded load report without changing its
+canonical SHA-256. The topology and strict loading were then extracted into
+separate reusable modules; a fresh network-denied load produced a byte-identical
+report with zero network attempts, audio opens or inference runs. The one-way
+network/audio/checkpoint enforcement is now a reusable execution guard rather
+than inline CLI logic. The source-bound contract, single-use tensor adapter,
+result projection/validation and exclusive receipt writer are separate,
+reusable boundaries. A failed first attempt would remain evidence and could not
+authorize an automatic remediation run.
+
+The approved attempt is complete. Its retained report SHA-256 is
+`bd5fa57716267488cfd9a0d1d69bc1627da6244d283fdaec5a5592234d51cec8`
+(file SHA-256
+`397293bb60d9bf658632cdb7526ece03ffb6007de5e1d86883d6cedb1408699a`).
+All ten objective gates passed: the CPU run completed in 2.85397 seconds at
+2,052,014,080-byte peak RSS, produced finite `[1, 2, 88200]` float32 output at
+44.1 kHz, reconstructed within `7.450580596923828e-09`, and recorded zero
+network, audio-open or unapproved-checkpoint attempts. No private or persisted
+audio was used. The target peak was only `4.118360084248707e-05`, so this is an
+adapter-execution result, not evidence of musically useful separation.
+
+The wider incremental restructuring sequence is recorded in
+[Separation maintainability plan](SEPARATION_MAINTAINABILITY_PLAN.md).
+
+The one-attempt authority is consumed. The next gate is a separate,
+rights-bound reference-query canary plan for guitar and broad keyboard/synth.
+Further inference, reference or song audio processing, public activation,
+source selection and MIDI remain unapproved.
+
+Inspect that no-effects plan with:
+
+```bash
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-reference.py
+```
+
+Its document SHA-256 is
+`abfebe4f3eddfa3d891c8972edcbfd2dc62b968dc71e6c20dfb4311068059c76`.
+It freezes three ten-second guitar, keyboard and synth queries from one
+owner-authorised Ezzye song and applies each to three different authorised
+mixtures, for exactly nine song-disjoint attempts. Provider stems are query
+hints and comparison estimates, never truth. Poor feedback cannot start a
+query hunt. The command prints the exact rights-bound approval required before
+audio decoding, inference or private review artifacts.
