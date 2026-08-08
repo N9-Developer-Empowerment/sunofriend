@@ -348,12 +348,15 @@ zero network, forbidden-audio or unapproved-checkpoint attempts. The objective
 report SHA-256 is
 `fd15e3ba9524a49ebd182f86fa5c50ea0f5b02e95cc776ee5943a09147206ea8`.
 
-This is not musical-quality evidence. Target peaks varied from
-`0.0001608742` to `0.0355826542`, human listening is pending, and the profile
-remains unregistered, unselected and unavailable to MIDI. The nine-attempt
-authority is consumed. Poor or mixed feedback cannot trigger a query hunt or
-disable the public core-four route. Further inference, public activation,
-source selection and MIDI require a new reviewed plan and explicit approval.
+This is not musical-quality evidence. The completed bound review listened to
+all nine targets, rated eight `not_useful` and one quiet keyboard result
+`partly_useful`, and described several guitar/synth targets as blank or paired
+with query hints unrelated to the mixture. Banquet is therefore technically
+valid but musically unsuccessful in this frozen canary. It remains
+unregistered, unselected and unavailable to MIDI. The nine-attempt authority
+is consumed. Poor feedback does not trigger a query hunt or disable the public
+core-four route. Further inference, public activation, source selection and
+MIDI require a new reviewed plan and explicit approval.
 
 Inspect that no-effects plan with:
 

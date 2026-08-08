@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-08.4"
+INTERFACE_CONTRACT_VERSION = "2026-08-08.5"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -222,8 +222,9 @@ def render_skill_interface_reference() -> str:
         "explicit rights-bound approval completed exactly nine song-disjoint reference",
         "attempts under network denial in 64.01 seconds at about 3.26 GB peak RSS. All",
         "36 private PCM24 artifacts matched their hashes and reconstructed within zero",
-        "LSB. Listening remains pending, and neither objective pass establishes musical",
-        "usefulness. It is not registered or executable; another inference run,",
+        "LSB. The completed bound review rated eight targets not useful and one quiet",
+        "keyboard target partly useful. Banquet is technically valid but musically",
+        "unsuccessful. It is not registered or executable; another inference run,",
         "activation, source selection or MIDI requires new explicit authority.",
         "Its CC BY-NC-SA checkpoint permits no hosted or commercial-default claim.",
         "No Sunofriend command downloads music.",

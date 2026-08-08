@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-08.4 -->
+<!-- sunofriend-interface-contract: 2026-08-08.5 -->
 
 # Sunofriend
 
@@ -254,7 +254,9 @@ checkpoint, establishing SHA-256
   PCM24 review artifacts with zero-LSB reconstruction. It permits no
   feedback-driven query hunt. Serve the completed private package with
   `scripts/serve-separation-other-refinement-query-reference-review.py ROOT`.
-  Listening may record poor, mixed, cannot-tell or not-tested results but
+  The completed bound review listened to all nine targets, rated eight not
+  useful and one quiet keyboard result partly useful, and establishes this
+  frozen challenger as technically valid but musically unsuccessful. It
   selects nothing. The profile remains unregistered and non-executable; public
   activation, another inference run, source selection and MIDI require a new
   reviewed plan and explicit approval.

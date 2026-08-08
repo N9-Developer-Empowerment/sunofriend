@@ -165,10 +165,12 @@ export default function SeparationResearch() {
                 exactly nine song-disjoint CPU calls under network denial in
                 64.01 seconds at about 3.26 GB peak RSS. All 36 private PCM24
                 artifacts matched their hashes and target plus residual
-                reconstructed each reference with zero-LSB error. This remains
-                objective execution evidence: human listening is pending, the
-                approved nine-attempt authority is consumed, and the challenger
-                is still unregistered, unselected and unavailable to MIDI.
+                reconstructed each reference with zero-LSB error. The completed
+                bound review rated eight targets not useful and one quiet
+                keyboard target partly useful, with several guitar/synth targets
+                heard as blank or paired with unrelated query hints. The
+                challenger is technically valid but musically unsuccessful,
+                and remains unregistered, unselected and unavailable to MIDI.
                 The pure result validator accepts either an objective pass or a
                 retained objective failure and rejects subjective ratings,
                 automatic retry and product activation. Its

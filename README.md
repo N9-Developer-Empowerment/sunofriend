@@ -180,11 +180,13 @@ private PCM24 artifacts matched their hashes, every target plus residual
 reconstructed its reference with zero-LSB error, and the worker recorded zero
 network, forbidden-audio or unapproved-checkpoint attempts. The report SHA-256
 is `fd15e3ba9524a49ebd182f86fa5c50ea0f5b02e95cc776ee5943a09147206ea8`.
-That is objective execution evidence, not musical validation: the target peaks
-varied from `0.0001608742` to `0.0355826542`, and human listening is pending.
-The challenger remains unregistered, unselected and unavailable to MIDI; the
-approved nine-attempt authority is consumed and poor feedback cannot trigger a
-query hunt. See
+That is objective execution evidence, not musical validation. The completed
+bound review rated eight of nine targets not useful and one quiet keyboard
+target partly useful; several guitar/synth targets were heard as blank or had
+query hints unrelated to the mixture. The challenger is therefore technically
+valid but musically unsuccessful. It remains unregistered, unselected and
+unavailable to MIDI; the approved nine-attempt authority is consumed and poor
+feedback cannot trigger a query hunt. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 The incremental code-structure work is tracked in
 [Separation maintainability plan](docs/SEPARATION_MAINTAINABILITY_PLAN.md).

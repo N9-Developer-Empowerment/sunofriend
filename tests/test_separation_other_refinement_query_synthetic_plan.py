@@ -84,7 +84,9 @@ def test_public_capability_binds_the_exact_synthetic_plan() -> None:
     ]["next_query_challenger"]
     plan = build_query_synthetic_plan()
 
-    assert published["status"] == "reference_objective_pass_human_listening_pending"
+    assert published["status"] == (
+        "reference_objective_pass_human_listening_musically_unsuccessful"
+    )
     assert published["synthetic_plan_status"] == plan["status"]
     assert published["synthetic_plan_document_sha256"] == plan["document_sha256"]
     assert published["synthetic_plan_run_limit"] == plan["next_approval"][
@@ -110,4 +112,5 @@ def test_public_capability_binds_the_exact_synthetic_plan() -> None:
     assert published["reference_query_result"][
         "maximum_reconstruction_error_lsb"
     ] == 0
-    assert published["reference_query_result"]["human_listening_pending"] is True
+    assert published["reference_query_result"]["human_listening_pending"] is False
+    assert published["reference_query_result"]["not_useful_cases"] == 8

@@ -20,7 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None:
     audit = build_query_runtime_audit()
 
-    assert audit["status"] == "reference_objective_pass_human_listening_pending"
+    assert audit["status"] == (
+        "reference_objective_pass_human_listening_musically_unsuccessful"
+    )
     assert audit["registered"] is False
     assert audit["executable"] is False
     assert audit["source_audit"]["query_bandit"]["revision"] == (
@@ -105,10 +107,14 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     assert reference["private_pcm24_artifact_count"] == 36
     assert reference["maximum_reconstruction_error_lsb"] == 0
     assert reference["network_attempts"] == 0
-    assert reference["human_listening_pending"] is True
+    assert reference["human_listening_pending"] is False
+    assert reference["human_listening_complete"] is True
+    assert reference["not_useful_cases"] == 8
+    assert reference["partly_useful_cases"] == 1
+    assert reference["conclusion"] == "technically_valid_musically_unsuccessful"
     assert reference["musical_usefulness_established"] is False
     assert audit["next_gate"]["kind"] == (
-        "complete_private_reference_query_human_listen"
+        "prepare_new_bounded_challenger_plan_after_musical_failure"
     )
     assert audit["next_gate"]["plan_command"] == (
         "python3 scripts/plan-separation-other-refinement-query-reference.py"
@@ -123,7 +129,7 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     assert audit["next_gate"]["model_construction"] is True
     assert audit["next_gate"]["reference_inference_complete"] is True
     assert audit["next_gate"]["reference_audio_processing_complete"] is True
-    assert audit["next_gate"]["human_listening_complete"] is False
+    assert audit["next_gate"]["human_listening_complete"] is True
     assert audit["next_gate"]["further_inference"] is False
     assert not any(
         value is True

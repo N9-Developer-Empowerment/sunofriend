@@ -247,7 +247,8 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /rights-bound reference-query canary/);
   assert.match(html, /exactly nine song-disjoint CPU calls/);
   assert.match(html, /All 36 private PCM24 artifacts/);
-  assert.match(html, /human listening is pending/);
+  assert.match(html, /eight targets not useful/);
+  assert.match(html, /technically valid but musically unsuccessful/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
@@ -600,7 +601,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.status,
-    "reference_objective_pass_human_listening_pending",
+    "reference_objective_pass_human_listening_musically_unsuccessful",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -616,6 +617,11 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.forward_contract_implemented,
     true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.reference_query_result.not_useful_cases,
+    8,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -738,7 +744,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.reference_query_result.human_listening_pending,
-    true,
+    false,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

@@ -34,7 +34,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
     audit: dict[str, Any] = {
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
-        "status": "reference_objective_pass_human_listening_pending",
+        "status": "reference_objective_pass_human_listening_musically_unsuccessful",
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
         "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
@@ -337,7 +337,8 @@ def build_query_runtime_audit() -> dict[str, Any]:
             },
             "reference_query_evidence": {
                 "status": (
-                    "objective_execution_complete_listening_pending_no_selection"
+                    "objective_execution_complete_listening_musically_"
+                    "unsuccessful_no_selection"
                 ),
                 "report_sha256": (
                     "fd15e3ba9524a49ebd182f86fa5c50ea0f5b02e95cc776ee5943a09147206ea8"
@@ -357,7 +358,15 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 "unapproved_checkpoint_attempts": 0,
                 "all_six_source_hashes_unchanged": True,
                 "musical_usefulness_established": False,
-                "human_listening_pending": True,
+                "human_listening_pending": False,
+                "human_listening_complete": True,
+                "review_file_sha256": (
+                    "80b7d87b6cfa72cf24e565f4d40d2fcf84a765b04d9469da8bd99c807711dd6c"
+                ),
+                "valid_listening_cases": 9,
+                "not_useful_cases": 8,
+                "partly_useful_cases": 1,
+                "conclusion": "technically_valid_musically_unsuccessful",
                 "automatic_retry_authorized": False,
                 "public_activation_authorized": False,
                 "source_selection_authorized": False,
@@ -365,11 +374,10 @@ def build_query_runtime_audit() -> dict[str, Any]:
             },
         },
         "next_gate": {
-            "kind": "complete_private_reference_query_human_listen",
+            "kind": "prepare_new_bounded_challenger_plan_after_musical_failure",
             "next_action": (
-                "listen to all nine private guitar, keyboard and synth cases and "
-                "record usefulness or limitations without selecting a source or "
-                "starting MIDI"
+                "publish the known limitation and prepare one static, bounded "
+                "challenger comparison without tuning or rerunning Banquet"
             ),
             "plan_command": (
                 "python3 scripts/plan-separation-other-refinement-query-reference.py"
@@ -388,7 +396,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
             "synthetic_inference_complete": True,
             "reference_inference_complete": True,
             "reference_audio_processing_complete": True,
-            "human_listening_complete": False,
+            "human_listening_complete": True,
             "further_inference": False,
             "audio_processing": False,
             "public_activation": False,
