@@ -68,7 +68,11 @@ on.
   a second required 341,546,630-byte OpenMIC PaSST checkpoint and forbids both
   upstream automatic/unrestricted loaders. Use
   `scripts/plan-separation-other-refinement-query-runtime.py` for the current
-  no-effects gate; do not download PaSST without its separate approval.
+  no-effects gate. Its separately approved evidence-only download established
+  SHA-256
+  `dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`
+  without loading it. Do not install dependencies, load either checkpoint or
+  run inference without a new reviewed plan and explicit approval.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -197,8 +201,13 @@ SHA-256 and a network-denied, non-deserializing opcode report. It did not
 authorize dependency installation, checkpoint loading, model inference,
 private-song processing, public activation, source selection or MIDI. Require
 a new reviewed plan and explicit approval before any of those actions. The
-audit found a second required OpenMIC PaSST checkpoint whose hash has not yet
-been established; do not use the upstream downloader or loader.
+audit found and separately inspected the second required OpenMIC PaSST
+checkpoint, establishing SHA-256
+`dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`
+without loading it. Both model-artifact identities are complete, but runtime
+dependency hashes are not. Do not use the upstream downloader or loader, and
+do not install dependencies until a new hash-locked plan is reviewed and
+explicitly approved.
 
 ## Inspect before installing
 
