@@ -77,7 +77,7 @@ artifact is:
 | PaSST release | `v0.0.5`, revision `d7049e78e84ba38173ffd779479d1c9ec7d1c116` |
 | Required file | `openmic-passt-s-f128-10sec-p16-s10-ap.85.pt` |
 | GitHub release size | 341,546,630 bytes |
-| SHA-256 | not published; evidence download required |
+| Observed SHA-256 | `dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da` |
 | PaSST code/release evidence | Apache-2.0 |
 | OpenMIC-2018 training data | CC BY 4.0 |
 
