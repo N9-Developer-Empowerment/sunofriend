@@ -7,20 +7,24 @@ PLAN_SCRIPT="$REPOSITORY_ROOT/scripts/plan-separation-other-refinement-query-run
 INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-passt-checkpoint.py"
 WHEEL_DOWNLOAD_SCRIPT="$REPOSITORY_ROOT/scripts/download-separation-other-refinement-query-runtime-wheels.py"
 WHEEL_INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-query-runtime-wheels.py"
+RUNTIME_IMPORT_SCRIPT="$REPOSITORY_ROOT/scripts/verify-separation-other-refinement-query-runtime-imports.py"
+RUNTIME_REQUIREMENTS="$REPOSITORY_ROOT/separation-other-refinement-query-runtime-requirements.txt"
 DATA_ROOT=${SUNOFRIEND_SEPARATION_ROOT:-"$HOME/.local/share/sunofriend/separation"}
 EVIDENCE_ROOT=${SUNOFRIEND_PASST_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/passt-openmic-v0.0.5"}
 RUNTIME_WHEEL_EVIDENCE_ROOT=${SUNOFRIEND_QUERY_RUNTIME_WHEEL_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/query-bandit-runtime-wheels-macos-arm64-py312-v1"}
+RUNTIME_IMPORT_ROOT=${SUNOFRIEND_QUERY_RUNTIME_IMPORT_ROOT:-"$DATA_ROOT/evidence/query-bandit-runtime-import-macos-arm64-py312-v1"}
 ACTION=plan
 ACCEPTED_TERMS=false
 ACCEPTED_CHECKPOINT_USE=false
 ACCEPTED_RUNTIME_WHEEL_EVIDENCE=false
+ACCEPTED_RUNTIME_INSTALL_AND_IMPORT=false
 EXPECTED_BYTES=341546630
 MAX_BYTES=393216000
 RUNTIME_WHEEL_CAP_BYTES=1073741824
 CHECKPOINT_URL='https://github.com/kkoutini/PaSST/releases/download/v0.0.5/openmic-passt-s-f128-10sec-p16-s10-ap.85.pt'
 
 usage() {
-    echo "Usage: scripts/setup-separation-other-refinement-query-runtime-macos.sh [--plan | --passt-evidence-only --accept-passt-terms --accept-passt-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence]"
+    echo "Usage: scripts/setup-separation-other-refinement-query-runtime-macos.sh [--plan | --passt-evidence-only --accept-passt-terms --accept-passt-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence | --install-runtime --accept-runtime-install-and-import]"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -28,9 +32,11 @@ while [ "$#" -gt 0 ]; do
         --plan) ACTION=plan ;;
         --passt-evidence-only) ACTION=passt-evidence-only ;;
         --runtime-wheel-evidence-only) ACTION=runtime-wheel-evidence-only ;;
+        --install-runtime) ACTION=install-runtime ;;
         --accept-passt-terms) ACCEPTED_TERMS=true ;;
         --accept-passt-checkpoint-use) ACCEPTED_CHECKPOINT_USE=true ;;
         --accept-runtime-wheel-evidence) ACCEPTED_RUNTIME_WHEEL_EVIDENCE=true ;;
+        --accept-runtime-install-and-import) ACCEPTED_RUNTIME_INSTALL_AND_IMPORT=true ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
@@ -51,6 +57,227 @@ PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
 if [ "$ACTION" = plan ]; then
     echo ""
     echo "Plan only; nothing was downloaded, installed, loaded or executed."
+    exit 0
+fi
+
+if [ "$ACTION" = install-runtime ]; then
+    if [ "$ACCEPTED_RUNTIME_INSTALL_AND_IMPORT" != true ]; then
+        echo "--install-runtime requires --accept-runtime-install-and-import after reviewing the exact isolated boundary" >&2
+        exit 2
+    fi
+    if [ "$(uname -s)" != Darwin ] || [ "$(uname -m)" != arm64 ]; then
+        echo "The approved isolated runtime targets macOS on Apple silicon only" >&2
+        exit 2
+    fi
+    for required_command in sandbox-exec shasum df cmp; do
+        if ! command -v "$required_command" >/dev/null 2>&1; then
+            echo "$required_command is required for isolated runtime verification" >&2
+            exit 2
+        fi
+    done
+    if command -v python3.12 >/dev/null 2>&1; then
+        RUNTIME_IMPORT_PYTHON=$(command -v python3.12)
+    else
+        echo "Python 3.12 is required for the exact isolated runtime" >&2
+        exit 2
+    fi
+    if [ "$($RUNTIME_IMPORT_PYTHON -c 'import platform, sys; print(f"{sys.version_info.major}.{sys.version_info.minor}:{platform.machine()}")')" != 3.12:arm64 ]; then
+        echo "Selected isolated runtime Python must be CPython 3.12 on arm64: $RUNTIME_IMPORT_PYTHON" >&2
+        exit 2
+    fi
+    if [ -e "$RUNTIME_IMPORT_ROOT" ] || [ -L "$RUNTIME_IMPORT_ROOT" ]; then
+        echo "Refusing to overwrite existing isolated runtime evidence: $RUNTIME_IMPORT_ROOT" >&2
+        exit 2
+    fi
+    for required_evidence in \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/STATIC-EVIDENCE.json" \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/APPROVAL-RECEIPT.json" \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/HASHED-REQUIREMENTS.txt" \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/wheels"; do
+        if [ ! -e "$required_evidence" ] || [ -L "$required_evidence" ]; then
+            echo "Approved runtime wheel evidence is incomplete: $required_evidence" >&2
+            exit 2
+        fi
+    done
+    echo "28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92  $RUNTIME_REQUIREMENTS" | shasum -a 256 -c - >/dev/null
+    if ! cmp -s "$RUNTIME_REQUIREMENTS" "$RUNTIME_WHEEL_EVIDENCE_ROOT/HASHED-REQUIREMENTS.txt"; then
+        echo "Committed runtime lock differs from the approved local wheel evidence" >&2
+        exit 2
+    fi
+    echo "8943cde3676faf17ee1199a09f11494df53a9d6a2e4d5829ea68c8931d88bc37  $RUNTIME_WHEEL_EVIDENCE_ROOT/STATIC-EVIDENCE.json" | shasum -a 256 -c - >/dev/null
+    PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
+        "$PLAN_PYTHON" -B "$WHEEL_INSPECT_SCRIPT" \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/wheels" \
+        > /dev/null
+
+    RUNTIME_IMPORT_PARENT=$(dirname "$RUNTIME_IMPORT_ROOT")
+    mkdir -p "$RUNTIME_IMPORT_PARENT"
+    available_bytes=$(df -Pk "$RUNTIME_IMPORT_PARENT" | awk 'NR == 2 {printf "%.0f", $4 * 1024}')
+    if [ -z "$available_bytes" ] || [ "$available_bytes" -lt 2147483648 ]; then
+        echo "Isolated runtime setup requires at least 2147483648 free bytes before staging" >&2
+        exit 2
+    fi
+    STAGING=$(mktemp -d "$RUNTIME_IMPORT_PARENT/.query-runtime-import.building.XXXXXX")
+    preserve_failed_runtime_import_staging() {
+        runtime_import_exit_code=$?
+        if [ -n "${STAGING:-}" ] && [ -d "$STAGING" ]; then
+            failed_root="$RUNTIME_IMPORT_PARENT/query-bandit-runtime-import.failed.$$.evidence"
+            if [ ! -e "$failed_root" ] && [ ! -L "$failed_root" ]; then
+                chmod -R go-w "$STAGING" 2>/dev/null || true
+                mv "$STAGING" "$failed_root"
+                STAGING=
+                echo "Preserved failed isolated runtime evidence: $failed_root" >&2
+            fi
+        fi
+        exit "$runtime_import_exit_code"
+    }
+    trap preserve_failed_runtime_import_staging EXIT HUP INT TERM
+    mkdir -p "$STAGING/home/cache" "$STAGING/home/torch"
+    cp "$RUNTIME_REQUIREMENTS" "$STAGING/LOCKED-REQUIREMENTS.txt"
+    chmod 0444 "$STAGING/LOCKED-REQUIREMENTS.txt"
+
+    "$RUNTIME_IMPORT_PYTHON" -m venv "$STAGING/runtime"
+    (
+        ulimit -f 2097152
+        HOME="$STAGING/home" XDG_CACHE_HOME="$STAGING/home/cache" \
+        TORCH_HOME="$STAGING/home/torch" PYTHONNOUSERSITE=1 \
+        PYTHONDONTWRITEBYTECODE=1 PIP_CONFIG_FILE=/dev/null \
+        sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+        "$STAGING/runtime/bin/python" -m pip --isolated install \
+            --disable-pip-version-check --no-cache-dir --no-index \
+            --find-links "$RUNTIME_WHEEL_EVIDENCE_ROOT/wheels" \
+            --only-binary=:all: --require-hashes \
+            -r "$STAGING/LOCKED-REQUIREMENTS.txt"
+    ) > "$STAGING/PIP-INSTALL.log" 2>&1
+
+    HOME="$STAGING/home" XDG_CACHE_HOME="$STAGING/home/cache" \
+    TORCH_HOME="$STAGING/home/torch" PYTHONNOUSERSITE=1 \
+    PYTHONDONTWRITEBYTECODE=1 PIP_CONFIG_FILE=/dev/null \
+    sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+    "$STAGING/runtime/bin/python" -m pip --isolated check \
+        > "$STAGING/PIP-CHECK.log" 2>&1
+
+    HOME="$STAGING/home" XDG_CACHE_HOME="$STAGING/home/cache" \
+    TORCH_HOME="$STAGING/home/torch" HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
+    sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+    "$STAGING/runtime/bin/python" -I -B "$RUNTIME_IMPORT_SCRIPT" \
+        --runtime-root "$STAGING/runtime" \
+        --requirements "$STAGING/LOCKED-REQUIREMENTS.txt" \
+        > "$STAGING/IMPORT-REPORT.json"
+
+    PYTHONDONTWRITEBYTECODE=1 "$PLAN_PYTHON" -B - \
+        "$STAGING/IMPORT-REPORT.json" \
+        "$STAGING/APPROVAL-RECEIPT.json" \
+        "$RUNTIME_IMPORT_ROOT" <<'PY'
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+report_path = Path(sys.argv[1])
+receipt_path = Path(sys.argv[2])
+published_root = Path(sys.argv[3])
+report = json.loads(report_path.read_text(encoding="utf-8"))
+assert report["schema"] == "sunofriend.other-refinement-query-runtime-import-evidence.v1"
+assert report["status"] == "isolated_hash_locked_runtime_imports_verified_network_denied"
+assert report["locked_package_count"] == 28
+assert len(report["locked_packages"]) == 28
+assert report["runtime"]["implementation"] == "CPython"
+assert report["runtime"]["python"].startswith("3.12.")
+assert report["runtime"]["machine"] == "arm64"
+assert report["runtime"]["virtual_environment"] is True
+assert report["runtime"]["isolated_mode"] is True
+assert report["runtime"]["user_site_enabled"] is False
+assert set(report["bootstrap_packages"]) == {"pip"}
+assert report["guards"] == {
+    "audio_open_attempts": 0,
+    "checkpoint_open_attempts": 0,
+    "os_network_denial_required": True,
+    "python_network_attempts": 0,
+    "torch_load_calls": 0,
+}
+effects = report["effects"]
+assert effects["dependency_installed"] is True
+assert effects["checkpoint_loaded"] is False
+assert effects["model_constructed"] is False
+assert effects["inference_runs"] == 0
+assert effects["audio_reads"] == 0
+assert effects["audio_writes"] == 0
+assert effects["public_activation"] is False
+assert effects["source_selection"] is False
+assert effects["midi_created"] is False
+
+def document_sha256(value: dict) -> str:
+    payload = {key: item for key, item in value.items() if key != "report_sha256"}
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+assert report["report_sha256"] == document_sha256(report)
+receipt = {
+    "schema": "sunofriend.other-refinement-query-runtime-import-approval.v1",
+    "status": "isolated_runtime_import_gate_complete_no_model_authority",
+    "recorded_at": datetime.now(timezone.utc).isoformat(),
+    "profile_id": "query-bandit-ev-pre-aug-v1",
+    "published_root": str(published_root),
+    "runtime_requirements_sha256": "28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92",
+    "wheel_static_evidence_file_sha256": "8943cde3676faf17ee1199a09f11494df53a9d6a2e4d5829ea68c8931d88bc37",
+    "import_report_sha256": report["report_sha256"],
+    "approved_action": (
+        "install the exact 28-wheel hash-locked CPython 3.12 macOS-arm64 "
+        "runtime into a fresh isolated environment and perform "
+        "network-denied package-import verification only"
+    ),
+    "dependency_installed": True,
+    "package_import_verified": True,
+    "network_denied_during_install_and_import": True,
+    "checkpoint_loaded": False,
+    "model_constructed": False,
+    "inference_performed": False,
+    "audio_processed": False,
+    "public_activation": False,
+    "source_selection": False,
+    "midi_created": False,
+    "not_approved": [
+        "checkpoint_loading",
+        "model_construction",
+        "inference",
+        "audio_processing",
+        "public_activation",
+        "source_selection",
+        "midi",
+    ],
+}
+receipt_path.write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+PY
+
+    installed_bytes=$(du -sk "$STAGING" | awk '{printf "%.0f", $1 * 1024}')
+    if [ -z "$installed_bytes" ] || [ "$installed_bytes" -gt 2147483648 ]; then
+        echo "Isolated runtime staging exceeds the 2 GiB installation ceiling" >&2
+        exit 2
+    fi
+    chmod 0444 "$STAGING"/*.json "$STAGING"/*.log
+    chmod -R go-w "$STAGING"
+    mv "$STAGING" "$RUNTIME_IMPORT_ROOT"
+    STAGING=
+    trap - EXIT HUP INT TERM
+
+    echo ""
+    echo "Isolated query runtime import gate complete: $RUNTIME_IMPORT_ROOT"
+    echo "The exact 28-wheel runtime was installed from the approved local cache and imported under network denial."
+    echo "No checkpoint was loaded, no model was constructed, no inference or audio ran, and nothing was activated, selected or sent to MIDI."
     exit 0
 fi
 

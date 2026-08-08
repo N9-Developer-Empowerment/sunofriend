@@ -417,7 +417,7 @@
         "next_query_challenger": {
           "scope_id": "other-query-refinement-v1",
           "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
-          "status": "blocked_pending_isolated_install_and_restricted_import_plan",
+          "status": "blocked_pending_restricted_model_construction_and_weights_only_load_plan",
           "registered": false,
           "executable": false,
           "targets": ["guitar", "keyboard_synth"],
@@ -469,9 +469,35 @@
             "dependency_installed": false,
             "packages_imported": false
           },
+          "runtime_import_evidence": {
+            "status": "isolated_hash_locked_runtime_imports_verified_network_denied",
+            "target": "CPython 3.12.10, macOS arm64",
+            "locked_package_count": 28,
+            "runtime_logical_file_bytes": 511510119,
+            "imported_modules": [
+              "numpy",
+              "torch",
+              "torchaudio",
+              "torchvision",
+              "timm",
+              "hear21passt",
+              "hear21passt.models.passt",
+              "hear21passt.base"
+            ],
+            "import_report_sha256": "8f0b23e9943aa4e3f520f599479e575589102c07fa1c199424690cff0711768a",
+            "network_denied": true,
+            "network_attempts": 0,
+            "checkpoint_open_attempts": 0,
+            "torch_load_calls": 0,
+            "audio_open_attempts": 0,
+            "dependency_installed": true,
+            "checkpoint_loaded": false,
+            "model_constructed": false,
+            "inference_runs": 0
+          },
           "dependency_artifact_download_authorized": true,
-          "dependency_install_authorized": false,
-          "package_import_authorized": false,
+          "dependency_install_authorized": true,
+          "package_import_authorized": true,
           "model_loading_authorized": false,
           "inference_authorized": false,
           "plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py",
@@ -479,7 +505,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "review an isolated hash-locked installation and network-denied package-import plan; do not install, import, load or infer without separate approval"
+        "next_gate": "review a restricted network-denied model-construction and weights-only checkpoint-loading plan; do not construct, load, infer or read audio without separate approval"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

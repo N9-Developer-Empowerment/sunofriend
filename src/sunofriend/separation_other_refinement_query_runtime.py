@@ -1,8 +1,8 @@
-"""No-effects runtime audit for the Banquet query challenger.
+"""Runtime audit and no-effects next-gate plan for the Banquet challenger.
 
-This module records what was learned from static source and checkpoint
-inspection.  It deliberately does not import a model dependency, inspect a
-private audio file, download an artifact or make the challenger executable.
+This module records completed static and isolated-import evidence. Building
+the document itself does not import a model dependency, inspect audio,
+download an artifact or make the challenger executable.
 """
 
 from __future__ import annotations
@@ -34,7 +34,9 @@ def build_query_runtime_audit() -> dict[str, Any]:
     audit: dict[str, Any] = {
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
-        "status": "blocked_pending_isolated_install_and_restricted_import_plan",
+        "status": (
+            "blocked_pending_restricted_model_construction_and_weights_only_load_plan"
+        ),
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
         "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
@@ -203,26 +205,69 @@ def build_query_runtime_audit() -> dict[str, Any]:
             },
             "model_artifact_hashes_complete": True,
             "runtime_dependency_hashes_complete": True,
-            "installation_approved": False,
-            "apple_silicon_import_verified": False,
+            "installation_approved": True,
+            "installation_complete": True,
+            "apple_silicon_import_verified": True,
+            "import_evidence": {
+                "status": (
+                    "isolated_hash_locked_runtime_imports_verified_network_denied"
+                ),
+                "target": "CPython 3.12.10, macOS arm64",
+                "locked_package_count": 28,
+                "bootstrap_package": "pip==25.0.1",
+                "runtime_file_count": 21_493,
+                "runtime_logical_file_bytes": 511_510_119,
+                "imported_modules": [
+                    "numpy",
+                    "torch",
+                    "torchaudio",
+                    "torchvision",
+                    "timm",
+                    "hear21passt",
+                    "hear21passt.models.passt",
+                    "hear21passt.base",
+                ],
+                "import_report_sha256": (
+                    "8f0b23e9943aa4e3f520f599479e575589102c07fa1c199424690cff0711768a"
+                ),
+                "import_report_file_sha256": (
+                    "369c7f63b4cb93591d8060d76043ab9f3509e42b26c0c57cc1ca5f7bbf41657d"
+                ),
+                "approval_receipt_file_sha256": (
+                    "ffd25870b284126925f9f8f1a46577882f7e35442bc45a68c2ade9f58c2ec39b"
+                ),
+                "network_denied": True,
+                "network_attempts": 0,
+                "checkpoint_open_attempts": 0,
+                "torch_load_calls": 0,
+                "audio_open_attempts": 0,
+                "dependency_installed": True,
+                "checkpoint_loaded": False,
+                "model_constructed": False,
+                "inference_runs": 0,
+                "audio_reads": 0,
+            },
         },
         "next_gate": {
-            "kind": "review_isolated_install_and_restricted_import_plan",
+            "kind": (
+                "review_restricted_model_construction_and_weights_only_load_plan"
+            ),
             "next_action": (
-                "review an isolated hash-locked installation and network-denied "
-                "package-import plan without loading either checkpoint"
+                "review a minimal network-denied adapter plan that constructs PaSST "
+                "with pretrained=False and loads both explicit local checkpoints "
+                "weights-only without reading audio"
             ),
             "dependency_artifact_download_approved": True,
             "dependency_artifact_download_complete": True,
-            "dependency_installation": False,
-            "package_import": False,
+            "dependency_installation": True,
+            "package_import": True,
             "model_loading": False,
             "model_construction": False,
             "inference": False,
             "audio_processing": False,
             "public_activation": False,
             "source_or_midi_activation": False,
-            "requires_separate_approval_before_install_or_import": True,
+            "requires_separate_approval_before_model_construction_or_loading": True,
         },
         "effects": {
             "network_used_by_plan": False,

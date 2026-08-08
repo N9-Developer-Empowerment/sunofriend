@@ -21,7 +21,7 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     audit = build_query_runtime_audit()
 
     assert audit["status"] == (
-        "blocked_pending_isolated_install_and_restricted_import_plan"
+        "blocked_pending_restricted_model_construction_and_weights_only_load_plan"
     )
     assert audit["registered"] is False
     assert audit["executable"] is False
@@ -60,13 +60,27 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     )
     assert runtime["wheel_evidence"]["dependency_installed"] is False
     assert runtime["wheel_evidence"]["packages_imported"] is False
+    assert runtime["installation_approved"] is True
+    assert runtime["installation_complete"] is True
+    assert runtime["apple_silicon_import_verified"] is True
+    import_evidence = runtime["import_evidence"]
+    assert import_evidence["locked_package_count"] == 28
+    assert import_evidence["target"] == "CPython 3.12.10, macOS arm64"
+    assert import_evidence["dependency_installed"] is True
+    assert import_evidence["network_denied"] is True
+    assert import_evidence["network_attempts"] == 0
+    assert import_evidence["checkpoint_open_attempts"] == 0
+    assert import_evidence["torch_load_calls"] == 0
+    assert import_evidence["audio_open_attempts"] == 0
+    assert import_evidence["checkpoint_loaded"] is False
+    assert import_evidence["model_constructed"] is False
     assert audit["next_gate"]["kind"] == (
-        "review_isolated_install_and_restricted_import_plan"
+        "review_restricted_model_construction_and_weights_only_load_plan"
     )
     assert audit["next_gate"]["dependency_artifact_download_approved"] is True
     assert audit["next_gate"]["dependency_artifact_download_complete"] is True
-    assert audit["next_gate"]["dependency_installation"] is False
-    assert audit["next_gate"]["package_import"] is False
+    assert audit["next_gate"]["dependency_installation"] is True
+    assert audit["next_gate"]["package_import"] is True
     assert audit["next_gate"]["model_loading"] is False
     assert not any(
         value is True

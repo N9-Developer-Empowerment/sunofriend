@@ -92,6 +92,6 @@ def test_passt_setup_is_capped_evidence_only_and_network_denied() -> None:
     assert '--max-filesize "$MAX_BYTES"' in setup
     assert "(deny network*)" in setup
     assert "--passt-evidence-only" in setup
-    assert "pip install" not in setup
-    assert "torch.load" not in setup
-    assert "--install" not in setup
+    passt_evidence_route = setup[setup.index('if [ "$ACCEPTED_TERMS" != true ]') :]
+    assert "pip install" not in passt_evidence_route
+    assert "torch.load" not in passt_evidence_route

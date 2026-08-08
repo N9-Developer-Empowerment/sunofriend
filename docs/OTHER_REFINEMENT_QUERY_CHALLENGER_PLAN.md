@@ -211,10 +211,33 @@ scripts/setup-separation-other-refinement-query-runtime-macos.sh \
   --accept-runtime-wheel-evidence
 ```
 
-The wheels were downloaded but not installed. ZIP metadata inspection ran
-under network denial and imported no downloaded package. The exact public lock
-is `separation-other-refinement-query-runtime-requirements.txt`. The next
-bounded gate is a separately reviewed isolated installation and
-network-denied package-import plan that still must not load either checkpoint.
-Installation, imports, checkpoint loading, model construction, inference,
-audio processing, activation, source selection and MIDI remain unapproved.
+The wheels were downloaded but not installed during that evidence-only step.
+ZIP metadata inspection ran under network denial and imported no downloaded
+package. The exact public lock is
+`separation-other-refinement-query-runtime-requirements.txt`.
+
+The separately approved isolated installation and import gate completed on
+2026-08-08:
+
+```bash
+scripts/setup-separation-other-refinement-query-runtime-macos.sh \
+  --install-runtime \
+  --accept-runtime-install-and-import
+```
+
+The command created a fresh CPython 3.12.10/macOS-arm64 virtual environment,
+installed the exact 28 packages from the approved local wheel cache with
+`--no-index --require-hashes`, and ran package imports under operating-system
+network denial and Python isolated mode. `pip check` reported no broken
+requirements. The eight relevant imports were NumPy, Torch, TorchAudio,
+TorchVision, timm, `hear21passt`, `hear21passt.models.passt` and
+`hear21passt.base`. The import gate recorded zero network attempts, checkpoint
+opens, `torch.load` calls and audio opens. Its canonical import report SHA-256
+is `8f0b23e9943aa4e3f520f599479e575589102c07fa1c199424690cff0711768a`.
+
+This installation does not make the challenger registered or executable. The
+next bounded gate is a separately reviewed minimal adapter plan that constructs
+PaSST with `pretrained=False`, loads both explicit local checkpoints with
+`weights_only=True` under network denial and reads no audio. Checkpoint
+loading, model construction, inference, audio processing, activation, source
+selection and MIDI remain unapproved.

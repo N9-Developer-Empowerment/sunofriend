@@ -145,10 +145,15 @@ export default function SeparationResearch() {
                 dependency step then resolved and hashed 28 exact
                 CPython-3.12/macOS-arm64 wheels (99,354,620 bytes) under a
                 1 GiB cap. Licence metadata inspection ran with network denied
-                and imported or installed nothing. The challenger remains
-                blocked, unregistered and non-executable pending a separately
-                approved isolated install/import plan and Apple-silicon
-                qualification. Its
+                and imported or installed nothing during that evidence step. A
+                later separately approved gate installed the exact closure from
+                the local cache into a fresh CPython 3.12.10 environment with
+                <code> --no-index --require-hashes</code>. Eight relevant modules
+                imported under network denial with zero network attempts,
+                checkpoint opens, <code>torch.load</code> calls or audio opens.
+                The challenger remains blocked, unregistered and non-executable
+                pending a separately approved restricted model-construction and
+                weights-only checkpoint-loading plan. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
               </p>

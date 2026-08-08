@@ -239,7 +239,9 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /five-song, ten-report review demonstrated neither/);
   assert.match(html, /keyboard_synth/);
   assert.match(html, /99,354,620 bytes/);
-  assert.match(html, /imported or installed nothing/);
+  assert.match(html, /Eight relevant modules/);
+  assert.match(html, /zero network attempts/);
+  assert.match(html, /weights-only checkpoint-loading plan/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
@@ -592,7 +594,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.status,
-    "blocked_pending_isolated_install_and_restricted_import_plan",
+    "blocked_pending_restricted_model_construction_and_weights_only_load_plan",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -638,6 +640,21 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.runtime_wheel_evidence.packages_imported,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_import_evidence.locked_package_count,
+    28,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_import_evidence.network_attempts,
+    0,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_import_evidence.checkpoint_loaded,
     false,
   );
   assert.equal(

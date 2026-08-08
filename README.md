@@ -138,8 +138,13 @@ then resolved 28 exact CPython 3.12/macOS-arm64 wheels (99,354,620 bytes),
 recorded every SHA-256 and licence metadata under network-denied non-importing
 inspection, and committed the 2,800-byte lock with SHA-256
 `28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92`.
-Nothing was installed or imported. The challenger remains blocked pending a
-separately approved isolated install/import plan. See
+A later separately approved gate installed those exact 28 packages from the
+local cache into a fresh CPython 3.12.10/macOS-arm64 environment using
+`--no-index --require-hashes`. Eight relevant package modules imported under
+network denial with zero checkpoint opens, `torch.load` calls, network
+attempts or audio opens. The challenger remains blocked and non-executable
+pending a separately approved restricted model-construction and weights-only
+checkpoint-loading plan. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 After the local page exports your listening JSON, bind it to the exact result

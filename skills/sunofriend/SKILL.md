@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-08.1 -->
+<!-- sunofriend-interface-contract: 2026-08-08.2 -->
 
 # Sunofriend
 
@@ -76,8 +76,12 @@ on.
   cap. Their 99,354,620-byte closure and licence metadata were inspected under
   network denial without installation or import; the committed lock SHA-256 is
   `28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92`.
-  Do not install or import dependencies, load either checkpoint or run
-  inference without a new reviewed plan and explicit approval.
+  A later separately approved gate installed those exact wheels into a fresh
+  CPython 3.12.10/macOS-arm64 environment and imported the eight relevant
+  modules under network denial. It recorded zero network attempts, checkpoint
+  opens, `torch.load` calls and audio opens. Do not construct a model, load
+  either checkpoint or run inference without a new reviewed plan and explicit
+  approval.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -209,11 +213,12 @@ a new reviewed plan and explicit approval before any of those actions. The
 audit found and separately inspected the second required OpenMIC PaSST
 checkpoint, establishing SHA-256
 `dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`
-without loading it. Both model-artifact identities and the 28-wheel runtime
-hash closure are complete. The wheel step installed and imported nothing. Do
-not use the upstream downloader or loader, and do not install or import the
-dependencies until a new isolated-runtime plan is reviewed and explicitly
-approved.
+  without loading it. Both model-artifact identities and the 28-wheel runtime
+  hash closure are complete. A separately approved isolated gate installed the
+  closure from the local cache and verified the relevant imports under network
+  denial without loading a checkpoint. Do not use the upstream downloader or
+  loader, construct a model, load either checkpoint or run inference until a
+  new restricted-loading plan is reviewed and explicitly approved.
 
 ## Inspect before installing
 
