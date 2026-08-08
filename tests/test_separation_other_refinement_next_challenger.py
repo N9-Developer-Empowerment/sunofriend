@@ -44,8 +44,17 @@ def test_next_challenger_pins_source_artifacts_and_safe_loader() -> None:
     assert checkpoint["declared_sha256"] == (
         "c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f"
     )
-    assert checkpoint["locally_verified"] is False
+    assert checkpoint["locally_verified"] is True
+    assert checkpoint["observed_sha256"] == checkpoint["declared_sha256"]
     assert checkpoint["download_authorized"] is False
+    assert checkpoint["evidence_download_status"] == "complete_authority_consumed"
+    assert plan["artifacts"]["evidence_sha256"] == (
+        "d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24"
+    )
+    assert plan["next_gate"]["kind"] == (
+        "hash_locked_macos_arm64_dependency_closure_evidence"
+    )
+    assert plan["next_gate"]["runtime_wheel_download"] is False
 
 
 def test_presence_is_separate_from_model_usefulness() -> None:

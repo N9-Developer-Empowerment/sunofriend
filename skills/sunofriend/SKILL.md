@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-08.6 -->
+<!-- sunofriend-interface-contract: 2026-08-08.7 -->
 
 # Sunofriend
 
@@ -100,11 +100,17 @@ on.
   `synth` the first target, followed by guitar and wind; acoustic piano is only
   an optional control and is never a modern-keys proxy. The proposed MVSep
   Mega-53/BS-RoFormer MLX candidate is unregistered and non-executable. Its
-  1,368,919,887-byte checkpoint identity is declared but not locally verified,
-  and checkpoint terms remain unreviewed. The plan downloads and loads nothing,
-  reads no audio, forbids upstream automatic/unrestricted loaders, separates
-  audible target presence from usefulness scoring, and grants no inference,
-  activation, source selection or MIDI authority.
+  approved evidence-only gate locally verified the 1,368,919,887-byte
+  checkpoint and 4,184-byte configuration. Their SHA-256 values are
+  `c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f`
+  and `7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103`.
+  The network-denied static inspector parsed archive metadata and pickle
+  opcodes without deserializing or calling `torch.load`; evidence SHA-256 is
+  `d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24`.
+  Checkpoint terms remain unreviewed under the acknowledged provisional local
+  noncommercial boundary. The download authority is consumed. No dependency
+  installation, model loading, inference, audio processing, activation, source
+  selection or MIDI is authorized.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

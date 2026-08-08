@@ -35,7 +35,7 @@ def build_next_challenger_plan() -> dict[str, Any]:
     plan: dict[str, Any] = {
         "schema": NEXT_CHALLENGER_SCHEMA,
         "document_sha256": "",
-        "status": "static_plan_ready_evidence_download_not_authorized",
+        "status": "artifact_evidence_verified_runtime_not_authorized",
         "checked_on": "2026-08-08",
         "scope_id": "other-synth-refinement-v1",
         "proposed_profile_id": "bs-roformer-mega-53-synth-v1",
@@ -140,8 +140,13 @@ def build_next_challenger_plan() -> dict[str, Any]:
                 "declared_sha256": (
                     "c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f"
                 ),
-                "locally_verified": False,
+                "observed_bytes": 1_368_919_887,
+                "observed_sha256": (
+                    "c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f"
+                ),
+                "locally_verified": True,
                 "download_authorized": False,
+                "evidence_download_status": "complete_authority_consumed",
             },
             "config": {
                 "file": "mvsep_mega_model_bs_roformer_53_stems.yaml",
@@ -149,15 +154,24 @@ def build_next_challenger_plan() -> dict[str, Any]:
                 "declared_sha256": (
                     "7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103"
                 ),
-                "locally_verified": False,
+                "observed_bytes": 4_184,
+                "observed_sha256": (
+                    "7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103"
+                ),
+                "locally_verified": True,
                 "download_authorized": False,
+                "evidence_download_status": "complete_authority_consumed",
             },
+            "evidence_sha256": (
+                "d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24"
+            ),
+            "observed_total_bytes": 1_368_924_071,
             "terms_evidence": {
                 "checkpoint_registry_value": "not-reviewed",
                 "public_github_release": True,
                 "source_code_license": "MIT",
                 "checkpoint_terms_established": False,
-                "provisional_local_noncommercial_use_acknowledgement_required": True,
+                "provisional_local_noncommercial_use_acknowledged": True,
                 "hosted_service_or_redistribution_allowed": False,
             },
         },
@@ -209,10 +223,15 @@ def build_next_challenger_plan() -> dict[str, Any]:
             "one generated-tensor synthetic objective run",
             "one four-song synth canary with no automatic retry",
         ],
+        "completed_gates": [
+            "capped evidence-only checkpoint and config download with exact hash verification",
+            "network-denied non-loading static pickle/config inspection",
+        ],
         "next_gate": {
-            "kind": "evidence_only_artifact_verification",
-            "maximum_download_bytes": 1_610_612_736,
+            "kind": "hash_locked_macos_arm64_dependency_closure_evidence",
+            "maximum_download_bytes": None,
             "artifact_download": False,
+            "runtime_wheel_download": False,
             "dependency_installation": False,
             "package_import": False,
             "checkpoint_loading": False,

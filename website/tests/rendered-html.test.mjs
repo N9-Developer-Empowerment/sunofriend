@@ -772,7 +772,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_synth_challenger.checkpoint_locally_verified,
-    false,
+    true,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -782,7 +782,12 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_synth_challenger.plan_document_sha256,
-    "216ab235c5847b45555cb54fbcbece08eb2d86bea4e36ca60f77f0b8aa5c63b1",
+    "91376b3e5edf6e9abb247497de6486771928adbbee307625b19eb519ccea10df",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.artifact_evidence_sha256,
+    "d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
