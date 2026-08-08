@@ -64,7 +64,11 @@ on.
   candidate plan is `docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md`; it
   targets guitar plus broad `keyboard_synth`. Its approved evidence-only
   checkpoint download and static inspection grant no dependency installation,
-  model load, inference or audio processing.
+  model load, inference or audio processing. The completed source audit found
+  a second required 341,546,630-byte OpenMIC PaSST checkpoint and forbids both
+  upstream automatic/unrestricted loaders. Use
+  `scripts/plan-separation-other-refinement-query-runtime.py` for the current
+  no-effects gate; do not download PaSST without its separate approval.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -184,7 +188,7 @@ MIDI activation.
 Inspect the next no-effects query-challenger plan with:
 
 ```bash
-.venv/bin/python scripts/plan-separation-other-refinement-query-challenger.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py
 ```
 
 It proposes Banquet under a CC BY-NC-SA 4.0 local-noncommercial boundary. The
@@ -192,7 +196,9 @@ approved capped evidence-only download established the exact checkpoint
 SHA-256 and a network-denied, non-deserializing opcode report. It did not
 authorize dependency installation, checkpoint loading, model inference,
 private-song processing, public activation, source selection or MIDI. Require
-a new reviewed plan and explicit approval before any of those actions.
+a new reviewed plan and explicit approval before any of those actions. The
+audit found a second required OpenMIC PaSST checkpoint whose hash has not yet
+been established; do not use the upstream downloader or loader.
 
 ## Inspect before installing
 

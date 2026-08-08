@@ -55,6 +55,45 @@ a model or establish loading safety. Exact runtime pins and Apple-silicon
 resource behaviour remain unknown. Consequently the candidate is still not
 registered, executable or approved for model loading.
 
+## Runtime audit: a second checkpoint is required
+
+The exact pinned source does not publish a dependency file or lock. Its
+top-level `train.py` imports the training, data, metrics and augmentation stack
+even for inference, then calls Lightning's unrestricted
+`load_from_checkpoint`. Static checkpoint metadata identifies Lightning
+`2.1.3`, but that does not make the upstream loader acceptable.
+
+Banquet also constructs
+`hear21passt.get_basic_model(mode="embed_only", arch="openmic")`. The pinned
+`hear21passt==0.0.26` implementation resolves another model through its download
+cache and loads it with an unrestricted `torch.load`. The required release
+artifact is:
+
+| PaSST evidence | Identity |
+| --- | --- |
+| Package | `hear21passt==0.0.26` |
+| Package revision | `5f1cce6a54b88faf0abad82ed428355e7931213a` |
+| Package wheel SHA-256 | `a3a7377604c6d829369111ab26a86fc5dd40154ec611b8fa5819ecaa6b252550` |
+| PaSST release | `v0.0.5`, revision `d7049e78e84ba38173ffd779479d1c9ec7d1c116` |
+| Required file | `openmic-passt-s-f128-10sec-p16-s10-ap.85.pt` |
+| GitHub release size | 341,546,630 bytes |
+| SHA-256 | not published; evidence download required |
+| PaSST code/release evidence | Apache-2.0 |
+| OpenMIC-2018 training data | CC BY 4.0 |
+
+No maintainer email is required for this local evidence stage. The public
+package metadata, source license, source-linked release and OpenMIC terms are
+sufficient provisional evidence unless a later static audit contradicts them.
+The Banquet checkpoint's CC BY-NC-SA boundary still makes the combined route
+local noncommercial research only.
+
+Sunofriend will not run either upstream loader. The proposed adapter must
+construct PaSST with `pretrained=False`, load both explicit local checkpoints
+with `torch.load(weights_only=True, map_location="cpu")`, verify state-dict keys
+and tensor shapes before strict loading, and deny network access for import,
+construction, loading and inference. Lightning, TorchMetrics, pandas,
+TorchAudioMentations and OmegaConf are excluded from the inference adapter.
+
 The NonCommercial term is an actual boundary, not something a user approval
 can erase. This candidate may be evaluated only as local noncommercial
 research unless separate permission changes that conclusion. It cannot become
@@ -120,13 +159,39 @@ evidence shows that it actually extracts target content.
 ```bash
 .venv/bin/python \
   scripts/plan-separation-other-refinement-query-challenger.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-runtime.py
 ```
 
 The command prints a deterministic, hash-bound plan. It performs no network
 request, reads no audio and installs nothing. It records the completed private
 checkpoint-evidence step without reading the cached checkpoint.
 
-The completed evidence approval did not authorize dependencies, loading or
-inference. The next work is a no-effects dependency/runtime audit. Any later
-installation or restricted model-loading attempt needs its own reviewed plan
-and explicit approval.
+The completed Banquet evidence approval did not authorize the PaSST artifact,
+dependencies, loading or inference. The runtime audit is now complete. The
+smallest next gate is an evidence-only PaSST download and network-denied static
+inspection:
+
+```text
+I approve a capped evidence-only download of the OpenMIC PaSST checkpoint
+openmic-passt-s-f128-10sec-p16-s10-ap.85.pt up to 375 MiB, acknowledge the
+PaSST Apache-2.0 and OpenMIC-2018 CC-BY-4.0 evidence, and approve
+network-denied non-loading static inspection to establish its exact SHA-256.
+This does not approve dependency installation, checkpoint loading, model
+construction, inference, audio processing, public activation, source selection
+or MIDI.
+```
+
+Once explicitly approved, the exact command is:
+
+```bash
+scripts/setup-separation-other-refinement-query-runtime-macos.sh \
+  --passt-evidence-only \
+  --accept-passt-terms \
+  --accept-passt-checkpoint-use
+```
+
+That evidence will make it possible to generate a fully hashed dependency and
+restricted-loading plan. Installation, construction and inference still need
+a later explicit approval.

@@ -589,6 +589,21 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.status,
+    "blocked_pending_passt_checkpoint_evidence",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.required_passt_checkpoint.published_bytes,
+    341546630,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.required_passt_checkpoint.download_authorized,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
       .parent_and_children_cannot_both_enter_midi,
     true,
   );
