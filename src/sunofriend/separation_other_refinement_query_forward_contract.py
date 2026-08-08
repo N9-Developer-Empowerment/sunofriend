@@ -2,8 +2,8 @@
 
 This module describes the exact pinned upstream forward path and setup-C model
 configuration.  It deliberately imports no model or audio runtime, constructs
-nothing and exposes no inference function.  A separately approved runner must
-validate this immutable document before implementing or executing the math.
+nothing and exposes no inference function.  The separate, single-use adapter
+and approved runner must validate this immutable document before execution.
 """
 
 from __future__ import annotations
@@ -69,12 +69,12 @@ def query_forward_contract_sha256(value: dict[str, Any]) -> str:
 
 
 def build_query_forward_contract() -> dict[str, Any]:
-    """Describe the proposed forward path without constructing or running it."""
+    """Describe the implemented forward path without constructing or running it."""
 
     contract: dict[str, Any] = {
         "schema": QUERY_FORWARD_CONTRACT_SCHEMA,
         "document_sha256": "",
-        "status": "design_only_not_implemented_or_executed",
+        "status": "source_bound_implementation_ready_not_executed",
         "profile_id": QUERY_PROFILE_ID,
         "source": {
             "repository": "https://github.com/kwatcharasupat/query-bandit",
@@ -167,9 +167,11 @@ def build_query_forward_contract() -> dict[str, Any]:
             },
         ],
         "implementation_boundary": {
-            "forward_math_implemented": False,
-            "synthetic_runner_implemented": False,
-            "report_validator_implemented": False,
+            "forward_math_implemented": True,
+            "synthetic_runner_implemented": True,
+            "report_validator_implemented": True,
+            "load_adapter_still_has_no_forward_method": True,
+            "single_use_forward_adapter": True,
             "upstream_cli_allowed": False,
             "upstream_checkpoint_loader_allowed": False,
         },

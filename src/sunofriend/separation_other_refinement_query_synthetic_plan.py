@@ -26,7 +26,7 @@ from .separation_other_refinement_query_synthetic_report_contract import (
 )
 
 
-QUERY_SYNTHETIC_PLAN_STATUS = "blocked_pending_explicit_synthetic_inference_approval"
+QUERY_SYNTHETIC_PLAN_STATUS = "approved_for_one_synthetic_inference_attempt"
 
 
 def query_synthetic_plan_sha256(value: dict[str, Any]) -> str:
@@ -84,6 +84,9 @@ def build_query_synthetic_plan() -> dict[str, Any]:
                 "restricted_checkpoint_loading": (
                     "separation_other_refinement_query_model_loading.py"
                 ),
+                "single_use_forward_adapter": (
+                    "separation_other_refinement_query_forward_adapter.py"
+                ),
                 "source_bound_forward_contract": (
                     "separation_other_refinement_query_forward_contract.py"
                 ),
@@ -99,6 +102,9 @@ def build_query_synthetic_plan() -> dict[str, Any]:
                 "synthetic_report_receipt": (
                     "separation_other_refinement_query_synthetic_report_receipt.py"
                 ),
+                "synthetic_report_projection": (
+                    "separation_other_refinement_query_synthetic_report_projection.py"
+                ),
                 "synthetic_report_compatibility_facade": (
                     "separation_other_refinement_query_synthetic_report.py"
                 ),
@@ -108,11 +114,12 @@ def build_query_synthetic_plan() -> dict[str, Any]:
                 "guarded_evidence_cli": (
                     "verify-separation-other-refinement-query-model-load.py"
                 ),
+                "single_attempt_synthetic_cli": (
+                    "run-separation-other-refinement-query-synthetic.py"
+                ),
             },
-            "next_implementation_must_separate": [
-                "forward_math_implementation",
-                "synthetic_forward_runner",
-            ],
+            "next_implementation_must_separate": [],
+            "synthetic_forward_is_single_use": True,
             "upstream_cli_allowed": False,
             "upstream_download_or_checkpoint_loader_allowed": False,
             "public_profile_or_registry_change": False,
@@ -166,7 +173,8 @@ def build_query_synthetic_plan() -> dict[str, Any]:
             "the 180-second or 12-GiB ceiling is exceeded",
         ],
         "next_approval": {
-            "required": True,
+            "required": False,
+            "received": True,
             "exact_text": (
                 "I approve one network-denied, CPU-only synthetic Banquet forward "
                 "run, including reloading the two exact verified local checkpoints, "

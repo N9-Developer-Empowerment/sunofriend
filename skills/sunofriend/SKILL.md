@@ -83,9 +83,12 @@ on.
   the restricted construction/load gate: the real 64-band adapter and both
   download-disabled PaSST variants matched all 1,228 combined checkpoint keys,
   shapes and dtypes before strict loading, with no missing or unexpected keys,
-  network or audio access. No inference ran. Do not run a forward pass, process
-  audio, activate a source or create MIDI without a new reviewed plan and
-  explicit approval.
+  network or audio access. The separately approved, single-use synthetic
+  forward then passed its objective tensor, resource and reconstruction gates
+  with zero audio or network access. That one-attempt authority is consumed and
+  the very quiet target is not musical evidence. Do not process reference
+  audio, run further inference, activate a source or create MIDI without a new
+  rights-bound plan and explicit approval.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -209,6 +212,7 @@ Inspect the next no-effects query-challenger plan with:
 .venv/bin/python scripts/plan-separation-other-refinement-query-forward.py
 .venv/bin/python scripts/plan-separation-other-refinement-query-synthetic-report.py
 .venv/bin/python scripts/plan-separation-other-refinement-query-synthetic.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-reference.py
 ```
 
 It records Banquet under a CC BY-NC-SA 4.0 local-noncommercial boundary. The
@@ -231,10 +235,18 @@ checkpoint, establishing SHA-256
   to nine pinned upstream source/configuration hashes; it contains no executable
   forward method. The third command prints the pure pass-or-retained-failure
   report contract; a failed attempt grants no retry or activation. The fourth
-  command prints the immutable synthetic-forward plan and exact next approval.
-  These planning commands construct no model, perform no inference and read no
-  audio. Do not run inference or process audio until that exact synthetic gate
-  is explicitly approved.
+  command prints the immutable synthetic-forward plan whose one-attempt
+  authority is now consumed. The approved network-denied CPU run used only the
+  fixed generated two-second mixture and ten-second query. It passed the shape,
+  clock, finite-sample, reconstruction, time and memory gates with zero audio or
+  network access. That proves adapter execution only: the very quiet synthetic
+  target does not establish guitar or keyboard/synth usefulness. The profile
+  remains unregistered and non-executable. The fifth command prints the pure
+  rights-bound plan for one frozen song-disjoint guitar, keyboard and synth
+  query bank against three owner-authorised mixtures. It permits no
+  feedback-driven query hunt. Require the exact approval printed by that plan
+  before any reference-query audio or further inference; public activation,
+  source selection and MIDI remain outside it.
 
 ## Inspect before installing
 

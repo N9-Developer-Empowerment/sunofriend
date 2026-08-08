@@ -64,13 +64,18 @@ same canonical SHA-256 and zero network, audio or inference effects. The next
 synthetic-forward plan is also a pure, no-effects document. A reusable one-way
 execution guard now owns network, audio and exact-checkpoint enforcement. A
 separate pure forward contract binds the proposed math and exact setup-C values
-to nine pinned upstream source/configuration hashes. Forward math implementation,
-synthetic execution and report validation remain distinct boundaries before any
-inference begins. The synthetic-result validator and receipt writer are now
+to nine pinned upstream source/configuration hashes. Forward math,
+synthetic execution and report validation remain distinct boundaries. The
+synthetic-result validator and receipt writer are now
 implemented as a pure pass-or-retained-failure contract: they accept no
 subjective rating, grant no automatic retry and cannot activate a profile,
 source or MIDI path. The initial combined implementation has been split again:
 immutable contract construction, objective projection/validation and receipt
 creation are separate one-way modules, with a small compatibility facade for
-the earlier import surface. This preserves the published contract identity
-while preventing the next inference runner from becoming another monolith.
+the earlier import surface. This preserves the published contract identity.
+The approved one-shot runner now uses a separate single-use tensor adapter and
+the pure report-projection module. Its only attempt passed all objective gates
+and was retained without granting audio, activation, source-selection or MIDI
+authority. The next refactor increment is to make the reference-query canary a
+small rights contract plus bounded runner, reusing these guards and report
+layers instead of adding model logic to setup shells.

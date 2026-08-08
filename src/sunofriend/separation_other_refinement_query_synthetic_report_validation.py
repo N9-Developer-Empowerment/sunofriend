@@ -15,13 +15,13 @@ from .separation_other_refinement_query_synthetic_report_contract import (
     EXPECTED_GUARDS,
     EXPECTED_RUNTIME,
     FAILURE_CODES,
-    MAXIMUM_ELAPSED_SECONDS,
-    MAXIMUM_PEAK_RESIDENT_SET_BYTES,
-    MAXIMUM_RECONSTRUCTION_ERROR,
     QUERY_SYNTHETIC_REPORT_SCHEMA,
     SHA256_RE,
     build_query_synthetic_report_contract,
     query_synthetic_report_sha256,
+)
+from .separation_other_refinement_query_synthetic_report_projection import (
+    project_query_synthetic_result,
 )
 
 
@@ -46,80 +46,6 @@ def _optional_finite_number(value: Any, label: str) -> float | None:
     if value is None:
         return None
     return _finite_number(value, label)
-
-
-def _expected_gate_outcomes(result: Mapping[str, Any]) -> dict[str, str]:
-    completed = result["forward_completed"]
-    output_shape = result["output_shape"]
-    output_dtype = result["output_dtype"]
-    output_sample_rate_hz = result["output_sample_rate_hz"]
-    finite_output = result["all_output_samples_finite"]
-    target_peak = result["target_peak"]
-    residual_peak = result["residual_peak"]
-    reconstruction = result["maximum_reconstruction_error"]
-    residual_definition = result["residual_definition"]
-    elapsed = float(result["elapsed_seconds"])
-    peak_memory = result["peak_resident_set_bytes"]
-    return {
-        "checkpoint_and_model_identity": "pass",
-        "network_denied": "pass",
-        "no_audio_access": "pass",
-        "forward_completed": "pass" if completed else "fail",
-        "output_shape_and_clock": (
-            "pass"
-            if completed
-            and output_shape == [1, 2, 88_200]
-            and output_dtype == "float32"
-            and output_sample_rate_hz == 44_100
-            else "fail" if completed else "not_reached"
-        ),
-        "finite_output": (
-            "pass"
-            if completed and finite_output is True
-            else "fail" if completed else "not_reached"
-        ),
-        "target_and_residual_peaks_recorded": (
-            "pass"
-            if completed and target_peak is not None and residual_peak is not None
-            else "fail" if completed else "not_reached"
-        ),
-        "reconstruction_accounting": (
-            "pass"
-            if completed
-            and reconstruction is not None
-            and residual_definition == "generated_mixture - requested_target"
-            and float(reconstruction) <= MAXIMUM_RECONSTRUCTION_ERROR
-            else "fail" if completed else "not_reached"
-        ),
-        "elapsed_time_ceiling": (
-            "pass" if elapsed <= MAXIMUM_ELAPSED_SECONDS else "fail"
-        ),
-        "peak_memory_ceiling": (
-            "pass"
-            if peak_memory <= MAXIMUM_PEAK_RESIDENT_SET_BYTES
-            else "fail"
-        ),
-    }
-
-
-def _expected_failure_code(gates: Mapping[str, str]) -> str:
-    if gates["forward_completed"] == "fail":
-        return "forward_exception"
-    if any(
-        gates[name] == "fail"
-        for name in (
-            "output_shape_and_clock",
-            "finite_output",
-            "target_and_residual_peaks_recorded",
-            "reconstruction_accounting",
-        )
-    ):
-        return "output_contract"
-    if gates["elapsed_time_ceiling"] == "fail":
-        return "elapsed_time_ceiling"
-    if gates["peak_memory_ceiling"] == "fail":
-        return "peak_memory_ceiling"
-    return "none"
 
 
 def validate_query_synthetic_report(
@@ -243,14 +169,15 @@ def validate_query_synthetic_report(
     ):
         raise ValueError("query synthetic failed forward retained output claims")
 
-    expected_gates = _expected_gate_outcomes(result)
+    projection = project_query_synthetic_result(result)
+    expected_gates = projection["objective_gates"]
     if report["objective_gates"] != expected_gates:
         raise ValueError("query synthetic objective gate projection differs")
-    all_pass = all(outcome == "pass" for outcome in expected_gates.values())
-    expected_status = "objective_pass" if all_pass else "objective_failure_recorded"
+    all_pass = projection["all_pass"]
+    expected_status = projection["status"]
     if report["status"] != expected_status:
         raise ValueError("query synthetic status differs from objective gates")
-    if result["failure_code"] != _expected_failure_code(expected_gates):
+    if result["failure_code"] != projection["failure_code"]:
         raise ValueError("query synthetic failure code differs from objective gates")
 
     expected_decision = {

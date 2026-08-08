@@ -14,6 +14,7 @@ from sunofriend.separation_other_refinement_query_synthetic_report import (
     EXPECTED_GUARDS,
     EXPECTED_RUNTIME,
     build_query_synthetic_receipt,
+    build_query_synthetic_report,
     build_query_synthetic_report_contract,
     query_synthetic_report_sha256,
     validate_query_synthetic_report,
@@ -123,7 +124,9 @@ def test_report_contract_has_no_effects_and_forbids_feedback_gating() -> None:
         / "separation_other_refinement_query_synthetic_report.py"
     ).read_text(encoding="utf-8")
 
-    assert contract["status"] == "validator_ready_inference_unapproved"
+    assert contract["status"] == (
+        "validator_ready_one_synthetic_attempt_approved"
+    )
     assert contract["attempt_contract"]["inference_attempt_limit"] == 1
     assert contract["decision_policy"]["subjective_feedback_fields_allowed"] is False
     assert contract["decision_policy"]["automatic_retry_or_remediation"] is False
@@ -186,6 +189,25 @@ def test_validator_accepts_pass_or_retained_failure(
         report,
         expected_plan_sha256=PLAN_SHA256,
     ) == report
+
+
+@pytest.mark.parametrize("forward_completed", [True, False])
+def test_report_projection_builds_the_validator_contract(
+    forward_completed: bool,
+) -> None:
+    sample = _report(forward_completed=forward_completed)
+    result = dict(sample["result"])  # type: ignore[arg-type]
+    result.pop("failure_code")
+    built = build_query_synthetic_report(
+        result=result,
+        guards=EXPECTED_GUARDS,
+        expected_plan_sha256=PLAN_SHA256,
+    )
+
+    assert validate_query_synthetic_report(
+        built,
+        expected_plan_sha256=PLAN_SHA256,
+    ) == built
 
 
 def test_validator_rejects_subjective_or_retry_authority() -> None:

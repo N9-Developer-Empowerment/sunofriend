@@ -34,9 +34,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
     audit: dict[str, Any] = {
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
-        "status": (
-            "blocked_pending_explicit_synthetic_inference_approval"
-        ),
+        "status": "synthetic_objective_pass_one_attempt_consumed",
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
         "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
@@ -303,28 +301,68 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 "audio_reads": 0,
                 "audio_writes": 0,
             },
+            "synthetic_forward_evidence": {
+                "status": "objective_pass",
+                "report_sha256": (
+                    "bd5fa57716267488cfd9a0d1d69bc1627da6244d283fdaec5a5592234d51cec8"
+                ),
+                "report_file_sha256": (
+                    "397293bb60d9bf658632cdb7526ece03ffb6007de5e1d86883d6cedb1408699a"
+                ),
+                "synthetic_plan_document_sha256": (
+                    "0c2e83e0e55f40a8c38a6d103aae81a6443f1c935f5c1f08e35cdbb241426356"
+                ),
+                "attempts_authorized": 1,
+                "attempts_consumed": 1,
+                "inference_completions": 1,
+                "elapsed_seconds": 2.853968958137557,
+                "peak_resident_set_bytes": 2_052_014_080,
+                "output_shape": [1, 2, 88_200],
+                "output_dtype": "float32",
+                "output_sample_rate_hz": 44_100,
+                "all_output_samples_finite": True,
+                "target_peak": 4.118360084248707e-05,
+                "residual_peak": 0.15990281105041504,
+                "maximum_reconstruction_error": 7.450580596923828e-09,
+                "network_attempts": 0,
+                "audio_open_attempts": 0,
+                "unapproved_checkpoint_open_attempts": 0,
+                "private_audio_processed": False,
+                "audio_persisted": False,
+                "musical_usefulness_established": False,
+                "automatic_retry_authorized": False,
+                "public_activation_authorized": False,
+                "source_selection_authorized": False,
+                "midi_authorized": False,
+            },
         },
         "next_gate": {
-            "kind": "review_network_denied_synthetic_adapter_inference_plan",
+            "kind": "review_bounded_authorised_reference_query_plan",
             "next_action": (
-                "review scripts/plan-separation-other-refinement-query-synthetic.py, "
-                "a bounded network-denied adapter-forward plan using only generated "
-                "tensors before any authorised song or query audio"
+                "design a separately approved, rights-bound reference-query canary "
+                "for guitar and broad keyboard/synth classes; the successful "
+                "synthetic gate grants no song-processing authority"
             ),
             "plan_command": (
-                "python3 scripts/plan-separation-other-refinement-query-synthetic.py"
+                "python3 scripts/plan-separation-other-refinement-query-reference.py"
             ),
+            "plan_document_sha256": (
+                "abfebe4f3eddfa3d891c8972edcbfd2dc62b968dc71e6c20dfb4311068059c76"
+            ),
+            "rights_category": "owned",
+            "song_disjoint_inference_attempt_limit": 9,
             "dependency_artifact_download_approved": True,
             "dependency_artifact_download_complete": True,
             "dependency_installation": True,
             "package_import": True,
             "model_loading": True,
             "model_construction": True,
-            "inference": False,
+            "synthetic_inference_complete": True,
+            "further_inference": False,
             "audio_processing": False,
             "public_activation": False,
             "source_or_midi_activation": False,
-            "requires_separate_approval_before_inference_or_audio_processing": True,
+            "requires_separate_approval_before_further_inference_or_audio_processing": True,
         },
         "effects": {
             "network_used_by_plan": False,

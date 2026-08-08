@@ -20,9 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None:
     audit = build_query_runtime_audit()
 
-    assert audit["status"] == (
-        "blocked_pending_explicit_synthetic_inference_approval"
-    )
+    assert audit["status"] == "synthetic_objective_pass_one_attempt_consumed"
     assert audit["registered"] is False
     assert audit["executable"] is False
     assert audit["source_audit"]["query_bandit"]["revision"] == (
@@ -93,12 +91,22 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
         assert load[model_name]["dtypes_equal"] is True
         assert load[model_name]["strict_load_missing_keys"] == []
         assert load[model_name]["strict_load_unexpected_keys"] == []
+    synthetic = runtime["synthetic_forward_evidence"]
+    assert synthetic["status"] == "objective_pass"
+    assert synthetic["attempts_authorized"] == 1
+    assert synthetic["attempts_consumed"] == 1
+    assert synthetic["network_attempts"] == 0
+    assert synthetic["audio_open_attempts"] == 0
+    assert synthetic["musical_usefulness_established"] is False
+    assert synthetic["automatic_retry_authorized"] is False
     assert audit["next_gate"]["kind"] == (
-        "review_network_denied_synthetic_adapter_inference_plan"
+        "review_bounded_authorised_reference_query_plan"
     )
     assert audit["next_gate"]["plan_command"] == (
-        "python3 scripts/plan-separation-other-refinement-query-synthetic.py"
+        "python3 scripts/plan-separation-other-refinement-query-reference.py"
     )
+    assert len(audit["next_gate"]["plan_document_sha256"]) == 64
+    assert audit["next_gate"]["song_disjoint_inference_attempt_limit"] == 9
     assert audit["next_gate"]["dependency_artifact_download_approved"] is True
     assert audit["next_gate"]["dependency_artifact_download_complete"] is True
     assert audit["next_gate"]["dependency_installation"] is True
@@ -117,7 +125,7 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
 def test_query_runtime_audit_rejects_authority_expansion() -> None:
     audit = build_query_runtime_audit()
     changed = copy.deepcopy(audit)
-    changed["next_gate"]["inference"] = True
+    changed["next_gate"]["further_inference"] = True
 
     with pytest.raises(ValueError, match="differs from the reviewed audit"):
         validate_query_runtime_audit(changed)

@@ -242,9 +242,9 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /Eight relevant modules/);
   assert.match(html, /zero network attempts/);
   assert.match(html, /strict weights-only loading/);
-  assert.match(html, /pending explicit synthetic-inference approval/);
-  assert.match(html, /one CPU run/);
-  assert.match(html, /one remediation at most/);
+  assert.match(html, /one-attempt authority is consumed/);
+  assert.match(html, /passed all objective gates in 2.85 seconds/);
+  assert.match(html, /rights-bound reference-query canary/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
@@ -597,22 +597,22 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.status,
-    "blocked_pending_explicit_synthetic_inference_approval",
+    "synthetic_objective_pass_one_attempt_consumed",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.synthetic_plan_document_sha256,
-    "6812891c1dd24badc6937b84c82c3aa2025389ed9f26022b132d82077bdb9001",
+    "0c2e83e0e55f40a8c38a6d103aae81a6443f1c935f5c1f08e35cdbb241426356",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.forward_contract_document_sha256,
-    "cb83fdcf04057779d5970147d10e1944df29128b099c2a16b5d3b2e2cb829888",
+    "886a88dd511ac4075a90536360d91181338a81df58b51c86c7290d7c7d57e36c",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.forward_contract_implemented,
-    false,
+    true,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -627,7 +627,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.synthetic_report_contract_document_sha256,
-    "dd72e21b28734d5b2a2590e2751999a2cc76a78ced440b0c02b29974fe11a2a2",
+    "81b11e5a85fc8fce656ba78657f359169930871daa824beb6d12595da1328ae5",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

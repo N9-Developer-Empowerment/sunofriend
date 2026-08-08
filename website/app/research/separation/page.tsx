@@ -155,17 +155,16 @@ export default function SeparationResearch() {
                 64-band adapter and both download-disabled PaSST variants. It
                 verified all 1,228 combined keys, shapes and dtypes before
                 strict weights-only loading, with no missing or unexpected
-                keys, network attempt or audio open. No inference ran. The
-                challenger remains blocked, unregistered and non-executable
-                pending explicit synthetic-inference approval. A published,
-                hash-bound forward contract now records the exact setup-C math
-                against nine pinned source/configuration files without adding
-                an executable forward path. The no-effects synthetic plan binds
-                that contract and limits the next gate to one CPU run on
-                generated in-memory tensors, with one remediation at most, a
-                180-second timeout, a 12 GiB ceiling and no song audio. A
-                separate pure result validator accepts either an objective pass
-                or a retained objective failure; it rejects subjective ratings,
+                keys, network attempt or audio open. The separately approved
+                single-use generated-tensor forward then passed all objective
+                gates in 2.85 seconds at about 2.05 GB peak RSS, with finite
+                stereo float32 output and zero network or audio access. The
+                target was very quiet, so this is adapter evidence rather than
+                musical-quality evidence. The one-attempt authority is consumed.
+                The challenger remains unregistered and non-executable; a
+                rights-bound reference-query canary requires separate approval.
+                The pure result validator accepts either an objective pass or a
+                retained objective failure and rejects subjective ratings,
                 automatic retry and product activation. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.

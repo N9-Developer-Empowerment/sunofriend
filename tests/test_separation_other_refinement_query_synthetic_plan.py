@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_synthetic_plan_is_bounded_and_has_no_effects() -> None:
     plan = build_query_synthetic_plan()
 
-    assert plan["status"] == "blocked_pending_explicit_synthetic_inference_approval"
+    assert plan["status"] == "approved_for_one_synthetic_inference_attempt"
     assert plan["registered"] is False
     assert plan["executable"] is False
     assert plan["proposed_single_run"]["configuration_count"] == 1
@@ -41,9 +41,12 @@ def test_synthetic_plan_is_bounded_and_has_no_effects() -> None:
     )
     assert plan["objective_acceptance"]["musical_usefulness_gate"] is False
     assert plan["next_approval"]["authorizes_inference_runs"] == 1
+    assert plan["next_approval"]["required"] is False
+    assert plan["next_approval"]["received"] is True
     assert plan["next_approval"]["authorizes_private_audio"] is False
     assert plan["effects"]["inference_runs"] == 0
     assert plan["effects"]["checkpoint_opened_by_plan"] is False
+    assert plan["implementation_boundary"]["synthetic_forward_is_single_use"] is True
     assert validate_query_synthetic_plan(plan) == plan
 
 
@@ -81,7 +84,8 @@ def test_public_capability_binds_the_exact_synthetic_plan() -> None:
     ]["next_query_challenger"]
     plan = build_query_synthetic_plan()
 
-    assert published["status"] == plan["status"]
+    assert published["status"] == "synthetic_objective_pass_one_attempt_consumed"
+    assert published["synthetic_plan_status"] == plan["status"]
     assert published["synthetic_plan_document_sha256"] == plan["document_sha256"]
     assert published["synthetic_plan_run_limit"] == plan["next_approval"][
         "authorizes_inference_runs"
@@ -93,3 +97,12 @@ def test_public_capability_binds_the_exact_synthetic_plan() -> None:
     assert published["synthetic_report_accepts_objective_failure"] is True
     assert published["synthetic_report_allows_subjective_feedback"] is False
     assert published["synthetic_report_grants_retry_or_activation"] is False
+    assert published["inference_authorized"] is False
+    assert published["inference_authorized_runs_consumed"] == 1
+    assert published["synthetic_forward_evidence"]["status"] == "objective_pass"
+    assert published["synthetic_forward_evidence"][
+        "musical_usefulness_established"
+    ] is False
+    assert published["reference_query_plan"]["inference_attempt_limit"] == 9
+    assert published["reference_query_plan"]["query_track_is_song_disjoint"] is True
+    assert published["reference_query_plan"]["poor_feedback_triggers_query_hunt"] is False

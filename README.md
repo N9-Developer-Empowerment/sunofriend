@@ -131,6 +131,9 @@ hunt. Inspect the no-effects plan with:
 
 .venv/bin/python \
   scripts/plan-separation-other-refinement-query-synthetic.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-reference.py
 ```
 
 It downloads, loads and executes nothing. The approved private checkpoint
@@ -155,18 +158,25 @@ the real 64-band Banquet adapter and both download-disabled PaSST variants and
 loaded the two exact local checkpoints with
 `torch.load(weights_only=True, map_location="cpu")`. All 1,069 Banquet and 159
 OpenMIC PaSST keys, shapes and dtypes matched before strict loading, with no
-missing or unexpected keys, network attempt or audio open. No inference ran.
+missing or unexpected keys, network attempt or audio open. The later approved
+single synthetic inference attempt then passed every objective gate under
+network denial: 2.85 seconds, 2,052,014,080-byte peak RSS, finite stereo
+float32 output at 44.1 kHz and `7.450580596923828e-09` maximum in-memory
+reconstruction error. It used only generated tensors and opened no audio.
 The second command prints the immutable forward contract bound to nine exact
 files from the pinned upstream revision and its setup-C configuration. The
 third prints the pure result validator contract: an objective failure must be
 retained and grants neither automatic retry nor activation. The fourth command
-is the immutable, no-effects synthetic-forward plan. It binds those contracts
-and the verified load report, then proposes one CPU run on generated in-memory
-tensors only, with one remediation at most, a 180-second timeout and a 12 GiB
-memory ceiling. None of these commands constructs a model, runs inference or
-reads audio.
-The challenger remains blocked, unregistered and non-executable pending the
-explicit approval printed by that plan. See
+is the immutable plan that bound the now-consumed one-attempt authority. The
+planning commands still construct no model, run no inference and read no
+audio. The retained report SHA-256 is
+`bd5fa57716267488cfd9a0d1d69bc1627da6244d283fdaec5a5592234d51cec8`.
+The very quiet synthetic target peak (`4.118360084248707e-05`) is explicitly
+not musical evidence. The challenger remains unregistered and non-executable;
+the next gate is the separately approved, rights-bound reference-query canary
+printed by the fifth command. It freezes one song-disjoint query bank for
+guitar, keyboard and synth against three owner-authorised test mixtures: nine
+attempts, one configuration and no feedback-driven query hunt. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 The incremental code-structure work is tracked in
 [Separation maintainability plan](docs/SEPARATION_MAINTAINABILITY_PLAN.md).

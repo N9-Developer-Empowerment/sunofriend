@@ -30,6 +30,10 @@ from .separation_other_refinement_query_synthetic_report_contract import (
 from .separation_other_refinement_query_synthetic_report_receipt import (
     build_query_synthetic_receipt,
 )
+from .separation_other_refinement_query_synthetic_report_projection import (
+    build_query_synthetic_report,
+    project_query_synthetic_result,
+)
 from .separation_other_refinement_query_synthetic_report_validation import (
     validate_query_synthetic_report,
 )
@@ -51,9 +55,11 @@ __all__ = [
     "QUERY_SYNTHETIC_REPORT_CONTRACT_SCHEMA",
     "QUERY_SYNTHETIC_REPORT_SCHEMA",
     "build_query_synthetic_receipt",
+    "build_query_synthetic_report",
     "build_query_synthetic_report_contract",
     "query_synthetic_report_contract_sha256",
     "query_synthetic_report_sha256",
+    "project_query_synthetic_result",
     "validate_query_synthetic_report",
     "validate_query_synthetic_report_contract",
 ]

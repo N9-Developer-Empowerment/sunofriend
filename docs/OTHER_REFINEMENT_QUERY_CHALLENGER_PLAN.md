@@ -267,11 +267,12 @@ dtype:
 The canonical load-report SHA-256 is
 `12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced`.
 This result proves architecture/checkpoint compatibility under the restricted
-loader. It does not prove separation quality, runtime resources or a working
-forward adapter.
+loader. It did not by itself prove separation quality, runtime resources or a
+working forward adapter; those objective adapter questions were handled by the
+separate synthetic gate below.
 
-The challenger remains blocked, unregistered and non-executable. The next
-bounded gate now has a pure forward contract and an immutable, no-effects plan:
+The challenger remains unregistered and non-executable. Its first bounded gate
+used a pure forward contract and an immutable one-attempt plan:
 
 ```bash
 .venv/bin/python \
@@ -287,21 +288,22 @@ bounded gate now has a pure forward contract and an immutable, no-effects plan:
 The forward contract binds the exact setup-C topology and forward sequence to
 nine files at source revision
 `79ed5bb75e5c3a40cd319d9d990cee913fc65c26`; its document SHA-256 is
-`cb83fdcf04057779d5970147d10e1944df29128b099c2a16b5d3b2e2cb829888`.
+`886a88dd511ac4075a90536360d91181338a81df58b51c86c7290d7c7d57e36c`.
 It describes STFT, 64-band splitting, sixteen alternating residual GRUs,
 PaSST query embedding, FiLM conditioning, complex-mask overlap-add and exact-
-length inverse STFT. It is design data only: no executable forward method was
-added. The separate result contract has document SHA-256
-`dd72e21b28734d5b2a2590e2751999a2cc76a78ced440b0c02b29974fe11a2a2`.
+length inverse STFT. The audited load adapter still has no forward method; the
+approved math lives in a separate single-use tensor adapter. The separate
+result contract has document SHA-256
+`81b11e5a85fc8fce656ba78657f359169930871daa824beb6d12595da1328ae5`.
 It validates either a complete objective pass or a retained objective failure,
 requires the exact output clock, peaks, reconstruction and resource gates, and
 rejects subjective feedback, automatic retry and product authority. The
 synthetic plan document SHA-256 is
-`6812891c1dd24badc6937b84c82c3aa2025389ed9f26022b132d82077bdb9001`.
-It proposes one CPU-only forward with a generated two-second stereo mixture and
+`0c2e83e0e55f40a8c38a6d103aae81a6443f1c935f5c1f08e35cdbb241426356`.
+It authorised one CPU-only forward with a generated two-second stereo mixture and
 generated ten-second stereo query, both held in memory, seed `0`, network
 denial, a 180-second timeout and a 12 GiB memory ceiling. It writes only an
-objective JSON report. One remediation is the absolute limit. No listening or
+objective JSON report. One remediation was the absolute limit. No listening or
 minimum usefulness rating can block recording the objective result.
 
 The large setup shell previously duplicated validation and receipt-building
@@ -315,14 +317,42 @@ canonical SHA-256. The topology and strict loading were then extracted into
 separate reusable modules; a fresh network-denied load produced a byte-identical
 report with zero network attempts, audio opens or inference runs. The one-way
 network/audio/checkpoint enforcement is now a reusable execution guard rather
-than inline CLI logic, and the proposed forward is a pure source-bound contract
-rather than an inference implementation. Synthetic-result validation and its
-exclusive receipt writer are also pure, reusable boundaries. A failed first
-attempt remains evidence and cannot authorize an automatic remediation run.
+than inline CLI logic. The source-bound contract, single-use tensor adapter,
+result projection/validation and exclusive receipt writer are separate,
+reusable boundaries. A failed first attempt would remain evidence and could not
+authorize an automatic remediation run.
+
+The approved attempt is complete. Its retained report SHA-256 is
+`bd5fa57716267488cfd9a0d1d69bc1627da6244d283fdaec5a5592234d51cec8`
+(file SHA-256
+`397293bb60d9bf658632cdb7526ece03ffb6007de5e1d86883d6cedb1408699a`).
+All ten objective gates passed: the CPU run completed in 2.85397 seconds at
+2,052,014,080-byte peak RSS, produced finite `[1, 2, 88200]` float32 output at
+44.1 kHz, reconstructed within `7.450580596923828e-09`, and recorded zero
+network, audio-open or unapproved-checkpoint attempts. No private or persisted
+audio was used. The target peak was only `4.118360084248707e-05`, so this is an
+adapter-execution result, not evidence of musically useful separation.
 
 The wider incremental restructuring sequence is recorded in
 [Separation maintainability plan](SEPARATION_MAINTAINABILITY_PLAN.md).
 
-Inference remains unapproved until the exact approval printed by the synthetic
-plan is given. Private or persisted audio, song processing, public activation,
-source selection and MIDI remain outside that approval.
+The one-attempt authority is consumed. The next gate is a separate,
+rights-bound reference-query canary plan for guitar and broad keyboard/synth.
+Further inference, reference or song audio processing, public activation,
+source selection and MIDI remain unapproved.
+
+Inspect that no-effects plan with:
+
+```bash
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-reference.py
+```
+
+Its document SHA-256 is
+`abfebe4f3eddfa3d891c8972edcbfd2dc62b968dc71e6c20dfb4311068059c76`.
+It freezes three ten-second guitar, keyboard and synth queries from one
+owner-authorised Ezzye song and applies each to three different authorised
+mixtures, for exactly nine song-disjoint attempts. Provider stems are query
+hints and comparison estimates, never truth. Poor feedback cannot start a
+query hunt. The command prints the exact rights-bound approval required before
+audio decoding, inference or private review artifacts.

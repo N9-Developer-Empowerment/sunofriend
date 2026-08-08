@@ -127,7 +127,7 @@ def build_query_synthetic_report_contract() -> dict[str, Any]:
     contract: dict[str, Any] = {
         "schema": QUERY_SYNTHETIC_REPORT_CONTRACT_SCHEMA,
         "document_sha256": "",
-        "status": "validator_ready_inference_unapproved",
+        "status": "validator_ready_one_synthetic_attempt_approved",
         "report_schema": QUERY_SYNTHETIC_REPORT_SCHEMA,
         "synthetic_plan_schema": QUERY_SYNTHETIC_PLAN_SCHEMA,
         "identity": {
