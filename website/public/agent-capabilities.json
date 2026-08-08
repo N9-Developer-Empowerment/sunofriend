@@ -417,7 +417,7 @@
         "next_query_challenger": {
           "scope_id": "other-query-refinement-v1",
           "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
-          "status": "blocked_pending_separately_approved_synthetic_inference_plan",
+          "status": "blocked_pending_explicit_synthetic_inference_approval",
           "registered": false,
           "executable": false,
           "targets": ["guitar", "keyboard_synth"],
@@ -519,11 +519,16 @@
           "model_loading_authorized": true,
           "inference_authorized": false,
           "plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py",
+          "synthetic_plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-synthetic.py",
+          "synthetic_plan_document_sha256": "6a7dd5e0836ba572708d11d4bbd067dc39ca95bf7480ec92ecc20821e0f9a125",
+          "synthetic_plan_run_limit": 1,
+          "synthetic_plan_remediation_limit": 1,
+          "synthetic_plan_uses_private_audio": false,
           "plan_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md"
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "review a bounded network-denied synthetic adapter inference plan; do not run inference, process audio, activate a source or create MIDI without separate approval"
+        "next_gate": "review the published bounded network-denied synthetic adapter inference plan; do not run inference, process audio, activate a source or create MIDI without explicit approval"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

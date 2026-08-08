@@ -37,7 +37,9 @@ guitar and broad `keyboard_synth`—electric piano, organ, synth pad and synth
 lead. Its exact runtime and restricted construction/load gate now pass under
 network denial, including all state keys, shapes and dtypes. No inference or
 audio ran. It remains blocked, unregistered and non-executable pending a
-separately approved synthetic inference plan. See
+separate explicit synthetic-inference approval. Its published no-effects plan
+allows inspection of the proposed single generated-tensor run with:
+`python3 scripts/plan-separation-other-refinement-query-synthetic.py`. See
 [Guitar and keyboard/synth query-challenger plan](OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 Inspect the executable default and immutable profiles at any time:

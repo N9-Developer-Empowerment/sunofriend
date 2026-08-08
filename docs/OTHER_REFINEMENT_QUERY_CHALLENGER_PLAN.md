@@ -271,7 +271,33 @@ loader. It does not prove separation quality, runtime resources or a working
 forward adapter.
 
 The challenger remains blocked, unregistered and non-executable. The next
-bounded gate is a separately reviewed, network-denied synthetic forward plan
-that uses generated tensors before any authorised query or song audio.
-Inference, audio processing, activation, source selection and MIDI remain
-unapproved.
+bounded gate now has an immutable, no-effects plan:
+
+```bash
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-synthetic.py
+```
+
+Its document SHA-256 is
+`6a7dd5e0836ba572708d11d4bbd067dc39ca95bf7480ec92ecc20821e0f9a125`.
+It proposes one CPU-only forward with a generated two-second stereo mixture and
+generated ten-second stereo query, both held in memory, seed `0`, network
+denial, a 180-second timeout and a 12 GiB memory ceiling. It writes only an
+objective JSON report. One remediation is the absolute limit. No listening or
+minimum usefulness rating can block recording the objective result.
+
+The large setup shell previously duplicated validation and receipt-building
+logic in an embedded Python block. That logic is now a pure standard-library
+contract in
+`src/sunofriend/separation_other_refinement_query_load_contract.py`, with a
+small exclusive-write receipt command. Model identity, topology/loading,
+synthetic execution and report validation are separate maintenance boundaries.
+The refactor validates the already-recorded load report without changing its
+canonical SHA-256.
+
+The wider incremental restructuring sequence is recorded in
+[Separation maintainability plan](SEPARATION_MAINTAINABILITY_PLAN.md).
+
+Inference remains unapproved until the exact approval printed by the synthetic
+plan is given. Private or persisted audio, song processing, public activation,
+source selection and MIDI remain outside that approval.

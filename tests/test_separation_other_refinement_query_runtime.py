@@ -21,7 +21,7 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     audit = build_query_runtime_audit()
 
     assert audit["status"] == (
-        "blocked_pending_separately_approved_synthetic_inference_plan"
+        "blocked_pending_explicit_synthetic_inference_approval"
     )
     assert audit["registered"] is False
     assert audit["executable"] is False
@@ -95,6 +95,9 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
         assert load[model_name]["strict_load_unexpected_keys"] == []
     assert audit["next_gate"]["kind"] == (
         "review_network_denied_synthetic_adapter_inference_plan"
+    )
+    assert audit["next_gate"]["plan_command"] == (
+        "python3 scripts/plan-separation-other-refinement-query-synthetic.py"
     )
     assert audit["next_gate"]["dependency_artifact_download_approved"] is True
     assert audit["next_gate"]["dependency_artifact_download_complete"] is True
@@ -172,4 +175,5 @@ def test_restricted_model_load_requires_its_explicit_acceptance_flag() -> None:
     assert "--accept-restricted-model-load" in source
     assert "deny network*" in source
     assert "MODEL-LOAD-REPORT.json" in source
+    assert "record-separation-other-refinement-query-model-load.py" in source
     assert "No inference or audio ran" in source

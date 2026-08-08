@@ -35,7 +35,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
         "status": (
-            "blocked_pending_separately_approved_synthetic_inference_plan"
+            "blocked_pending_explicit_synthetic_inference_approval"
         ),
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
@@ -307,8 +307,12 @@ def build_query_runtime_audit() -> dict[str, Any]:
         "next_gate": {
             "kind": "review_network_denied_synthetic_adapter_inference_plan",
             "next_action": (
-                "review a bounded network-denied adapter-forward plan using only "
-                "generated synthetic tensors before any authorised song or query audio"
+                "review scripts/plan-separation-other-refinement-query-synthetic.py, "
+                "a bounded network-denied adapter-forward plan using only generated "
+                "tensors before any authorised song or query audio"
+            ),
+            "plan_command": (
+                "python3 scripts/plan-separation-other-refinement-query-synthetic.py"
             ),
             "dependency_artifact_download_approved": True,
             "dependency_artifact_download_complete": True,

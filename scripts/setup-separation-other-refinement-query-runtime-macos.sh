@@ -9,6 +9,7 @@ WHEEL_DOWNLOAD_SCRIPT="$REPOSITORY_ROOT/scripts/download-separation-other-refine
 WHEEL_INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-query-runtime-wheels.py"
 RUNTIME_IMPORT_SCRIPT="$REPOSITORY_ROOT/scripts/verify-separation-other-refinement-query-runtime-imports.py"
 MODEL_LOAD_SCRIPT="$REPOSITORY_ROOT/scripts/verify-separation-other-refinement-query-model-load.py"
+MODEL_LOAD_RECEIPT_SCRIPT="$REPOSITORY_ROOT/scripts/record-separation-other-refinement-query-model-load.py"
 RUNTIME_REQUIREMENTS="$REPOSITORY_ROOT/separation-other-refinement-query-runtime-requirements.txt"
 DATA_ROOT=${SUNOFRIEND_SEPARATION_ROOT:-"$HOME/.local/share/sunofriend/separation"}
 BANQUET_EVIDENCE_ROOT=${SUNOFRIEND_QUERY_CHALLENGER_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/query-bandit-ev-pre-aug-v1"}
@@ -141,99 +142,11 @@ if [ "$ACTION" = construct-and-load-models ]; then
         > "$STAGING/MODEL-LOAD-REPORT.json" \
         2> "$STAGING/CONSTRUCTION.log"
 
-    PYTHONDONTWRITEBYTECODE=1 "$PLAN_PYTHON" -B - \
-        "$STAGING/MODEL-LOAD-REPORT.json" \
-        "$STAGING/APPROVAL-RECEIPT.json" \
-        "$MODEL_LOAD_ROOT" <<'PY'
-from __future__ import annotations
-
-from datetime import datetime, timezone
-import hashlib
-import json
-from pathlib import Path
-import sys
-
-report_path = Path(sys.argv[1])
-receipt_path = Path(sys.argv[2])
-published_root = Path(sys.argv[3])
-report = json.loads(report_path.read_text(encoding="utf-8"))
-assert report["schema"] == "sunofriend.other-refinement-query-restricted-model-load.v1"
-assert report["status"] == "two_exact_models_constructed_and_strictly_loaded_network_denied"
-assert report["source_revision"] == "79ed5bb75e5c3a40cd319d9d990cee913fc65c26"
-assert report["models"]["passt"]["inventory_sha256"] == "ed94f5ea73d96f5965b1f67f11e84264f0afadd2efbbfad4d22783a4fc2aef96"
-assert report["models"]["banquet"]["inventory_sha256"] == "c562cc6f0b6807470d4d36ee4f6a048870e917afac9d7f92b2e35d7b9efec27f"
-for model in report["models"].values():
-    if not isinstance(model, dict) or "keys_equal" not in model:
-        continue
-    assert model["keys_equal"] is True
-    assert model["shapes_equal"] is True
-    assert model["dtypes_equal"] is True
-    assert model["strict_load_missing_keys"] == []
-    assert model["strict_load_unexpected_keys"] == []
-assert report["guards"] == {
-    "audio_open_attempts": 0,
-    "network_attempts": 0,
-    "os_network_denial_required": True,
-    "pretrained_network_resolution": False,
-    "restricted_torch_load_calls": 2,
-    "unapproved_checkpoint_open_attempts": 0,
-}
-assert report["effects"] == {
-    "audio_reads": 0,
-    "audio_writes": 0,
-    "checkpoint_loaded": True,
-    "inference_runs": 0,
-    "midi_created": False,
-    "model_constructed": True,
-    "public_activation": False,
-    "source_selection": False,
-}
-
-def document_sha256(value: dict) -> str:
-    payload = {key: item for key, item in value.items() if key != "report_sha256"}
-    return hashlib.sha256(
-        json.dumps(
-            payload,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-            allow_nan=False,
-        ).encode("utf-8")
-    ).hexdigest()
-
-assert report["report_sha256"] == document_sha256(report)
-receipt = {
-    "schema": "sunofriend.other-refinement-query-restricted-model-load-approval.v1",
-    "status": "restricted_model_load_gate_complete_no_inference_authority",
-    "recorded_at": datetime.now(timezone.utc).isoformat(),
-    "profile_id": "query-bandit-ev-pre-aug-v1",
-    "published_root": str(published_root),
-    "model_load_report_sha256": report["report_sha256"],
-    "approved_action": (
-        "network-denied construction of the minimal Banquet and PaSST adapter "
-        "and weights-only loading of the two exact local checkpoints with strict "
-        "state-dict key, shape and dtype verification"
-    ),
-    "checkpoint_loaded": True,
-    "model_constructed": True,
-    "network_denied": True,
-    "audio_processed": False,
-    "inference_performed": False,
-    "public_activation": False,
-    "source_selection": False,
-    "midi_created": False,
-    "not_approved": [
-        "inference",
-        "audio_processing",
-        "public_activation",
-        "source_selection",
-        "midi",
-    ],
-}
-receipt_path.write_text(
-    json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-)
-PY
+    PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
+        "$PLAN_PYTHON" -B "$MODEL_LOAD_RECEIPT_SCRIPT" \
+        --report "$STAGING/MODEL-LOAD-REPORT.json" \
+        --receipt "$STAGING/APPROVAL-RECEIPT.json" \
+        --published-root "$MODEL_LOAD_ROOT"
 
     chmod 0444 "$STAGING"/*.json "$STAGING"/*.log
     chmod -R go-w "$STAGING"

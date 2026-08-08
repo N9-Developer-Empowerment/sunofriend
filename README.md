@@ -122,6 +122,9 @@ hunt. Inspect the no-effects plan with:
 ```bash
 .venv/bin/python \
   scripts/plan-separation-other-refinement-query-runtime.py
+
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-synthetic.py
 ```
 
 It downloads, loads and executes nothing. The approved private checkpoint
@@ -147,9 +150,15 @@ loaded the two exact local checkpoints with
 `torch.load(weights_only=True, map_location="cpu")`. All 1,069 Banquet and 159
 OpenMIC PaSST keys, shapes and dtypes matched before strict loading, with no
 missing or unexpected keys, network attempt or audio open. No inference ran.
-The challenger remains blocked, unregistered and non-executable pending a
-separately approved synthetic inference plan. See
+The second command is the new immutable, no-effects synthetic-forward plan. It
+binds the verified load report and proposes one CPU run on generated in-memory
+tensors only, with one remediation at most, a 180-second timeout and a 12 GiB
+memory ceiling. It does not construct a model, run inference or read audio.
+The challenger remains blocked, unregistered and non-executable pending the
+explicit approval printed by that plan. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
+The incremental code-structure work is tracked in
+[Separation maintainability plan](docs/SEPARATION_MAINTAINABILITY_PLAN.md).
 
 After the local page exports your listening JSON, bind it to the exact result
 without selecting a source or starting MIDI:

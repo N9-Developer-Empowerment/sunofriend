@@ -206,6 +206,7 @@ Inspect the next no-effects query-challenger plan with:
 
 ```bash
 .venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-synthetic.py
 ```
 
 It records Banquet under a CC BY-NC-SA 4.0 local-noncommercial boundary. The
@@ -224,8 +225,10 @@ checkpoint, establishing SHA-256
   denial. The approved restricted loader then constructed PaSST with
   `pretrained=False`, verified every state key, shape and dtype and strictly
   loaded both checkpoints under network denial. Do not use the upstream
-  downloader or loader, run inference or process audio until a new synthetic
-  inference plan is reviewed and explicitly approved.
+  downloader or loader. The second command prints the immutable synthetic
+  forward plan and exact next approval; running that command itself constructs
+  no model, performs no inference and reads no audio. Do not run inference or
+  process audio until that exact synthetic gate is explicitly approved.
 
 ## Inspect before installing
 

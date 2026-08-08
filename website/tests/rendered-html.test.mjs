@@ -242,7 +242,9 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /Eight relevant modules/);
   assert.match(html, /zero network attempts/);
   assert.match(html, /strict weights-only loading/);
-  assert.match(html, /separately approved synthetic inference plan/);
+  assert.match(html, /pending explicit synthetic-inference approval/);
+  assert.match(html, /one CPU run/);
+  assert.match(html, /one remediation at most/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
@@ -595,7 +597,22 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.status,
-    "blocked_pending_separately_approved_synthetic_inference_plan",
+    "blocked_pending_explicit_synthetic_inference_approval",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_plan_document_sha256,
+    "6a7dd5e0836ba572708d11d4bbd067dc39ca95bf7480ec92ecc20821e0f9a125",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_plan_run_limit,
+    1,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.synthetic_plan_uses_private_audio,
+    false,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

@@ -157,7 +157,10 @@ export default function SeparationResearch() {
                 strict weights-only loading, with no missing or unexpected
                 keys, network attempt or audio open. No inference ran. The
                 challenger remains blocked, unregistered and non-executable
-                pending a separately approved synthetic inference plan. Its
+                pending explicit synthetic-inference approval. A published,
+                hash-bound no-effects plan limits that next gate to one CPU run
+                on generated in-memory tensors, with one remediation at most,
+                a 180-second timeout, a 12 GiB ceiling and no song audio. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
               </p>

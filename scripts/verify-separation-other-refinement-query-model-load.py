@@ -4,8 +4,10 @@
 This is deliberately a construction/load gate, not an inference worker. It
 does not accept an audio path and never calls either model. The state-compatible
 Banquet topology follows the MIT-licensed pinned Query Bandit source revision
-recorded in ``SOURCE_REVISION``.
+recorded in the shared pure evidence contract.
 """
+
+# ruff: noqa: E402
 
 from __future__ import annotations
 
@@ -20,6 +22,9 @@ import sys
 from typing import Any
 import urllib.request
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
+
 import numpy as np
 import torch
 from torch import nn
@@ -28,30 +33,23 @@ import torchaudio
 from hear21passt.base import AugmentMelSTFT, PasstBasicWrapper
 from hear21passt.models.passt import get_model as get_passt_model
 
+from sunofriend.separation_other_refinement_query_load_contract import (
+    EXPECTED_CHECKPOINTS,
+    EXPECTED_MODEL_STATES,
+    QUERY_BANDIT_SOURCE_REVISION,
+    QUERY_MODEL_LOAD_REPORT_SCHEMA,
+    QUERY_MODEL_LOAD_REPORT_STATUS,
+    query_model_load_report_sha256,
+)
 
-SCHEMA = "sunofriend.other-refinement-query-restricted-model-load.v1"
-SOURCE_REVISION = "79ed5bb75e5c3a40cd319d9d990cee913fc65c26"
 EXPECTED = {
-    "banquet": {
-        "filename": "ev-pre-aug.ckpt",
-        "bytes": 645_470_187,
-        "sha256": "657295888781e62ef50593002720d2edb3858b9e5bbfabf0c54f715a0da4b9e2",
-        "inventory_sha256": (
-            "c562cc6f0b6807470d4d36ee4f6a048870e917afac9d7f92b2e35d7b9efec27f"
-        ),
-        "key_count": 1_069,
-        "total_numel": 111_234_333,
-    },
-    "passt": {
-        "filename": "openmic-passt-s-f128-10sec-p16-s10-ap.85.pt",
-        "bytes": 341_546_630,
-        "sha256": "dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da",
-        "inventory_sha256": (
-            "ed94f5ea73d96f5965b1f67f11e84264f0afadd2efbbfad4d22783a4fc2aef96"
-        ),
-        "key_count": 159,
-        "total_numel": 85_373_992,
-    },
+    label: {
+        "filename": checkpoint["file"],
+        "bytes": checkpoint["bytes"],
+        "sha256": checkpoint["sha256"],
+        **EXPECTED_MODEL_STATES[label],
+    }
+    for label, checkpoint in EXPECTED_CHECKPOINTS.items()
 }
 AUDIO_SUFFIXES = (".aac", ".aif", ".aiff", ".flac", ".m4a", ".mp3", ".ogg", ".wav")
 
@@ -62,19 +60,6 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
-
-
-def _document_sha256(value: dict[str, Any]) -> str:
-    payload = {key: item for key, item in value.items() if key != "report_sha256"}
-    return hashlib.sha256(
-        json.dumps(
-            payload,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-            allow_nan=False,
-        ).encode("utf-8")
-    ).hexdigest()
 
 
 def _state_dict(document: Any, label: str) -> dict[str, torch.Tensor]:
@@ -489,10 +474,10 @@ def main() -> int:
         raise RuntimeError("restricted model load crossed an effects boundary")
 
     report: dict[str, Any] = {
-        "schema": SCHEMA,
+        "schema": QUERY_MODEL_LOAD_REPORT_SCHEMA,
         "report_sha256": "",
-        "status": "two_exact_models_constructed_and_strictly_loaded_network_denied",
-        "source_revision": SOURCE_REVISION,
+        "status": QUERY_MODEL_LOAD_REPORT_STATUS,
+        "source_revision": QUERY_BANDIT_SOURCE_REVISION,
         "runtime": {
             "python": sys.version.split()[0],
             "torch": torch.__version__,
@@ -527,7 +512,7 @@ def main() -> int:
             "midi_created": False,
         },
     }
-    report["report_sha256"] = _document_sha256(report)
+    report["report_sha256"] = query_model_load_report_sha256(report)
     json.dump(report, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
     return 0
