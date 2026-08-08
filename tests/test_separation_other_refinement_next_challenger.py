@@ -25,7 +25,7 @@ def test_next_challenger_is_synth_first_and_no_effects() -> None:
     assert "never a proxy" in plan["piano_policy"]
     assert plan["registered"] is False
     assert plan["executable"] is False
-    assert plan["status"] == "runtime_closure_verified_install_not_authorized"
+    assert plan["status"] == "runtime_import_verified_model_load_not_authorized"
     assert not any(plan["effects"].values())
     assert validate_next_challenger_plan(plan) == plan
 
@@ -56,7 +56,17 @@ def test_next_challenger_pins_source_artifacts_and_safe_loader() -> None:
     assert plan["runtime_wheel_evidence"]["wheel_bytes"] == 127_527_173
     assert plan["runtime_wheel_evidence"]["dependency_installed"] is False
     assert plan["runtime_wheel_evidence"]["package_imported"] is False
-    assert plan["next_gate"]["kind"] == "isolated_install_and_import_verification"
+    runtime_import = plan["runtime_import_evidence"]
+    assert runtime_import["locked_package_count"] == 29
+    assert runtime_import["dependency_installed"] is True
+    assert runtime_import["python_network_attempts"] == 0
+    assert runtime_import["local_bind_attempts"] == [
+        "requests:socket.bind:('::1', 0)"
+    ]
+    assert runtime_import["checkpoint_loaded"] is False
+    assert runtime_import["model_constructed"] is False
+    assert runtime_import["remediation"]["cycles_used"] == 1
+    assert plan["next_gate"]["kind"] == "strict_weights_only_construction_and_load"
     assert plan["next_gate"]["runtime_wheel_download"] is False
 
 

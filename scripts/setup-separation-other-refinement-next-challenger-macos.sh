@@ -7,14 +7,17 @@ PLAN_SCRIPT="$REPOSITORY_ROOT/scripts/plan-separation-other-refinement-next-chal
 INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-next-challenger-artifacts.py"
 WHEEL_DOWNLOAD_SCRIPT="$REPOSITORY_ROOT/scripts/download-separation-other-refinement-next-runtime-wheels.py"
 WHEEL_INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-next-runtime-wheels.py"
+RUNTIME_IMPORT_SCRIPT="$REPOSITORY_ROOT/scripts/verify-separation-other-refinement-next-runtime-imports.py"
 RUNTIME_REQUIREMENTS="$REPOSITORY_ROOT/separation-other-refinement-next-runtime-requirements.txt"
 DATA_ROOT=${SUNOFRIEND_SEPARATION_ROOT:-"$HOME/.local/share/sunofriend/separation"}
 EVIDENCE_ROOT=${SUNOFRIEND_MEGA53_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-synth-v1"}
 RUNTIME_WHEEL_EVIDENCE_ROOT=${SUNOFRIEND_MEGA53_RUNTIME_WHEEL_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-runtime-wheels-macos-arm64-py312-v1"}
+RUNTIME_IMPORT_ROOT=${SUNOFRIEND_MEGA53_RUNTIME_IMPORT_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-runtime-import-macos-arm64-py312-v1"}
 ACTION=plan
 ACCEPTED_PROVISIONAL_TERMS=false
 ACCEPTED_CHECKPOINT_USE=false
 ACCEPTED_RUNTIME_WHEEL_EVIDENCE=false
+ACCEPTED_RUNTIME_INSTALL_AND_IMPORT=false
 CHECKPOINT_FILE=mvsep_mega_model_bs_roformer_53_stems_v1.ckpt
 CHECKPOINT_BYTES=1368919887
 CHECKPOINT_SHA256=c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f
@@ -29,7 +32,7 @@ RUNTIME_WHEEL_CAP_BYTES=1610612736
 RUNTIME_REQUIREMENTS_SHA256=284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b
 
 usage() {
-    echo "Usage: scripts/setup-separation-other-refinement-next-challenger-macos.sh [--plan | --evidence-only --accept-provisional-local-noncommercial-terms --accept-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence]"
+    echo "Usage: scripts/setup-separation-other-refinement-next-challenger-macos.sh [--plan | --evidence-only --accept-provisional-local-noncommercial-terms --accept-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence | --install-runtime --accept-runtime-install-and-import]"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -37,9 +40,11 @@ while [ "$#" -gt 0 ]; do
         --plan) ACTION=plan ;;
         --evidence-only) ACTION=evidence-only ;;
         --runtime-wheel-evidence-only) ACTION=runtime-wheel-evidence-only ;;
+        --install-runtime) ACTION=install-runtime ;;
         --accept-provisional-local-noncommercial-terms) ACCEPTED_PROVISIONAL_TERMS=true ;;
         --accept-checkpoint-use) ACCEPTED_CHECKPOINT_USE=true ;;
         --accept-runtime-wheel-evidence) ACCEPTED_RUNTIME_WHEEL_EVIDENCE=true ;;
+        --accept-runtime-install-and-import) ACCEPTED_RUNTIME_INSTALL_AND_IMPORT=true ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
@@ -60,6 +65,244 @@ PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
 if [ "$ACTION" = plan ]; then
     echo ""
     echo "Plan only; nothing was downloaded, installed, loaded or executed."
+    exit 0
+fi
+
+if [ "$ACTION" = install-runtime ]; then
+    if [ "$ACCEPTED_RUNTIME_INSTALL_AND_IMPORT" != true ]; then
+        echo "--install-runtime requires --accept-runtime-install-and-import after reviewing the exact isolated boundary" >&2
+        exit 2
+    fi
+    if [ "$(uname -s)" != Darwin ] || [ "$(uname -m)" != arm64 ]; then
+        echo "The approved isolated Mega-53 runtime targets macOS on Apple silicon only" >&2
+        exit 2
+    fi
+    for required_command in sandbox-exec shasum df cmp; do
+        if ! command -v "$required_command" >/dev/null 2>&1; then
+            echo "$required_command is required for isolated Mega-53 runtime verification" >&2
+            exit 2
+        fi
+    done
+    if command -v python3.12 >/dev/null 2>&1; then
+        RUNTIME_IMPORT_PYTHON=$(command -v python3.12)
+    else
+        echo "Python 3.12 is required for the exact isolated Mega-53 runtime" >&2
+        exit 2
+    fi
+    if [ "$("$RUNTIME_IMPORT_PYTHON" -c 'import platform, sys; print(f"{sys.implementation.name}:{sys.version_info.major}.{sys.version_info.minor}:{platform.machine()}")')" != cpython:3.12:arm64 ]; then
+        echo "Selected isolated Mega-53 runtime Python must be CPython 3.12 on arm64: $RUNTIME_IMPORT_PYTHON" >&2
+        exit 2
+    fi
+    if [ -e "$RUNTIME_IMPORT_ROOT" ] || [ -L "$RUNTIME_IMPORT_ROOT" ]; then
+        echo "Refusing to overwrite existing isolated Mega-53 runtime evidence: $RUNTIME_IMPORT_ROOT" >&2
+        exit 2
+    fi
+    for required_evidence in \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/STATIC-EVIDENCE.json" \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/APPROVAL-RECEIPT.json" \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/requirements.txt" \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/wheels"; do
+        if [ ! -e "$required_evidence" ] || [ -L "$required_evidence" ]; then
+            echo "Approved Mega-53 runtime wheel evidence is incomplete: $required_evidence" >&2
+            exit 2
+        fi
+    done
+    ACTUAL_REQUIREMENTS_SHA256=$(shasum -a 256 "$RUNTIME_REQUIREMENTS" | awk '{print $1}')
+    if [ "$ACTUAL_REQUIREMENTS_SHA256" != "$RUNTIME_REQUIREMENTS_SHA256" ]; then
+        echo "Committed Mega-53 runtime lock SHA-256 differs: $ACTUAL_REQUIREMENTS_SHA256" >&2
+        exit 2
+    fi
+    if ! cmp -s "$RUNTIME_REQUIREMENTS" "$RUNTIME_WHEEL_EVIDENCE_ROOT/requirements.txt"; then
+        echo "Committed Mega-53 runtime lock differs from the approved local wheel evidence" >&2
+        exit 2
+    fi
+    ACTUAL_STATIC_EVIDENCE_SHA256=$(shasum -a 256 "$RUNTIME_WHEEL_EVIDENCE_ROOT/STATIC-EVIDENCE.json" | awk '{print $1}')
+    if [ "$ACTUAL_STATIC_EVIDENCE_SHA256" != 5121a18a25d617c17efadb8d95eab342ef8b442e40eb4690519b80987e70e19d ]; then
+        echo "Mega-53 wheel static-evidence file SHA-256 differs: $ACTUAL_STATIC_EVIDENCE_SHA256" >&2
+        exit 2
+    fi
+    PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
+        sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+        "$PLAN_PYTHON" -B "$WHEEL_INSPECT_SCRIPT" \
+        "$RUNTIME_WHEEL_EVIDENCE_ROOT/wheels" \
+        > /dev/null
+
+    RUNTIME_IMPORT_PARENT=$(dirname "$RUNTIME_IMPORT_ROOT")
+    mkdir -p "$RUNTIME_IMPORT_PARENT"
+    available_bytes=$(df -Pk "$RUNTIME_IMPORT_PARENT" | awk 'NR == 2 {printf "%.0f", $4 * 1024}')
+    if [ -z "$available_bytes" ] || [ "$available_bytes" -lt 2147483648 ]; then
+        echo "Isolated Mega-53 runtime setup requires at least 2147483648 free bytes before staging" >&2
+        exit 2
+    fi
+    STAGING=$(mktemp -d "$RUNTIME_IMPORT_PARENT/.bs-roformer-mega-53-runtime-import.building.XXXXXX")
+    preserve_failed_runtime_import_staging() {
+        runtime_import_exit_code=$?
+        if [ -n "${STAGING:-}" ] && [ -d "$STAGING" ]; then
+            failed_root="$RUNTIME_IMPORT_PARENT/bs-roformer-mega-53-runtime-import.failed.$$.evidence"
+            if [ ! -e "$failed_root" ] && [ ! -L "$failed_root" ]; then
+                chmod -R go-w "$STAGING" 2>/dev/null || true
+                mv "$STAGING" "$failed_root"
+                STAGING=
+                echo "Preserved failed isolated Mega-53 runtime evidence: $failed_root" >&2
+            fi
+        fi
+        exit "$runtime_import_exit_code"
+    }
+    trap preserve_failed_runtime_import_staging EXIT HUP INT TERM
+    mkdir -p "$STAGING/home/cache" "$STAGING/home/torch"
+    cp "$RUNTIME_REQUIREMENTS" "$STAGING/LOCKED-REQUIREMENTS.txt"
+    chmod 0444 "$STAGING/LOCKED-REQUIREMENTS.txt"
+
+    "$RUNTIME_IMPORT_PYTHON" -m venv "$STAGING/runtime"
+    (
+        ulimit -f 2097152
+        HOME="$STAGING/home" XDG_CACHE_HOME="$STAGING/home/cache" \
+        TORCH_HOME="$STAGING/home/torch" PYTHONNOUSERSITE=1 \
+        PYTHONDONTWRITEBYTECODE=1 PIP_CONFIG_FILE=/dev/null \
+        sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+        "$STAGING/runtime/bin/python" -m pip --isolated install \
+            --disable-pip-version-check --no-cache-dir --no-index \
+            --find-links "$RUNTIME_WHEEL_EVIDENCE_ROOT/wheels" \
+            --only-binary=:all: --require-hashes \
+            -r "$STAGING/LOCKED-REQUIREMENTS.txt"
+    ) > "$STAGING/PIP-INSTALL.log" 2>&1
+
+    HOME="$STAGING/home" XDG_CACHE_HOME="$STAGING/home/cache" \
+    TORCH_HOME="$STAGING/home/torch" PYTHONNOUSERSITE=1 \
+    PYTHONDONTWRITEBYTECODE=1 PIP_CONFIG_FILE=/dev/null \
+    sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+    "$STAGING/runtime/bin/python" -m pip --isolated check \
+        > "$STAGING/PIP-CHECK.log" 2>&1
+
+    HOME="$STAGING/home" XDG_CACHE_HOME="$STAGING/home/cache" \
+    TORCH_HOME="$STAGING/home/torch" HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
+    sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+    "$STAGING/runtime/bin/python" -I -B "$RUNTIME_IMPORT_SCRIPT" \
+        --runtime-root "$STAGING/runtime" \
+        --requirements "$STAGING/LOCKED-REQUIREMENTS.txt" \
+        > "$STAGING/IMPORT-REPORT.json"
+
+    PYTHONDONTWRITEBYTECODE=1 "$PLAN_PYTHON" -B - \
+        "$STAGING/IMPORT-REPORT.json" \
+        "$STAGING/APPROVAL-RECEIPT.json" \
+        "$RUNTIME_IMPORT_ROOT" <<'PY'
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+report_path = Path(sys.argv[1])
+receipt_path = Path(sys.argv[2])
+published_root = Path(sys.argv[3])
+report = json.loads(report_path.read_text(encoding="utf-8"))
+assert report["schema"] == "sunofriend.mega53-runtime-import-evidence.v1"
+assert report["status"] == "isolated_hash_locked_runtime_imports_verified_network_denied"
+assert report["locked_package_count"] == 29
+assert len(report["locked_packages"]) == 29
+assert report["runtime"]["implementation"] == "CPython"
+assert report["runtime"]["python"].startswith("3.12.")
+assert report["runtime"]["machine"] == "arm64"
+assert report["runtime"]["virtual_environment"] is True
+assert report["runtime"]["isolated_mode"] is True
+assert report["runtime"]["user_site_enabled"] is False
+assert set(report["bootstrap_packages"]) == {"pip"}
+assert report["guards"] == {
+    "audio_open_attempts": 0,
+    "checkpoint_open_attempts": 0,
+    "local_bind_attempts": ["requests:socket.bind:('::1', 0)"],
+    "os_network_denial_required": True,
+    "python_network_attempts": 0,
+    "socket_constructions": ["requests:socket.__new__"],
+    "torch_load_calls": 0,
+}
+effects = report["effects"]
+assert effects["dependency_installed"] is True
+assert effects["checkpoint_loaded"] is False
+assert effects["model_constructed"] is False
+assert effects["inference_runs"] == 0
+assert effects["audio_reads"] == 0
+assert effects["audio_writes"] == 0
+assert effects["public_activation"] is False
+assert effects["source_selection"] is False
+assert effects["midi_created"] is False
+assert effects["hosting"] is False
+assert effects["redistribution"] is False
+
+def document_sha256(value: dict) -> str:
+    payload = {key: item for key, item in value.items() if key != "report_sha256"}
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+assert report["report_sha256"] == document_sha256(report)
+receipt = {
+    "schema": "sunofriend.mega53-runtime-import-approval.v1",
+    "status": "isolated_runtime_import_gate_complete_no_model_authority",
+    "recorded_at": datetime.now(timezone.utc).isoformat(),
+    "profile_id": "bs-roformer-mega-53-synth-v1",
+    "published_root": str(published_root),
+    "runtime_requirements_sha256": "284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b",
+    "wheel_static_evidence_file_sha256": "5121a18a25d617c17efadb8d95eab342ef8b442e40eb4690519b80987e70e19d",
+    "import_report_sha256": report["report_sha256"],
+    "approved_action": (
+        "install the exact 29-wheel hash-locked CPython 3.12 macOS 14+ arm64 "
+        "runtime into a fresh isolated Sunofriend evidence environment and "
+        "perform network-denied package-import verification only"
+    ),
+    "dependency_installed": True,
+    "package_import_verified": True,
+    "network_denied_during_install_and_import": True,
+    "checkpoint_loaded": False,
+    "model_constructed": False,
+    "inference_performed": False,
+    "audio_processed": False,
+    "public_activation": False,
+    "source_selection": False,
+    "midi_created": False,
+    "hosting": False,
+    "redistribution": False,
+    "not_approved": [
+        "checkpoint_loading",
+        "model_construction",
+        "inference",
+        "audio_processing",
+        "public_activation",
+        "source_selection",
+        "midi",
+        "hosting",
+        "redistribution",
+    ],
+}
+receipt_path.write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+PY
+
+    installed_bytes=$(du -sk "$STAGING" | awk '{printf "%.0f", $1 * 1024}')
+    if [ -z "$installed_bytes" ] || [ "$installed_bytes" -gt 2147483648 ]; then
+        echo "Isolated Mega-53 runtime staging exceeds the 2 GiB installation ceiling" >&2
+        exit 2
+    fi
+    chmod 0444 "$STAGING"/*.json "$STAGING"/*.log
+    chmod -R go-w "$STAGING"
+    mv "$STAGING" "$RUNTIME_IMPORT_ROOT"
+    STAGING=
+    trap - EXIT HUP INT TERM
+
+    echo ""
+    echo "Isolated Mega-53 runtime import gate complete: $RUNTIME_IMPORT_ROOT"
+    echo "The exact 29-wheel runtime was installed from the approved local cache and imported under network denial."
+    echo "No checkpoint was loaded, no model was constructed, no inference or audio ran, and nothing was activated, selected, sent to MIDI, hosted or redistributed."
     exit 0
 fi
 

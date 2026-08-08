@@ -1,4 +1,4 @@
-"""No-effects plan for the synth-first fine-stem challenger.
+"""No-effects plan and completed evidence for the synth-first challenger.
 
 The document records research evidence and a bounded evaluation contract.  It
 does not download an artifact, construct a model, read audio or make a profile
@@ -35,7 +35,7 @@ def build_next_challenger_plan() -> dict[str, Any]:
     plan: dict[str, Any] = {
         "schema": NEXT_CHALLENGER_SCHEMA,
         "document_sha256": "",
-        "status": "runtime_closure_verified_install_not_authorized",
+        "status": "runtime_import_verified_model_load_not_authorized",
         "checked_on": "2026-08-08",
         "scope_id": "other-synth-refinement-v1",
         "proposed_profile_id": "bs-roformer-mega-53-synth-v1",
@@ -233,6 +233,68 @@ def build_next_challenger_plan() -> dict[str, Any]:
             "inference_runs": 0,
             "audio_reads": 0,
         },
+        "runtime_import_evidence": {
+            "status": "isolated_hash_locked_runtime_imports_verified_network_denied",
+            "target": "CPython 3.12.10, macOS 14+ arm64",
+            "locked_package_count": 29,
+            "bootstrap_package": "pip==25.0.1",
+            "runtime_file_count": 21_124,
+            "runtime_logical_file_bytes": 620_247_886,
+            "imported_modules": [
+                "numpy",
+                "torch",
+                "mlx",
+                "mlx_spectro",
+                "soundfile",
+                "ml_collections",
+                "tqdm",
+                "beartype",
+                "rotary_embedding_torch",
+                "einops",
+                "yaml",
+                "requests",
+                "packaging",
+            ],
+            "import_report_sha256": (
+                "60eefa4285f720cc81f795b126c32dbc9462f05d1398662702bd313f394202a9"
+            ),
+            "import_report_file_sha256": (
+                "567068a414c5ebc0cdb7cd47564934c5ec8f6b13c70425dd736c02af43892ac7"
+            ),
+            "approval_receipt_file_sha256": (
+                "1e4a7c3f661171b4e62cf0efae55971a71eb51e0b52cd9b29176214e160080ed"
+            ),
+            "network_denied": True,
+            "python_network_attempts": 0,
+            "socket_constructions": ["requests:socket.__new__"],
+            "local_bind_attempts": ["requests:socket.bind:('::1', 0)"],
+            "checkpoint_open_attempts": 0,
+            "torch_load_calls": 0,
+            "audio_open_attempts": 0,
+            "dependency_installed": True,
+            "checkpoint_loaded": False,
+            "model_constructed": False,
+            "inference_runs": 0,
+            "audio_reads": 0,
+            "audio_writes": 0,
+            "public_activation": False,
+            "source_selection": False,
+            "midi_created": False,
+            "hosting": False,
+            "redistribution": False,
+            "remediation": {
+                "maximum_cycles": 1,
+                "cycles_used": 1,
+                "initial_issue": (
+                    "the verifier classified requests' unconnected local IPv6 "
+                    "capability probe as external network access"
+                ),
+                "resolution": (
+                    "record socket construction and the ::1 bind separately; "
+                    "continue to fail connection, DNS or non-loopback operations"
+                ),
+            },
+        },
         "evaluation": {
             "configuration_count": 1,
             "remediation_cycle_limit": 1,
@@ -285,9 +347,10 @@ def build_next_challenger_plan() -> dict[str, Any]:
             "capped evidence-only checkpoint and config download with exact hash verification",
             "network-denied non-loading static pickle/config inspection",
             "fully hash-locked macOS-arm64 dependency closure",
+            "isolated install and import verification",
         ],
         "next_gate": {
-            "kind": "isolated_install_and_import_verification",
+            "kind": "strict_weights_only_construction_and_load",
             "maximum_download_bytes": 0,
             "artifact_download": False,
             "runtime_wheel_download": False,

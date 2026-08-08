@@ -188,10 +188,15 @@ export default function SeparationResearch() {
                 denial without loading it. A later evidence-only gate resolved
                 29 exact CPython 3.12/macOS 14+ arm64 wheels totalling
                 127,527,173 bytes and inspected their metadata and licence files
-                without installing or importing them. Terms remain unreviewed
-                under the acknowledged provisional local-noncommercial boundary.
-                Isolated install and import verification is the next separate
-                gate. The plan permits one configuration, separates audible
+                without installing or importing them. An explicit follow-up
+                installed that closure into a fresh isolated CPython 3.12.10
+                runtime. Thirteen direct modules imported under OS network denial
+                with zero connect/DNS calls, checkpoint/audio opens or
+                <code>torch.load</code> calls; <code>requests</code> made one
+                contained <code>::1</code> capability-bind probe. Terms remain
+                unreviewed under the acknowledged provisional local-noncommercial
+                boundary. Strict weights-only construction and load is the next
+                separate gate. The plan permits one configuration, separates audible
                 target presence from model usefulness, forbids automatic or
                 unrestricted loaders, and grants no execution or MIDI authority.
               </p>

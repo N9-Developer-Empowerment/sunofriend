@@ -123,6 +123,9 @@ def test_setup_is_capped_non_loading_and_network_denied() -> None:
         / "scripts"
         / "setup-separation-other-refinement-next-challenger-macos.sh"
     ).read_text(encoding="utf-8")
+    artifact_route = setup[
+        setup.index('if [ "$ACCEPTED_PROVISIONAL_TERMS" != true ]') :
+    ]
 
     assert "MAX_DOWNLOAD_BYTES=1610612736" in setup
     assert "EXPECTED_TOTAL_BYTES=1368924071" in setup
@@ -131,6 +134,6 @@ def test_setup_is_capped_non_loading_and_network_denied() -> None:
     assert "(deny network*)" in setup
     assert "--evidence-only" in setup
     assert "--accept-provisional-local-noncommercial-terms" in setup
-    assert "pip install" not in setup
-    assert "torch.load" not in setup
-    assert "--install" not in setup
+    assert " -m pip" not in artifact_route
+    assert "torch.load" not in artifact_route
+    assert "--install-runtime" not in artifact_route

@@ -98,5 +98,7 @@ The Mega-53 runtime-evidence increment follows the same separation: one
 download-only helper owns resolver and aggregate-cap enforcement, one
 stdlib-only module owns wheel ZIP/METADATA/licence inspection, and the setup
 shell only binds approval, network denial and atomic publication. The exact
-29-wheel lock is committed separately. No model/runtime imports were added to
-the plan, evidence or documentation modules.
+29-wheel lock is committed separately. A standalone stdlib verifier now owns
+the isolated import gate, exact installed-distribution check and no-network,
+no-checkpoint and no-audio guards. The setup shell remains orchestration only;
+model construction and loading remain outside it.
