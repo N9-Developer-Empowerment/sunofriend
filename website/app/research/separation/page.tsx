@@ -113,7 +113,7 @@ export default function SeparationResearch() {
             </div>
             <div className="agent-card">
               <span className="card-number">OPT-IN STUDIO CHALLENGER</span>
-              <h3>Negative result retained; broader query next</h3>
+              <h3>Negative results retained; synth is next</h3>
               <p>
                 <code>other-refinement-v1</code> now binds one exact grouped-other
                 parent to one requested guitar or keys target plus a transparent
@@ -176,6 +176,18 @@ export default function SeparationResearch() {
                 automatic retry and product activation. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
+              </p>
+              <p>
+                The next bounded plan now targets <code>synth</code> first,
+                followed by guitar and wind. Acoustic piano is only an optional
+                control—not a proxy for modern keys. The public MVSep Mega-53
+                release exposes those roles through a different Band-Split
+                RoFormer architecture. Its exact Apple-native source revision
+                is audited, but the 1,368,919,887-byte checkpoint has not been
+                downloaded or locally verified and its terms remain unreviewed.
+                The no-effects plan permits one configuration, separates audible
+                target presence from model usefulness, forbids automatic or
+                unrestricted loaders, and grants no execution or MIDI authority.
               </p>
             </div>
             <div className="agent-card">

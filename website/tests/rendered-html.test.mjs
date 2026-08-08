@@ -233,7 +233,7 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /Four roles, one immutable profile, no hidden tuning loop/);
   assert.match(html, /OPT-IN STUDIO CHALLENGER/);
   assert.match(html, /other-refinement-v1/);
-  assert.match(html, /Negative result retained; broader query next/);
+  assert.match(html, /Negative results retained; synth is next/);
   assert.match(html, /Apple-native htdemucs_6s MLX/);
   assert.match(html, /normalization passed under network denial/);
   assert.match(html, /five-song, ten-report review demonstrated neither/);
@@ -248,6 +248,9 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /exactly nine song-disjoint CPU calls/);
   assert.match(html, /All 36 private PCM24 artifacts/);
   assert.match(html, /eight targets not useful/);
+  assert.match(html, /targets <code>synth<\/code> first/);
+  assert.match(html, /followed by guitar and wind/);
+  assert.match(html, /Acoustic piano is only an optional control/);
   assert.match(html, /technically valid but musically unsuccessful/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
@@ -750,6 +753,36 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.reference_query_result.midi_authorized,
     false,
+  );
+  assert.deepEqual(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.priority,
+    ["synth", "guitar", "wind"],
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.first_target,
+    "synth",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.checkpoint_declared_bytes,
+    1368919887,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.checkpoint_locally_verified,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.inference_authorized,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.plan_document_sha256,
+    "216ab235c5847b45555cb54fbcbece08eb2d86bea4e36ca60f77f0b8aa5c63b1",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

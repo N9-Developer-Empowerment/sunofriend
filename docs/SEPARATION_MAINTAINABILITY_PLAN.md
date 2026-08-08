@@ -83,3 +83,13 @@ report, and a localhost review/download server. The approved worker loaded the
 models once, completed exactly nine calls and atomically published its private
 package. Model math remains outside the audio and review layers; the setup
 shells still contain neither inference nor product activation.
+
+The next increment is now a pure synth-first challenger document in
+`separation_other_refinement_next_challenger.py`, with a tiny print-only CLI.
+It records exact upstream identities, loader hazards, authority boundaries and
+evaluation semantics without importing a model or touching audio. Instrument
+presence is explicitly separated from model usefulness, so absent targets do
+not become false failures and do not trigger replacement-window hunting. Any
+future Mega-53 adapter must keep artifact verification, restricted loading,
+model math, PCM24 accounting, review and activation in separate modules rather
+than extending one of the legacy orchestration files.
