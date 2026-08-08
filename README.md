@@ -172,11 +172,19 @@ planning commands still construct no model, run no inference and read no
 audio. The retained report SHA-256 is
 `bd5fa57716267488cfd9a0d1d69bc1627da6244d283fdaec5a5592234d51cec8`.
 The very quiet synthetic target peak (`4.118360084248707e-05`) is explicitly
-not musical evidence. The challenger remains unregistered and non-executable;
-the next gate is the separately approved, rights-bound reference-query canary
-printed by the fifth command. It freezes one song-disjoint query bank for
-guitar, keyboard and synth against three owner-authorised test mixtures: nine
-attempts, one configuration and no feedback-driven query hunt. See
+not musical evidence. A later, separately approved rights-bound canary used
+the fifth command's frozen song-disjoint guitar, keyboard and synth query bank
+against three owner-authorised mixtures. Exactly nine CPU attempts completed
+under network denial in 64.01 seconds at 3,259,236,352-byte peak RSS. All 36
+private PCM24 artifacts matched their hashes, every target plus residual
+reconstructed its reference with zero-LSB error, and the worker recorded zero
+network, forbidden-audio or unapproved-checkpoint attempts. The report SHA-256
+is `fd15e3ba9524a49ebd182f86fa5c50ea0f5b02e95cc776ee5943a09147206ea8`.
+That is objective execution evidence, not musical validation: the target peaks
+varied from `0.0001608742` to `0.0355826542`, and human listening is pending.
+The challenger remains unregistered, unselected and unavailable to MIDI; the
+approved nine-attempt authority is consumed and poor feedback cannot trigger a
+query hunt. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 The incremental code-structure work is tracked in
 [Separation maintainability plan](docs/SEPARATION_MAINTAINABILITY_PLAN.md).

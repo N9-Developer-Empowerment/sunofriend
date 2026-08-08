@@ -122,4 +122,25 @@ class SingleUseBanquetForward:
         return _source_pinned_forward(self._model, mixture, query)
 
 
-__all__ = ["SingleUseBanquetForward"]
+class BoundedBanquetReferenceForward:
+    """Permit the nine calls in the approved reference-query matrix only."""
+
+    def __init__(self, model: BanquetLoadAdapter, *, attempt_limit: int = 9) -> None:
+        if attempt_limit != 9:
+            raise ValueError("Banquet reference forward limit must be nine")
+        self._model = model
+        self._attempt_limit = attempt_limit
+        self._attempts = 0
+
+    @property
+    def attempts(self) -> int:
+        return self._attempts
+
+    def run_next(self, mixture: torch.Tensor, query: torch.Tensor) -> torch.Tensor:
+        if self._attempts >= self._attempt_limit:
+            raise RuntimeError("Banquet reference forward attempt limit is exhausted")
+        self._attempts += 1
+        return _source_pinned_forward(self._model, mixture, query)
+
+
+__all__ = ["BoundedBanquetReferenceForward", "SingleUseBanquetForward"]

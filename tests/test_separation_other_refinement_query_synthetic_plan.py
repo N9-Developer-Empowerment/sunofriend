@@ -84,7 +84,7 @@ def test_public_capability_binds_the_exact_synthetic_plan() -> None:
     ]["next_query_challenger"]
     plan = build_query_synthetic_plan()
 
-    assert published["status"] == "synthetic_objective_pass_one_attempt_consumed"
+    assert published["status"] == "reference_objective_pass_human_listening_pending"
     assert published["synthetic_plan_status"] == plan["status"]
     assert published["synthetic_plan_document_sha256"] == plan["document_sha256"]
     assert published["synthetic_plan_run_limit"] == plan["next_approval"][
@@ -106,3 +106,8 @@ def test_public_capability_binds_the_exact_synthetic_plan() -> None:
     assert published["reference_query_plan"]["inference_attempt_limit"] == 9
     assert published["reference_query_plan"]["query_track_is_song_disjoint"] is True
     assert published["reference_query_plan"]["poor_feedback_triggers_query_hunt"] is False
+    assert published["reference_query_result"]["inference_attempts"] == 9
+    assert published["reference_query_result"][
+        "maximum_reconstruction_error_lsb"
+    ] == 0
+    assert published["reference_query_result"]["human_listening_pending"] is True

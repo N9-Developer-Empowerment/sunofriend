@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-08.3"
+INTERFACE_CONTRACT_VERSION = "2026-08-08.4"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -218,9 +218,13 @@ def render_skill_interface_reference() -> str:
         "checkpoints with no missing or unexpected keys, network or audio access. A",
         "separately approved single-use generated-tensor forward then passed every",
         "objective gate in 2.85 seconds at about 2.05 GB peak RSS, with zero network",
-        "or audio access. The very quiet target is not musical evidence, and the",
-        "one-attempt authority is consumed. It is not registered or executable;",
-        "reference audio and further inference require new rights-bound approval.",
+        "or audio access. The very quiet target is not musical evidence. A later",
+        "explicit rights-bound approval completed exactly nine song-disjoint reference",
+        "attempts under network denial in 64.01 seconds at about 3.26 GB peak RSS. All",
+        "36 private PCM24 artifacts matched their hashes and reconstructed within zero",
+        "LSB. Listening remains pending, and neither objective pass establishes musical",
+        "usefulness. It is not registered or executable; another inference run,",
+        "activation, source selection or MIDI requires new explicit authority.",
         "Its CC BY-NC-SA checkpoint permits no hosted or commercial-default claim.",
         "No Sunofriend command downloads music.",
         "",

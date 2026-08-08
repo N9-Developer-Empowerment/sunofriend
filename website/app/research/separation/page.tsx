@@ -161,8 +161,14 @@ export default function SeparationResearch() {
                 stereo float32 output and zero network or audio access. The
                 target was very quiet, so this is adapter evidence rather than
                 musical-quality evidence. The one-attempt authority is consumed.
-                The challenger remains unregistered and non-executable; a
-                rights-bound reference-query canary requires separate approval.
+                A later, separately approved rights-bound reference-query canary completed
+                exactly nine song-disjoint CPU calls under network denial in
+                64.01 seconds at about 3.26 GB peak RSS. All 36 private PCM24
+                artifacts matched their hashes and target plus residual
+                reconstructed each reference with zero-LSB error. This remains
+                objective execution evidence: human listening is pending, the
+                approved nine-attempt authority is consumed, and the challenger
+                is still unregistered, unselected and unavailable to MIDI.
                 The pure result validator accepts either an objective pass or a
                 retained objective failure and rejects subjective ratings,
                 automatic retry and product activation. Its
