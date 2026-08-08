@@ -241,7 +241,8 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /99,354,620 bytes/);
   assert.match(html, /Eight relevant modules/);
   assert.match(html, /zero network attempts/);
-  assert.match(html, /weights-only checkpoint-loading plan/);
+  assert.match(html, /strict weights-only loading/);
+  assert.match(html, /separately approved synthetic inference plan/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
@@ -594,7 +595,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.status,
-    "blocked_pending_restricted_model_construction_and_weights_only_load_plan",
+    "blocked_pending_separately_approved_synthetic_inference_plan",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -615,7 +616,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.required_passt_checkpoint.deserialized,
-    false,
+    true,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -656,6 +657,22 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.runtime_import_evidence.checkpoint_loaded,
     false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.restricted_model_load_evidence.report_sha256,
+    "12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.restricted_model_load_evidence
+      .keys_shapes_and_dtypes_equal,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.restricted_model_load_evidence.inference_runs,
+    0,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

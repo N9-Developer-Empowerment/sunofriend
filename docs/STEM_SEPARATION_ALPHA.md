@@ -32,12 +32,12 @@ Use `sunofriend-separate review-other RESULT_ROOT REVIEW_JSON --out FRESH.json`
 to bind an explicit guitar/keys listening export without selecting or
 activating either frontier.
 
-A separate no-effects plan now audits a query-conditioned candidate for
+A separate audit now tracks a query-conditioned candidate for
 guitar and broad `keyboard_synth`—electric piano, organ, synth pad and synth
-lead. Its approved evidence-only checkpoint download and network-denied
-static inspection did not deserialize or authorize loading. It remains
-blocked, unregistered and non-executable pending objective runtime
-qualification. See
+lead. Its exact runtime and restricted construction/load gate now pass under
+network denial, including all state keys, shapes and dtypes. No inference or
+audio ran. It remains blocked, unregistered and non-executable pending a
+separately approved synthetic inference plan. See
 [Guitar and keyboard/synth query-challenger plan](OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 Inspect the executable default and immutable profiles at any time:

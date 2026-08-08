@@ -83,7 +83,8 @@ The completed five-song, ten-report round demonstrated neither useful guitar
 extraction nor successful piano extraction. That bounded result ends tuning of
 the six-source candidate. The next proposed Studio experiment is the
 unregistered, non-executable Banquet query challenger for guitar and broad
-`keyboard_synth`; see
+`keyboard_synth`. Its exact runtime and network-denied strict checkpoint load
+now pass, but inference and audio remain separately gated; see
 [Guitar and keyboard/synth query-challenger plan](OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 Completed refinement feedback is sealed separately with

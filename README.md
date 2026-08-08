@@ -124,11 +124,10 @@ hunt. Inspect the no-effects plan with:
   scripts/plan-separation-other-refinement-query-runtime.py
 ```
 
-It downloads or installs nothing. The approved private evidence-only checkpoint
-step has now established SHA-256
+It downloads, loads and executes nothing. The approved private checkpoint
+evidence established SHA-256
 `657295888781e62ef50593002720d2edb3858b9e5bbfabf0c54f715a0da4b9e2`
-and a network-denied, non-deserializing static structure report; dependency
-installation, loading and inference remain unapproved. The source audit also
+and a network-denied static structure report. The source audit also
 found the required 341,546,630-byte OpenMIC PaSST checkpoint and rejected the
 upstream automatic download and unrestricted loaders. Its separately approved
 evidence-only download established SHA-256
@@ -142,9 +141,14 @@ A later separately approved gate installed those exact 28 packages from the
 local cache into a fresh CPython 3.12.10/macOS-arm64 environment using
 `--no-index --require-hashes`. Eight relevant package modules imported under
 network denial with zero checkpoint opens, `torch.load` calls, network
-attempts or audio opens. The challenger remains blocked and non-executable
-pending a separately approved restricted model-construction and weights-only
-checkpoint-loading plan. See
+attempts or audio opens. A further explicitly approved gate then constructed
+the real 64-band Banquet adapter and both download-disabled PaSST variants and
+loaded the two exact local checkpoints with
+`torch.load(weights_only=True, map_location="cpu")`. All 1,069 Banquet and 159
+OpenMIC PaSST keys, shapes and dtypes matched before strict loading, with no
+missing or unexpected keys, network attempt or audio open. No inference ran.
+The challenger remains blocked, unregistered and non-executable pending a
+separately approved synthetic inference plan. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 After the local page exports your listening JSON, bind it to the exact result

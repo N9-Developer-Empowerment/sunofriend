@@ -50,10 +50,10 @@ A network-denied, non-deserializing inspection found a 3,491-member PyTorch ZIP
 and parsed its 452,701-byte protocol-2 pickle metadata stream. Its four GLOBAL
 references were limited to `OrderedDict`, Torch float/double storage and the
 standard tensor rebuild helper; no application model class was observed. The
-inspection did not read tensor-storage payloads, import a dependency, construct
-a model or establish loading safety. Exact runtime pins and Apple-silicon
-resource behaviour remain unknown. Consequently the candidate is still not
-registered, executable or approved for model loading.
+inspection did not read tensor-storage payloads, import a dependency or
+construct a model. Later bounded gates established the exact runtime and the
+restricted loading result described below. The candidate is still not
+registered or executable and has no inference authority.
 
 ## Runtime audit: a second checkpoint is required
 
@@ -90,7 +90,7 @@ local noncommercial research only.
 Sunofriend will not run either upstream loader. The proposed adapter must
 construct PaSST with `pretrained=False`, load both explicit local checkpoints
 with `torch.load(weights_only=True, map_location="cpu")`, verify state-dict keys
-and tensor shapes before strict loading, and deny network access for import,
+and tensor shapes and dtypes before strict loading, and deny network access for import,
 construction, loading and inference. Lightning, TorchMetrics, pandas,
 TorchAudioMentations and OmegaConf are excluded from the inference adapter.
 
@@ -145,10 +145,11 @@ evidence shows that it actually extracts target content.
 ## Objective gates
 
 - exact source, checkpoint and runtime identities;
-- checkpoint SHA-256 and weights-only static inspection before model loading
-  (**passed as non-authorising evidence**);
+- checkpoint SHA-256, weights-only static inspection and exact state-contract
+  verification before strict model loading (**passed**);
 - hash-locked dependencies;
-- network-denied model construction and inference;
+- network-denied model construction (**passed**) and inference (**pending a
+  separate approval**);
 - finite stereo 44.1 kHz samples on the parent clock;
 - target-plus-residual reconstruction within two PCM24 LSBs;
 - declared timeout and memory ceilings on the first supported Mac; and
@@ -235,9 +236,42 @@ TorchVision, timm, `hear21passt`, `hear21passt.models.passt` and
 opens, `torch.load` calls and audio opens. Its canonical import report SHA-256
 is `8f0b23e9943aa4e3f520f599479e575589102c07fa1c199424690cff0711768a`.
 
-This installation does not make the challenger registered or executable. The
-next bounded gate is a separately reviewed minimal adapter plan that constructs
-PaSST with `pretrained=False`, loads both explicit local checkpoints with
-`weights_only=True` under network denial and reads no audio. Checkpoint
-loading, model construction, inference, audio processing, activation, source
-selection and MIDI remain unapproved.
+This installation did not make the challenger registered or executable.
+
+The separately approved restricted construction and load gate then completed
+on 2026-08-08:
+
+```bash
+scripts/setup-separation-other-refinement-query-runtime-macos.sh \
+  --construct-and-load-models \
+  --accept-restricted-model-load
+```
+
+The gate used the isolated CPython 3.12.10/macOS-arm64 runtime and operating
+system network denial. It constructed the pinned 64-musical-band Banquet
+setup-C topology with sixteen bidirectional GRUs, 64 mask heads, FiLM and its
+embedded 527-class PaSST, plus the separate 20-class OpenMIC PaSST. Both PaSST
+instances were constructed with `pretrained=False`; neither upstream loader
+ran.
+
+Before strict loading, Sunofriend compared every state key, tensor shape and
+dtype:
+
+| Model state | Verified result |
+| --- | --- |
+| Banquet checkpoint | 1,069 keys, 111,234,333 values, inventory SHA-256 `c562cc6f0b6807470d4d36ee4f6a048870e917afac9d7f92b2e35d7b9efec27f` |
+| Standalone OpenMIC PaSST | 159 keys, 85,373,992 values, inventory SHA-256 `ed94f5ea73d96f5965b1f67f11e84264f0afadd2efbbfad4d22783a4fc2aef96` |
+| Strict loads | zero missing keys and zero unexpected keys for both models |
+| Effects boundary | zero network attempts, zero audio opens and zero inference runs |
+
+The canonical load-report SHA-256 is
+`12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced`.
+This result proves architecture/checkpoint compatibility under the restricted
+loader. It does not prove separation quality, runtime resources or a working
+forward adapter.
+
+The challenger remains blocked, unregistered and non-executable. The next
+bounded gate is a separately reviewed, network-denied synthetic forward plan
+that uses generated tensors before any authorised query or song audio.
+Inference, audio processing, activation, source selection and MIDI remain
+unapproved.

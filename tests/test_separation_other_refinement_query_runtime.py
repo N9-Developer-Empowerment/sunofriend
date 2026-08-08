@@ -21,7 +21,7 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     audit = build_query_runtime_audit()
 
     assert audit["status"] == (
-        "blocked_pending_restricted_model_construction_and_weights_only_load_plan"
+        "blocked_pending_separately_approved_synthetic_inference_plan"
     )
     assert audit["registered"] is False
     assert audit["executable"] is False
@@ -42,7 +42,8 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     assert passt["evidence_complete"] is True
     assert passt["evidence_only_download_approved"] is True
     assert passt["network_denied_static_inspection_complete"] is True
-    assert passt["loaded"] is False
+    assert passt["loaded"] is True
+    assert audit["required_artifacts"]["banquet"]["loaded"] is True
     contract = audit["restricted_loading_contract"]
     assert contract["use_upstream_train_cli"] is False
     assert contract["use_lightning_load_from_checkpoint"] is False
@@ -74,14 +75,33 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     assert import_evidence["audio_open_attempts"] == 0
     assert import_evidence["checkpoint_loaded"] is False
     assert import_evidence["model_constructed"] is False
+    load = runtime["model_load_evidence"]
+    assert load["status"] == (
+        "two_exact_models_constructed_and_strictly_loaded_network_denied"
+    )
+    assert load["model_load_report_sha256"] == (
+        "12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced"
+    )
+    assert load["network_attempts"] == 0
+    assert load["audio_open_attempts"] == 0
+    assert load["checkpoint_loaded"] is True
+    assert load["model_constructed"] is True
+    assert load["inference_runs"] == 0
+    for model_name in ("banquet", "passt"):
+        assert load[model_name]["keys_equal"] is True
+        assert load[model_name]["shapes_equal"] is True
+        assert load[model_name]["dtypes_equal"] is True
+        assert load[model_name]["strict_load_missing_keys"] == []
+        assert load[model_name]["strict_load_unexpected_keys"] == []
     assert audit["next_gate"]["kind"] == (
-        "review_restricted_model_construction_and_weights_only_load_plan"
+        "review_network_denied_synthetic_adapter_inference_plan"
     )
     assert audit["next_gate"]["dependency_artifact_download_approved"] is True
     assert audit["next_gate"]["dependency_artifact_download_complete"] is True
     assert audit["next_gate"]["dependency_installation"] is True
     assert audit["next_gate"]["package_import"] is True
-    assert audit["next_gate"]["model_loading"] is False
+    assert audit["next_gate"]["model_loading"] is True
+    assert audit["next_gate"]["model_construction"] is True
     assert not any(
         value is True
         for key, value in audit["effects"].items()
@@ -94,7 +114,7 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
 def test_query_runtime_audit_rejects_authority_expansion() -> None:
     audit = build_query_runtime_audit()
     changed = copy.deepcopy(audit)
-    changed["next_gate"]["model_loading"] = True
+    changed["next_gate"]["inference"] = True
 
     with pytest.raises(ValueError, match="differs from the reviewed audit"):
         validate_query_runtime_audit(changed)
@@ -120,3 +140,36 @@ def test_query_runtime_plan_script_is_read_only() -> None:
     assert document == build_query_runtime_audit()
     assert document["effects"]["network_used_by_plan"] is False
     assert document["effects"]["artifact_downloaded_by_plan"] is False
+
+
+def test_restricted_model_load_script_has_no_inference_or_audio_interface() -> None:
+    source = (
+        ROOT
+        / "scripts"
+        / "verify-separation-other-refinement-query-model-load.py"
+    ).read_text(encoding="utf-8")
+
+    assert "def forward" not in source
+    assert 'parser.add_argument("--banquet"' in source
+    assert 'parser.add_argument("--passt"' in source
+    assert 'parser.add_argument("--audio"' not in source
+    assert 'pretrained=False' in source
+    assert 'weights_only=True' in source
+    assert 'map_location="cpu"' in source
+    assert '"inference_runs": 0' in source
+    assert '"audio_reads": 0' in source
+    assert '"public_activation": False' in source
+
+
+def test_restricted_model_load_requires_its_explicit_acceptance_flag() -> None:
+    source = (
+        ROOT
+        / "scripts"
+        / "setup-separation-other-refinement-query-runtime-macos.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "--construct-and-load-models" in source
+    assert "--accept-restricted-model-load" in source
+    assert "deny network*" in source
+    assert "MODEL-LOAD-REPORT.json" in source
+    assert "No inference or audio ran" in source

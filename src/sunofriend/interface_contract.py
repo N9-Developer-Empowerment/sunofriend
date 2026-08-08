@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-08.2"
+INTERFACE_CONTRACT_VERSION = "2026-08-08.3"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -197,9 +197,9 @@ def render_skill_interface_reference() -> str:
         "to the unchanged result and grants no selection, activation or promotion.",
         "The completed five-song, ten-report round demonstrated neither useful guitar",
         "extraction nor successful piano extraction. The profile remains reproducible",
-        "but is not a working guitar/keyboard claim. A separate read-only Banquet plan",
+        "but is not a working guitar/keyboard claim. A separate Banquet audit",
         "targets guitar and broad `keyboard_synth`; its approved evidence-only download",
-        "and network-denied opcode inspection did not deserialize or authorize loading.",
+        "and network-denied opcode inspection preceded a restricted loading gate.",
         "Its source audit found a second required 341,546,630-byte OpenMIC PaSST",
         "checkpoint and rejected the upstream automatic and unrestricted loaders. The",
         "separately approved non-loading inspection established SHA-256",
@@ -212,9 +212,12 @@ def render_skill_interface_reference() -> str:
         "A later separately approved gate installed that exact closure into a fresh",
         "CPython 3.12.10/macOS-arm64 environment and imported the eight relevant",
         "modules under network denial with zero network attempts, checkpoint opens,",
-        "`torch.load` calls or audio opens. It is not registered or executable; model",
-        "construction and weights-only checkpoint loading still require separate",
-        "approval. Its CC BY-NC-SA checkpoint permits no hosted or",
+        "`torch.load` calls or audio opens. A further explicit approval constructed the",
+        "real 64-band adapter and both download-disabled PaSST variants, verified all",
+        "1,228 combined state keys, shapes and dtypes, and strictly loaded both exact",
+        "checkpoints with no missing or unexpected keys, network or audio access. No",
+        "inference ran. It is not registered or executable; inference and audio still",
+        "require separate approval. Its CC BY-NC-SA checkpoint permits no hosted or",
         "commercial-default claim.",
         "No Sunofriend command downloads music.",
         "",

@@ -8,23 +8,27 @@ INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-pas
 WHEEL_DOWNLOAD_SCRIPT="$REPOSITORY_ROOT/scripts/download-separation-other-refinement-query-runtime-wheels.py"
 WHEEL_INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-query-runtime-wheels.py"
 RUNTIME_IMPORT_SCRIPT="$REPOSITORY_ROOT/scripts/verify-separation-other-refinement-query-runtime-imports.py"
+MODEL_LOAD_SCRIPT="$REPOSITORY_ROOT/scripts/verify-separation-other-refinement-query-model-load.py"
 RUNTIME_REQUIREMENTS="$REPOSITORY_ROOT/separation-other-refinement-query-runtime-requirements.txt"
 DATA_ROOT=${SUNOFRIEND_SEPARATION_ROOT:-"$HOME/.local/share/sunofriend/separation"}
+BANQUET_EVIDENCE_ROOT=${SUNOFRIEND_QUERY_CHALLENGER_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/query-bandit-ev-pre-aug-v1"}
 EVIDENCE_ROOT=${SUNOFRIEND_PASST_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/passt-openmic-v0.0.5"}
 RUNTIME_WHEEL_EVIDENCE_ROOT=${SUNOFRIEND_QUERY_RUNTIME_WHEEL_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/query-bandit-runtime-wheels-macos-arm64-py312-v1"}
 RUNTIME_IMPORT_ROOT=${SUNOFRIEND_QUERY_RUNTIME_IMPORT_ROOT:-"$DATA_ROOT/evidence/query-bandit-runtime-import-macos-arm64-py312-v1"}
+MODEL_LOAD_ROOT=${SUNOFRIEND_QUERY_MODEL_LOAD_ROOT:-"$DATA_ROOT/evidence/query-bandit-restricted-model-load-v1"}
 ACTION=plan
 ACCEPTED_TERMS=false
 ACCEPTED_CHECKPOINT_USE=false
 ACCEPTED_RUNTIME_WHEEL_EVIDENCE=false
 ACCEPTED_RUNTIME_INSTALL_AND_IMPORT=false
+ACCEPTED_RESTRICTED_MODEL_LOAD=false
 EXPECTED_BYTES=341546630
 MAX_BYTES=393216000
 RUNTIME_WHEEL_CAP_BYTES=1073741824
 CHECKPOINT_URL='https://github.com/kkoutini/PaSST/releases/download/v0.0.5/openmic-passt-s-f128-10sec-p16-s10-ap.85.pt'
 
 usage() {
-    echo "Usage: scripts/setup-separation-other-refinement-query-runtime-macos.sh [--plan | --passt-evidence-only --accept-passt-terms --accept-passt-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence | --install-runtime --accept-runtime-install-and-import]"
+    echo "Usage: scripts/setup-separation-other-refinement-query-runtime-macos.sh [--plan | --passt-evidence-only --accept-passt-terms --accept-passt-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence | --install-runtime --accept-runtime-install-and-import | --construct-and-load-models --accept-restricted-model-load]"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -33,10 +37,12 @@ while [ "$#" -gt 0 ]; do
         --passt-evidence-only) ACTION=passt-evidence-only ;;
         --runtime-wheel-evidence-only) ACTION=runtime-wheel-evidence-only ;;
         --install-runtime) ACTION=install-runtime ;;
+        --construct-and-load-models) ACTION=construct-and-load-models ;;
         --accept-passt-terms) ACCEPTED_TERMS=true ;;
         --accept-passt-checkpoint-use) ACCEPTED_CHECKPOINT_USE=true ;;
         --accept-runtime-wheel-evidence) ACCEPTED_RUNTIME_WHEEL_EVIDENCE=true ;;
         --accept-runtime-install-and-import) ACCEPTED_RUNTIME_INSTALL_AND_IMPORT=true ;;
+        --accept-restricted-model-load) ACCEPTED_RESTRICTED_MODEL_LOAD=true ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
@@ -57,6 +63,188 @@ PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
 if [ "$ACTION" = plan ]; then
     echo ""
     echo "Plan only; nothing was downloaded, installed, loaded or executed."
+    exit 0
+fi
+
+if [ "$ACTION" = construct-and-load-models ]; then
+    if [ "$ACCEPTED_RESTRICTED_MODEL_LOAD" != true ]; then
+        echo "--construct-and-load-models requires --accept-restricted-model-load after reviewing the exact no-inference boundary" >&2
+        exit 2
+    fi
+    if [ "$(uname -s)" != Darwin ] || [ "$(uname -m)" != arm64 ]; then
+        echo "The approved restricted model load targets macOS on Apple silicon only" >&2
+        exit 2
+    fi
+    for required_command in sandbox-exec shasum; do
+        if ! command -v "$required_command" >/dev/null 2>&1; then
+            echo "$required_command is required for restricted model loading" >&2
+            exit 2
+        fi
+    done
+    if [ -e "$MODEL_LOAD_ROOT" ] || [ -L "$MODEL_LOAD_ROOT" ]; then
+        echo "Refusing to overwrite existing restricted model-load evidence: $MODEL_LOAD_ROOT" >&2
+        exit 2
+    fi
+    for required_evidence in \
+        "$BANQUET_EVIDENCE_ROOT/ev-pre-aug.ckpt" \
+        "$BANQUET_EVIDENCE_ROOT/STATIC-EVIDENCE.json" \
+        "$BANQUET_EVIDENCE_ROOT/APPROVAL-RECEIPT.json" \
+        "$EVIDENCE_ROOT/openmic-passt-s-f128-10sec-p16-s10-ap.85.pt" \
+        "$EVIDENCE_ROOT/STATIC-EVIDENCE.json" \
+        "$EVIDENCE_ROOT/APPROVAL-RECEIPT.json" \
+        "$RUNTIME_IMPORT_ROOT/IMPORT-REPORT.json" \
+        "$RUNTIME_IMPORT_ROOT/APPROVAL-RECEIPT.json"; do
+        if [ ! -e "$required_evidence" ] || [ -L "$required_evidence" ]; then
+            echo "Approved restricted model-load prerequisite is missing: $required_evidence" >&2
+            exit 2
+        fi
+    done
+    if [ ! -x "$RUNTIME_IMPORT_ROOT/runtime/bin/python" ]; then
+        echo "Approved restricted model-load runtime Python is not executable" >&2
+        exit 2
+    fi
+    echo "657295888781e62ef50593002720d2edb3858b9e5bbfabf0c54f715a0da4b9e2  $BANQUET_EVIDENCE_ROOT/ev-pre-aug.ckpt" | shasum -a 256 -c - >/dev/null
+    echo "dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da  $EVIDENCE_ROOT/openmic-passt-s-f128-10sec-p16-s10-ap.85.pt" | shasum -a 256 -c - >/dev/null
+    echo "369c7f63b4cb93591d8060d76043ab9f3509e42b26c0c57cc1ca5f7bbf41657d  $RUNTIME_IMPORT_ROOT/IMPORT-REPORT.json" | shasum -a 256 -c - >/dev/null
+    echo "ffd25870b284126925f9f8f1a46577882f7e35442bc45a68c2ade9f58c2ec39b  $RUNTIME_IMPORT_ROOT/APPROVAL-RECEIPT.json" | shasum -a 256 -c - >/dev/null
+    if [ "$("$RUNTIME_IMPORT_ROOT/runtime/bin/python" -c 'import platform, sys; print(f"{sys.version_info.major}.{sys.version_info.minor}:{platform.machine()}")')" != 3.12:arm64 ]; then
+        echo "Approved restricted model-load runtime identity differs" >&2
+        exit 2
+    fi
+
+    MODEL_LOAD_PARENT=$(dirname "$MODEL_LOAD_ROOT")
+    mkdir -p "$MODEL_LOAD_PARENT"
+    STAGING=$(mktemp -d "$MODEL_LOAD_PARENT/.query-model-load.building.XXXXXX")
+    preserve_failed_model_load_staging() {
+        model_load_exit_code=$?
+        if [ -n "${STAGING:-}" ] && [ -d "$STAGING" ]; then
+            failed_root="$MODEL_LOAD_PARENT/query-bandit-restricted-model-load.failed.$$.evidence"
+            if [ ! -e "$failed_root" ] && [ ! -L "$failed_root" ]; then
+                chmod -R go-w "$STAGING" 2>/dev/null || true
+                mv "$STAGING" "$failed_root"
+                STAGING=
+                echo "Preserved failed restricted model-load evidence: $failed_root" >&2
+            fi
+        fi
+        exit "$model_load_exit_code"
+    }
+    trap preserve_failed_model_load_staging EXIT HUP INT TERM
+    mkdir -p "$STAGING/home/cache" "$STAGING/home/torch"
+
+    HOME="$STAGING/home" XDG_CACHE_HOME="$STAGING/home/cache" \
+    TORCH_HOME="$STAGING/home/torch" HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
+    sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+    "$RUNTIME_IMPORT_ROOT/runtime/bin/python" -I -B "$MODEL_LOAD_SCRIPT" \
+        --banquet "$BANQUET_EVIDENCE_ROOT/ev-pre-aug.ckpt" \
+        --passt "$EVIDENCE_ROOT/openmic-passt-s-f128-10sec-p16-s10-ap.85.pt" \
+        > "$STAGING/MODEL-LOAD-REPORT.json" \
+        2> "$STAGING/CONSTRUCTION.log"
+
+    PYTHONDONTWRITEBYTECODE=1 "$PLAN_PYTHON" -B - \
+        "$STAGING/MODEL-LOAD-REPORT.json" \
+        "$STAGING/APPROVAL-RECEIPT.json" \
+        "$MODEL_LOAD_ROOT" <<'PY'
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+report_path = Path(sys.argv[1])
+receipt_path = Path(sys.argv[2])
+published_root = Path(sys.argv[3])
+report = json.loads(report_path.read_text(encoding="utf-8"))
+assert report["schema"] == "sunofriend.other-refinement-query-restricted-model-load.v1"
+assert report["status"] == "two_exact_models_constructed_and_strictly_loaded_network_denied"
+assert report["source_revision"] == "79ed5bb75e5c3a40cd319d9d990cee913fc65c26"
+assert report["models"]["passt"]["inventory_sha256"] == "ed94f5ea73d96f5965b1f67f11e84264f0afadd2efbbfad4d22783a4fc2aef96"
+assert report["models"]["banquet"]["inventory_sha256"] == "c562cc6f0b6807470d4d36ee4f6a048870e917afac9d7f92b2e35d7b9efec27f"
+for model in report["models"].values():
+    if not isinstance(model, dict) or "keys_equal" not in model:
+        continue
+    assert model["keys_equal"] is True
+    assert model["shapes_equal"] is True
+    assert model["dtypes_equal"] is True
+    assert model["strict_load_missing_keys"] == []
+    assert model["strict_load_unexpected_keys"] == []
+assert report["guards"] == {
+    "audio_open_attempts": 0,
+    "network_attempts": 0,
+    "os_network_denial_required": True,
+    "pretrained_network_resolution": False,
+    "restricted_torch_load_calls": 2,
+    "unapproved_checkpoint_open_attempts": 0,
+}
+assert report["effects"] == {
+    "audio_reads": 0,
+    "audio_writes": 0,
+    "checkpoint_loaded": True,
+    "inference_runs": 0,
+    "midi_created": False,
+    "model_constructed": True,
+    "public_activation": False,
+    "source_selection": False,
+}
+
+def document_sha256(value: dict) -> str:
+    payload = {key: item for key, item in value.items() if key != "report_sha256"}
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+assert report["report_sha256"] == document_sha256(report)
+receipt = {
+    "schema": "sunofriend.other-refinement-query-restricted-model-load-approval.v1",
+    "status": "restricted_model_load_gate_complete_no_inference_authority",
+    "recorded_at": datetime.now(timezone.utc).isoformat(),
+    "profile_id": "query-bandit-ev-pre-aug-v1",
+    "published_root": str(published_root),
+    "model_load_report_sha256": report["report_sha256"],
+    "approved_action": (
+        "network-denied construction of the minimal Banquet and PaSST adapter "
+        "and weights-only loading of the two exact local checkpoints with strict "
+        "state-dict key, shape and dtype verification"
+    ),
+    "checkpoint_loaded": True,
+    "model_constructed": True,
+    "network_denied": True,
+    "audio_processed": False,
+    "inference_performed": False,
+    "public_activation": False,
+    "source_selection": False,
+    "midi_created": False,
+    "not_approved": [
+        "inference",
+        "audio_processing",
+        "public_activation",
+        "source_selection",
+        "midi",
+    ],
+}
+receipt_path.write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+PY
+
+    chmod 0444 "$STAGING"/*.json "$STAGING"/*.log
+    chmod -R go-w "$STAGING"
+    mv "$STAGING" "$MODEL_LOAD_ROOT"
+    STAGING=
+    trap - EXIT HUP INT TERM
+
+    echo ""
+    echo "Restricted query model-load gate complete: $MODEL_LOAD_ROOT"
+    echo "Both exact models were constructed with download-disabled PaSST and loaded strictly under network denial."
+    echo "No inference or audio ran, and nothing was activated, selected or sent to MIDI."
     exit 0
 fi
 

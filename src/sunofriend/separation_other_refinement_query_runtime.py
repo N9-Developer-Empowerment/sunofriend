@@ -1,8 +1,8 @@
-"""Runtime audit and no-effects next-gate plan for the Banquet challenger.
+"""Runtime and restricted-load audit for the Banquet challenger.
 
-This module records completed static and isolated-import evidence. Building
-the document itself does not import a model dependency, inspect audio,
-download an artifact or make the challenger executable.
+This module records completed static, isolated-import and strict model-load
+evidence. Building the document itself does not import a model dependency,
+inspect audio, load a checkpoint or make the challenger executable.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
         "status": (
-            "blocked_pending_restricted_model_construction_and_weights_only_load_plan"
+            "blocked_pending_separately_approved_synthetic_inference_plan"
         ),
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
@@ -92,7 +92,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 ),
                 "license": "CC-BY-NC-SA-4.0",
                 "evidence_complete": True,
-                "loaded": False,
+                "loaded": True,
             },
             "passt_openmic": {
                 "file": "openmic-passt-s-f128-10sec-p16-s10-ap.85.pt",
@@ -110,7 +110,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 "evidence_complete": True,
                 "evidence_only_download_approved": True,
                 "network_denied_static_inspection_complete": True,
-                "loaded": False,
+                "loaded": True,
             },
         },
         "observed_upstream_hazards": [
@@ -156,7 +156,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
             "passt_construction": "pretrained=False with explicit local weights",
             "network_denied_for_import_construction_and_load": True,
             "explicit_local_cache_only": True,
-            "state_dict_keys_and_tensor_shapes_verified_before_strict_load": True,
+            "state_dict_keys_shapes_and_dtypes_verified_before_strict_load": True,
             "no_audio_during_first_restricted_load": True,
             "dependency_artifacts_require_sha256": True,
             "runtime_environment_isolated": True,
@@ -208,6 +208,8 @@ def build_query_runtime_audit() -> dict[str, Any]:
             "installation_approved": True,
             "installation_complete": True,
             "apple_silicon_import_verified": True,
+            "restricted_model_load_approved": True,
+            "restricted_model_load_complete": True,
             "import_evidence": {
                 "status": (
                     "isolated_hash_locked_runtime_imports_verified_network_denied"
@@ -247,27 +249,78 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 "inference_runs": 0,
                 "audio_reads": 0,
             },
+            "model_load_evidence": {
+                "status": (
+                    "two_exact_models_constructed_and_strictly_loaded_network_denied"
+                ),
+                "target": "CPython 3.12.10, macOS arm64",
+                "source_revision": (
+                    "79ed5bb75e5c3a40cd319d9d990cee913fc65c26"
+                ),
+                "model_load_report_sha256": (
+                    "12c028e88afdb94a22aa4344b75fb63a23386fd4f2292d9bf9aac0405b12dced"
+                ),
+                "model_load_report_file_sha256": (
+                    "6707d71ac08abf884e050921d1ee5e6b973b9e33c87d2905eb1acf2120809843"
+                ),
+                "approval_receipt_file_sha256": (
+                    "0dc27808000cd2a8afc6ff5a15aee8f31671c223e5ec84da8b16a172b5df4bdc"
+                ),
+                "banquet": {
+                    "state_key_count": 1_069,
+                    "total_numel": 111_234_333,
+                    "inventory_sha256": (
+                        "c562cc6f0b6807470d4d36ee4f6a048870e917afac9d7f92b2e35d7b9efec27f"
+                    ),
+                    "keys_equal": True,
+                    "shapes_equal": True,
+                    "dtypes_equal": True,
+                    "strict_load_missing_keys": [],
+                    "strict_load_unexpected_keys": [],
+                },
+                "passt": {
+                    "state_key_count": 159,
+                    "total_numel": 85_373_992,
+                    "inventory_sha256": (
+                        "ed94f5ea73d96f5965b1f67f11e84264f0afadd2efbbfad4d22783a4fc2aef96"
+                    ),
+                    "keys_equal": True,
+                    "shapes_equal": True,
+                    "dtypes_equal": True,
+                    "strict_load_missing_keys": [],
+                    "strict_load_unexpected_keys": [],
+                },
+                "torch_load_contract": (
+                    "two calls using weights_only=True and map_location='cpu'"
+                ),
+                "network_denied": True,
+                "network_attempts": 0,
+                "audio_open_attempts": 0,
+                "unapproved_checkpoint_open_attempts": 0,
+                "checkpoint_loaded": True,
+                "model_constructed": True,
+                "inference_runs": 0,
+                "audio_reads": 0,
+                "audio_writes": 0,
+            },
         },
         "next_gate": {
-            "kind": (
-                "review_restricted_model_construction_and_weights_only_load_plan"
-            ),
+            "kind": "review_network_denied_synthetic_adapter_inference_plan",
             "next_action": (
-                "review a minimal network-denied adapter plan that constructs PaSST "
-                "with pretrained=False and loads both explicit local checkpoints "
-                "weights-only without reading audio"
+                "review a bounded network-denied adapter-forward plan using only "
+                "generated synthetic tensors before any authorised song or query audio"
             ),
             "dependency_artifact_download_approved": True,
             "dependency_artifact_download_complete": True,
             "dependency_installation": True,
             "package_import": True,
-            "model_loading": False,
-            "model_construction": False,
+            "model_loading": True,
+            "model_construction": True,
             "inference": False,
             "audio_processing": False,
             "public_activation": False,
             "source_or_midi_activation": False,
-            "requires_separate_approval_before_model_construction_or_loading": True,
+            "requires_separate_approval_before_inference_or_audio_processing": True,
         },
         "effects": {
             "network_used_by_plan": False,

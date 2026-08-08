@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-08.2 -->
+<!-- sunofriend-interface-contract: 2026-08-08.3 -->
 
 # Sunofriend
 
@@ -61,10 +61,10 @@ on.
   guitar extraction nor successful piano extraction. Keep the technically
   valid profile reproducible in Studio, but do not promote it, describe it as
   a working guitar/keys capability or send it to MIDI. The next read-only
-  candidate plan is `docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md`; it
+  candidate is documented in `docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md`; it
   targets guitar plus broad `keyboard_synth`. Its approved evidence-only
-  checkpoint download and static inspection grant no dependency installation,
-  model load, inference or audio processing. The completed source audit found
+  checkpoint download and static inspection did not themselves grant model
+  loading, inference or audio processing. The completed source audit found
   a second required 341,546,630-byte OpenMIC PaSST checkpoint and forbids both
   upstream automatic/unrestricted loaders. Use
   `scripts/plan-separation-other-refinement-query-runtime.py` for the current
@@ -79,9 +79,13 @@ on.
   A later separately approved gate installed those exact wheels into a fresh
   CPython 3.12.10/macOS-arm64 environment and imported the eight relevant
   modules under network denial. It recorded zero network attempts, checkpoint
-  opens, `torch.load` calls and audio opens. Do not construct a model, load
-  either checkpoint or run inference without a new reviewed plan and explicit
-  approval.
+  opens, `torch.load` calls and audio opens. A later explicit approval completed
+  the restricted construction/load gate: the real 64-band adapter and both
+  download-disabled PaSST variants matched all 1,228 combined checkpoint keys,
+  shapes and dtypes before strict loading, with no missing or unexpected keys,
+  network or audio access. No inference ran. Do not run a forward pass, process
+  audio, activate a source or create MIDI without a new reviewed plan and
+  explicit approval.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
@@ -204,21 +208,24 @@ Inspect the next no-effects query-challenger plan with:
 .venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py
 ```
 
-It proposes Banquet under a CC BY-NC-SA 4.0 local-noncommercial boundary. The
+It records Banquet under a CC BY-NC-SA 4.0 local-noncommercial boundary. The
 approved capped evidence-only download established the exact checkpoint
-SHA-256 and a network-denied, non-deserializing opcode report. It did not
-authorize dependency installation, checkpoint loading, model inference,
-private-song processing, public activation, source selection or MIDI. Require
-a new reviewed plan and explicit approval before any of those actions. The
+SHA-256 and a network-denied, non-deserializing opcode report. The later
+restricted load approval authorized only construction and strict weights-only
+loading; it did not authorize model inference, private-song processing, public
+activation, source selection or MIDI. Require a new reviewed plan and explicit
+approval before any of those actions. The
 audit found and separately inspected the second required OpenMIC PaSST
 checkpoint, establishing SHA-256
 `dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`
   without loading it. Both model-artifact identities and the 28-wheel runtime
   hash closure are complete. A separately approved isolated gate installed the
   closure from the local cache and verified the relevant imports under network
-  denial without loading a checkpoint. Do not use the upstream downloader or
-  loader, construct a model, load either checkpoint or run inference until a
-  new restricted-loading plan is reviewed and explicitly approved.
+  denial. The approved restricted loader then constructed PaSST with
+  `pretrained=False`, verified every state key, shape and dtype and strictly
+  loaded both checkpoints under network denial. Do not use the upstream
+  downloader or loader, run inference or process audio until a new synthetic
+  inference plan is reviewed and explicitly approved.
 
 ## Inspect before installing
 

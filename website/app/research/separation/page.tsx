@@ -131,7 +131,7 @@ export default function SeparationResearch() {
                 source selection or MIDI.
               </p>
               <p>
-                The next no-effects plan audits the music-specific Banquet
+                The next bounded audit tracks the music-specific Banquet
                 query separator for guitar plus broad <code>keyboard_synth</code>:
                 electric piano, organ, synth pad and synth lead. Its approved
                 evidence-only checkpoint download matched the published MD5,
@@ -151,9 +151,13 @@ export default function SeparationResearch() {
                 <code> --no-index --require-hashes</code>. Eight relevant modules
                 imported under network denial with zero network attempts,
                 checkpoint opens, <code>torch.load</code> calls or audio opens.
-                The challenger remains blocked, unregistered and non-executable
-                pending a separately approved restricted model-construction and
-                weights-only checkpoint-loading plan. Its
+                A further explicitly approved gate constructed the real
+                64-band adapter and both download-disabled PaSST variants. It
+                verified all 1,228 combined keys, shapes and dtypes before
+                strict weights-only loading, with no missing or unexpected
+                keys, network attempt or audio open. No inference ran. The
+                challenger remains blocked, unregistered and non-executable
+                pending a separately approved synthetic inference plan. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
               </p>
