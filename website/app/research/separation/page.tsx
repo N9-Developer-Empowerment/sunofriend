@@ -136,9 +136,13 @@ export default function SeparationResearch() {
                 electric piano, organ, synth pad and synth lead. Its approved
                 evidence-only checkpoint download matched the published MD5,
                 established an exact SHA-256 and passed network-denied static
-                opcode inspection without deserialization. It remains blocked,
-                unregistered and non-executable pending separately approved
-                runtime work and Apple-silicon qualification. Its
+                opcode inspection without deserialization. The source audit
+                then found a second required 341,546,630-byte OpenMIC PaSST
+                checkpoint plus unsafe automatic upstream loaders. Sunofriend
+                will bypass those loaders; the challenger remains blocked,
+                unregistered and non-executable pending a separately approved
+                PaSST evidence download, hash-locked runtime work and
+                Apple-silicon qualification. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
               </p>

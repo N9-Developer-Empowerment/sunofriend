@@ -417,7 +417,7 @@
         "next_query_challenger": {
           "scope_id": "other-query-refinement-v1",
           "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
-          "status": "blocked_pending_runtime_qualification",
+          "status": "blocked_pending_passt_checkpoint_evidence",
           "registered": false,
           "executable": false,
           "targets": ["guitar", "keyboard_synth"],
@@ -439,15 +439,28 @@
           "network_denied_static_inspection_complete": true,
           "checkpoint_deserialized": false,
           "loading_safety_established": false,
+          "runtime_source_audit_complete": true,
+          "checkpoint_lightning_version_observed_statically": "2.1.3",
+          "upstream_cli_allowed": false,
+          "upstream_checkpoint_loaders_allowed": false,
+          "required_passt_checkpoint": {
+            "file": "openmic-passt-s-f128-10sec-p16-s10-ap.85.pt",
+            "published_bytes": 341546630,
+            "sha256": null,
+            "download_authorized": false,
+            "code_and_release_license_evidence": "Apache-2.0",
+            "training_dataset": "OpenMIC-2018",
+            "training_dataset_license": "CC-BY-4.0"
+          },
           "dependency_install_authorized": false,
           "model_loading_authorized": false,
           "inference_authorized": false,
-          "plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-challenger.py",
+          "plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py",
           "plan_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md"
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "retain the negative six-source result; obtain separate evidence-only approval before downloading or inspecting the query-conditioned checkpoint"
+        "next_gate": "obtain separate evidence-only approval for the required 341,546,630-byte OpenMIC PaSST checkpoint; do not install, load or infer"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,
