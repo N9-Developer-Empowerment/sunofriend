@@ -34,7 +34,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
     audit: dict[str, Any] = {
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
-        "status": "blocked_pending_hash_locked_runtime_plan",
+        "status": "blocked_pending_isolated_install_and_restricted_import_plan",
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
         "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
@@ -162,7 +162,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
         "proposed_runtime_identity": {
             "platform": "macOS 11 or later, arm64",
             "python": "3.12",
-            "direct_candidates_not_yet_approved": {
+            "approved_direct_requirements": {
                 "torch": "2.2.2",
                 "torchaudio": "2.2.2",
                 "torchvision": "0.17.2",
@@ -177,26 +177,52 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 "torch-audiomentations",
                 "omegaconf",
             ],
+            "wheel_evidence": {
+                "target": "CPython 3.12, macOS 11+, arm64",
+                "package_count": 28,
+                "wheel_bytes": 99_354_620,
+                "approved_cap_bytes": 1_073_741_824,
+                "peak_staged_bytes": 159_772_783,
+                "static_evidence_sha256": (
+                    "d5976d21a919648dbe6a371f1ce1f7d19adee75296f31739f4c662c040dd5329"
+                ),
+                "requirements_file": (
+                    "separation-other-refinement-query-runtime-requirements.txt"
+                ),
+                "requirements_sha256": (
+                    "28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92"
+                ),
+                "download_complete": True,
+                "network_denied_non_importing_inspection_complete": True,
+                "dependency_installed": False,
+                "packages_imported": False,
+                "license_disposition": (
+                    "wheel metadata and licence-member hashes retained; no "
+                    "contradiction found for local noncommercial research"
+                ),
+            },
             "model_artifact_hashes_complete": True,
-            "runtime_dependency_hashes_complete": False,
+            "runtime_dependency_hashes_complete": True,
             "installation_approved": False,
             "apple_silicon_import_verified": False,
         },
         "next_gate": {
-            "kind": "review_hash_locked_runtime_plan",
+            "kind": "review_isolated_install_and_restricted_import_plan",
             "next_action": (
-                "prepare a fully hash-locked dependency and restricted-loading "
-                "plan without installing or loading anything"
+                "review an isolated hash-locked installation and network-denied "
+                "package-import plan without loading either checkpoint"
             ),
-            "dependency_artifact_download_approved": False,
+            "dependency_artifact_download_approved": True,
+            "dependency_artifact_download_complete": True,
             "dependency_installation": False,
+            "package_import": False,
             "model_loading": False,
             "model_construction": False,
             "inference": False,
             "audio_processing": False,
             "public_activation": False,
             "source_or_midi_activation": False,
-            "requires_separate_approval_before_download_or_install": True,
+            "requires_separate_approval_before_install_or_import": True,
         },
         "effects": {
             "network_used_by_plan": False,

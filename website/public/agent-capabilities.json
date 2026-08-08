@@ -417,7 +417,7 @@
         "next_query_challenger": {
           "scope_id": "other-query-refinement-v1",
           "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
-          "status": "blocked_pending_hash_locked_runtime_plan",
+          "status": "blocked_pending_isolated_install_and_restricted_import_plan",
           "registered": false,
           "executable": false,
           "targets": ["guitar", "keyboard_synth"],
@@ -455,7 +455,23 @@
             "training_dataset": "OpenMIC-2018",
             "training_dataset_license": "CC-BY-4.0"
           },
+          "runtime_wheel_evidence": {
+            "target": "CPython 3.12, macOS 11+, arm64",
+            "approved_cap_bytes": 1073741824,
+            "peak_staged_bytes": 159772783,
+            "package_count": 28,
+            "wheel_bytes": 99354620,
+            "static_evidence_sha256": "d5976d21a919648dbe6a371f1ce1f7d19adee75296f31739f4c662c040dd5329",
+            "requirements_file": "separation-other-refinement-query-runtime-requirements.txt",
+            "requirements_sha256": "28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92",
+            "evidence_only_download_authorized": true,
+            "network_denied_non_importing_inspection_complete": true,
+            "dependency_installed": false,
+            "packages_imported": false
+          },
+          "dependency_artifact_download_authorized": true,
           "dependency_install_authorized": false,
+          "package_import_authorized": false,
           "model_loading_authorized": false,
           "inference_authorized": false,
           "plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py",
@@ -463,7 +479,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "prepare and review a fully hash-locked dependency and restricted-loading plan; do not download dependencies, install, load or infer without separate approval"
+        "next_gate": "review an isolated hash-locked installation and network-denied package-import plan; do not install, import, load or infer without separate approval"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

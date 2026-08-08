@@ -141,9 +141,14 @@ export default function SeparationResearch() {
                 checkpoint plus unsafe automatic upstream loaders. Sunofriend
                 will bypass those loaders. A separately approved evidence-only
                 download established its exact SHA-256 under network-denied,
-                non-loading inspection. The challenger remains blocked,
-                unregistered and non-executable pending hash-locked runtime
-                work and Apple-silicon qualification. Its
+                non-loading inspection. A separately approved evidence-only
+                dependency step then resolved and hashed 28 exact
+                CPython-3.12/macOS-arm64 wheels (99,354,620 bytes) under a
+                1 GiB cap. Licence metadata inspection ran with network denied
+                and imported or installed nothing. The challenger remains
+                blocked, unregistered and non-executable pending a separately
+                approved isolated install/import plan and Apple-silicon
+                qualification. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
               </p>

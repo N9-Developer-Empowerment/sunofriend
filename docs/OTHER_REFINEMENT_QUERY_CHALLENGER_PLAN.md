@@ -185,8 +185,36 @@ scripts/setup-separation-other-refinement-query-runtime-macos.sh \
 ```
 
 Both required model-artifact identities are now complete. The challenger is
-still blocked, unregistered and non-executable. The next bounded step is to
-prepare and review a fully hash-locked dependency and restricted-loading plan
-without installing or loading anything. Dependency-artifact downloads,
-installation, construction, inference, audio processing, activation, source
-selection and MIDI each remain outside the completed approval.
+still blocked, unregistered and non-executable.
+
+The separately approved dependency-evidence step also completed on 2026-08-08:
+
+- target: CPython 3.12, macOS 11 or later, arm64;
+- direct pins: Torch/TorchAudio `2.2.2`, TorchVision `0.17.2`,
+  `hear21passt 0.0.26`, `timm 0.9.12` and NumPy `1.26.4`;
+- resolved closure: 28 wheels and 99,354,620 wheel bytes;
+- maximum staged evidence: 159,772,783 bytes under the approved 1 GiB cap;
+- static evidence SHA-256:
+  `d5976d21a919648dbe6a371f1ce1f7d19adee75296f31739f4c662c040dd5329`;
+- committed lock SHA-256:
+  `28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92`;
+  and
+- wheel metadata and licence-member hashes showed permissive, MPL/LGPL and
+  disclosed GPL-with-runtime-exception material, with no contradiction for
+  this local noncommercial research route.
+
+The completed command was:
+
+```bash
+scripts/setup-separation-other-refinement-query-runtime-macos.sh \
+  --runtime-wheel-evidence-only \
+  --accept-runtime-wheel-evidence
+```
+
+The wheels were downloaded but not installed. ZIP metadata inspection ran
+under network denial and imported no downloaded package. The exact public lock
+is `separation-other-refinement-query-runtime-requirements.txt`. The next
+bounded gate is a separately reviewed isolated installation and
+network-denied package-import plan that still must not load either checkpoint.
+Installation, imports, checkpoint loading, model construction, inference,
+audio processing, activation, source selection and MIDI remain unapproved.

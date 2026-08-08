@@ -133,8 +133,13 @@ found the required 341,546,630-byte OpenMIC PaSST checkpoint and rejected the
 upstream automatic download and unrestricted loaders. Its separately approved
 evidence-only download established SHA-256
 `dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`
-without loading it. The challenger remains blocked while a fully hash-locked
-runtime plan is prepared. See
+without loading it. A separately approved evidence-only dependency step
+then resolved 28 exact CPython 3.12/macOS-arm64 wheels (99,354,620 bytes),
+recorded every SHA-256 and licence metadata under network-denied non-importing
+inspection, and committed the 2,800-byte lock with SHA-256
+`28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92`.
+Nothing was installed or imported. The challenger remains blocked pending a
+separately approved isolated install/import plan. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 After the local page exports your listening JSON, bind it to the exact result

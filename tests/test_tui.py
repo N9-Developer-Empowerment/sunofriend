@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -681,9 +682,14 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
             new_project, new_candidates = _fixture(root / "new")
             from sunofriend.tui_model import load_tui_project as real_load
 
+            load_started = threading.Event()
+            release_load = threading.Event()
+
             def delayed_new_load(config):
                 if config.project == new_project.resolve():
-                    time.sleep(0.2)
+                    load_started.set()
+                    if not release_load.wait(timeout=5.0):
+                        raise TimeoutError("test did not release the project load")
                 return real_load(config)
 
             app = SunofriendTui(
@@ -705,16 +711,22 @@ class TuiInteractionTests(unittest.IsolatedAsyncioTestCase):
                     side_effect=delayed_new_load,
                 ):
                     app._start_project_load()
-                    await pilot.pause(0.02)
-                    self.assertTrue(app._project_loading)
-                    self.assertIs(app.snapshot, old_snapshot)
-                    with patch.object(
-                        app,
-                        "_run_visual_studio",
-                    ) as launch:
-                        app.action_open_visual_studio()
-                        launch.assert_not_called()
-                    self.assertFalse(app._workbench_launching)
+                    try:
+                        self.assertTrue(
+                            await asyncio.to_thread(load_started.wait, 2.0),
+                            "new project load did not start",
+                        )
+                        self.assertTrue(app._project_loading)
+                        self.assertIs(app.snapshot, old_snapshot)
+                        with patch.object(
+                            app,
+                            "_run_visual_studio",
+                        ) as launch:
+                            app.action_open_visual_studio()
+                            launch.assert_not_called()
+                        self.assertFalse(app._workbench_launching)
+                    finally:
+                        release_load.set()
                     for _ in range(100):
                         await pilot.pause(0.02)
                         if (
