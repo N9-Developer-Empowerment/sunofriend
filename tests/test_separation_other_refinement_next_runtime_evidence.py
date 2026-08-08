@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import importlib.util
 import os
 from pathlib import Path
 import subprocess
@@ -129,6 +130,77 @@ def test_mega53_runtime_route_requires_specific_acceptance(tmp_path: Path) -> No
     assert result.returncode == 2
     assert "requires --accept-runtime-wheel-evidence" in result.stderr
     assert not (tmp_path / "separation").exists()
+
+
+def test_mega53_isolated_runtime_route_requires_specific_acceptance(
+    tmp_path: Path,
+) -> None:
+    setup = ROOT / "scripts" / "setup-separation-other-refinement-next-challenger-macos.sh"
+    result = subprocess.run(
+        [str(setup), "--install-runtime"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={
+            **os.environ,
+            "SUNOFRIEND_SEPARATION_ROOT": str(tmp_path / "separation"),
+        },
+    )
+
+    assert result.returncode == 2
+    assert "requires --accept-runtime-install-and-import" in result.stderr
+    assert not (tmp_path / "separation").exists()
+
+
+def test_mega53_isolated_runtime_route_is_offline_hash_locked_and_import_only() -> None:
+    setup = (
+        ROOT / "scripts" / "setup-separation-other-refinement-next-challenger-macos.sh"
+    ).read_text(encoding="utf-8")
+    worker = (
+        ROOT / "scripts" / "verify-separation-other-refinement-next-runtime-imports.py"
+    ).read_text(encoding="utf-8")
+
+    acceptance = setup.index('if [ "$ACCEPTED_RUNTIME_INSTALL_AND_IMPORT" != true ]')
+    first_install_write = setup.index('mkdir -p "$RUNTIME_IMPORT_PARENT"')
+    assert acceptance < first_install_write
+    assert "--install-runtime" in setup
+    assert "--accept-runtime-install-and-import" in setup
+    assert "--no-index" in setup
+    assert "--find-links" in setup
+    assert "--require-hashes" in setup
+    assert "(deny network*)" in setup
+    assert '"$STAGING/runtime/bin/python" -I -B "$RUNTIME_IMPORT_SCRIPT"' in setup
+    assert "torch.load = deny_torch_load" in worker
+    assert 'event == "socket.__new__"' in worker
+    assert 'event == "socket.bind"' in worker
+    assert '{"::1", "127.0.0.1"}' in worker
+    assert '"local_bind_attempts": local_bind_attempts' in worker
+    assert '"socket_constructions": socket_constructions' in worker
+    assert "checkpoint file open forbidden" in worker
+    assert "audio file open forbidden" in worker
+    assert "importlib.import_module(module_name)" in worker
+    assert "load_model(" not in worker
+    assert "BSRoformer(" not in worker
+
+
+def test_mega53_import_worker_parses_exact_29_package_lock() -> None:
+    worker_path = (
+        ROOT / "scripts" / "verify-separation-other-refinement-next-runtime-imports.py"
+    )
+    spec = importlib.util.spec_from_file_location("mega53_runtime_import_worker", worker_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    packages = module._requirements(
+        ROOT / "separation-other-refinement-next-runtime-requirements.txt"
+    )
+
+    assert len(packages) == 29
+    assert packages["torch"] == "2.2.2"
+    assert packages["mlx"] == "0.31.2"
+    assert packages["mlx-spectro"] == "0.7.0"
+    assert packages["rotary-embedding-torch"] == "0.8.9"
 
 
 def test_committed_mega53_runtime_lock_matches_completed_evidence() -> None:

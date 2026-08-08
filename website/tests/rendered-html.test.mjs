@@ -782,7 +782,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_synth_challenger.plan_document_sha256,
-    "01e935139f558a8b1c2f3a879faced4678864efb4300d0c6adfc90ec3fc60f5e",
+    "b1fa40c6b6d0701e728b05866ac3d0ea43994b91bda6937bbca5b357b65ad343",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -792,7 +792,22 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_synth_challenger.runtime_wheel_evidence.installed,
-    false,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.runtime_import_evidence.locked_package_count,
+    29,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.runtime_import_evidence.python_network_attempts,
+    0,
+  );
+  assert.deepEqual(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.runtime_import_evidence.local_bind_attempts,
+    ["requests:socket.bind:('::1', 0)"],
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

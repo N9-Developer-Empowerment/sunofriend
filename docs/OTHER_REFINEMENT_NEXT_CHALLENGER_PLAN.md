@@ -144,10 +144,40 @@ scripts/setup-separation-other-refinement-next-challenger-macos.sh \
   --accept-runtime-wheel-evidence
 ```
 
-That authority is consumed. The next gate is a fresh isolated installation
-from the local wheel cache plus network-denied import verification, and needs
-separate explicit approval. It may not load either checkpoint or construct the
-model.
+That authority is consumed.
+
+## Isolated runtime import gate
+
+The separately approved follow-up installed the exact 29-wheel lock into a
+fresh CPython 3.12.10/macOS-arm64 environment using only the local cache,
+`--no-index`, `--require-hashes` and OS network denial. All 29 installed
+distributions matched the lock and the thirteen direct runtime modules imported
+from the isolated environment. The runtime contains 21,124 regular files and
+620,247,886 logical file bytes. The canonical import-report SHA-256 is
+`60eefa4285f720cc81f795b126c32dbc9462f05d1398662702bd313f394202a9`;
+the report file SHA-256 is
+`567068a414c5ebc0cdb7cd47564934c5ec8f6b13c70425dd736c02af43892ac7`.
+
+The first verifier pass correctly stopped on a socket audit event. The single
+allowed remediation established from installed source that importing
+`requests`/`urllib3` constructs a socket and attempts a loopback `::1` bind to
+probe IPv6 support. The final verifier records that contained local probe
+separately while continuing to fail any connect, DNS or non-loopback operation.
+The OS network-denial sandbox remained active. There were zero Python network
+attempts, checkpoint or audio opens, and `torch.load` calls.
+
+The completed command was:
+
+```bash
+scripts/setup-separation-other-refinement-next-challenger-macos.sh \
+  --install-runtime \
+  --accept-runtime-install-and-import
+```
+
+That authority is consumed. No checkpoint was loaded, no model was constructed,
+no inference or audio ran, and nothing was activated, selected, sent to MIDI,
+hosted or redistributed. Strict weights-only construction and load is the next
+gate and needs separate explicit approval.
 
 ## Evaluation without false failures
 
@@ -182,8 +212,8 @@ The remaining gates are deliberately one-way:
 1. **Complete:** evidence-only artifact download and exact hash verification;
 2. **Complete:** network-denied, non-loading static inspection;
 3. **Complete:** a fully hash-locked CPython 3.12/macOS 14+ arm64 dependency closure;
-4. **Next, not yet approved:** isolated install and import verification;
-5. strict weights-only construction and load;
+4. **Complete:** isolated install and import verification;
+5. **Next, not yet approved:** strict weights-only construction and load;
 6. one generated-tensor objective forward; and
 7. one four-song synth canary.
 

@@ -204,8 +204,12 @@ without loading it. A later evidence-only gate resolved and statically
 inspected 29 exact CPython 3.12/macOS 14+ arm64 wheels (127,527,173 bytes)
 without installing or importing them. The committed lock SHA-256 is
 `284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b`.
-Its checkpoint terms remain unreviewed and the profile remains non-executable;
-isolated install and import verification is the next separately approved gate.
+An explicit follow-up installed that exact closure into a fresh isolated
+CPython 3.12.10 runtime and imported thirteen direct modules under OS network
+denial. There were zero connect or DNS calls, checkpoint/audio opens or
+`torch.load` calls; `requests` made one contained `::1` capability-bind probe.
+Checkpoint terms remain unreviewed and the profile remains non-executable;
+strict weights-only construction and load is the next separately approved gate.
 Inspect the current plan without effects:
 
 ```bash

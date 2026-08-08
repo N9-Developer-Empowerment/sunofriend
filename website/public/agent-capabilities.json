@@ -612,7 +612,7 @@
         "next_synth_challenger": {
           "scope_id": "other-synth-refinement-v1",
           "proposed_profile_id": "bs-roformer-mega-53-synth-v1",
-          "status": "runtime_closure_verified_install_not_authorized",
+          "status": "runtime_import_verified_model_load_not_authorized",
           "registered": false,
           "executable": false,
           "priority": ["synth", "guitar", "wind"],
@@ -648,7 +648,7 @@
           "remediation_cycle_limit": 1,
           "inference_attempt_limit": 4,
           "plan_command": ".venv/bin/python scripts/plan-separation-other-refinement-next-challenger.py",
-          "plan_document_sha256": "01e935139f558a8b1c2f3a879faced4678864efb4300d0c6adfc90ec3fc60f5e",
+          "plan_document_sha256": "b1fa40c6b6d0701e728b05866ac3d0ea43994b91bda6937bbca5b357b65ad343",
           "plan_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md",
           "artifact_download_authorized": false,
           "runtime_wheel_evidence": {
@@ -658,10 +658,31 @@
             "wheel_bytes": 127527173,
             "evidence_sha256": "d8488079a9c82961056e296fa1050e07f2d341602293b01ed3e5b1de32ae5327",
             "requirements_sha256": "284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b",
-            "installed": false,
-            "imported": false
+            "installed": true,
+            "imported": true
+          },
+          "runtime_import_evidence": {
+            "status": "isolated_hash_locked_runtime_imports_verified_network_denied",
+            "target": "CPython 3.12.10 on macOS 14+ arm64",
+            "locked_package_count": 29,
+            "direct_module_import_count": 13,
+            "runtime_file_count": 21124,
+            "runtime_logical_file_bytes": 620247886,
+            "report_sha256": "60eefa4285f720cc81f795b126c32dbc9462f05d1398662702bd313f394202a9",
+            "report_file_sha256": "567068a414c5ebc0cdb7cd47564934c5ec8f6b13c70425dd736c02af43892ac7",
+            "network_denied": true,
+            "python_network_attempts": 0,
+            "socket_constructions": ["requests:socket.__new__"],
+            "local_bind_attempts": ["requests:socket.bind:('::1', 0)"],
+            "checkpoint_open_attempts": 0,
+            "audio_open_attempts": 0,
+            "torch_load_calls": 0,
+            "model_constructed": false,
+            "inference_runs": 0,
+            "remediation_cycles_used": 1
           },
           "dependency_install_authorized": false,
+          "dependency_install_complete": true,
           "checkpoint_loading_authorized": false,
           "inference_authorized": false,
           "audio_processing_authorized": false,
@@ -671,7 +692,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "install the exact local 29-wheel Mega-53 closure into a fresh isolated environment and verify imports under network denial only after separate explicit approval; do not load checkpoints or construct a model"
+        "next_gate": "construct the exact Mega-53 model and load the explicit local checkpoint with torch.load(weights_only=True, map_location='cpu') under network denial only after separate explicit approval; do not run inference or process audio"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

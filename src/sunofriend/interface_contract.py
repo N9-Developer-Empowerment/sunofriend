@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-08.8"
+INTERFACE_CONTRACT_VERSION = "2026-08-08.9"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -236,15 +236,19 @@ def render_skill_interface_reference() -> str:
         "`torch.load`. The evidence SHA-256 is",
         "`d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24`.",
         "Its terms remain unreviewed under a provisional local-",
-        "noncommercial boundary. The download authority is consumed; dependency",
-        "installation, loading, inference, activation, source-selection and MIDI remain",
-        "unauthorized. A separately approved evidence-only gate resolved 29 exact",
+        "noncommercial boundary. The download authority is consumed; loading,",
+        "inference, activation, source-selection and MIDI remain unauthorized. A",
+        "separately approved evidence-only gate resolved 29 exact",
         "CPython 3.12/macOS 14+ arm64 wheels totalling 127,527,173 bytes and",
         "inspected their ZIP metadata and licence evidence under network denial",
         "without installation or import. The committed lock SHA-256 is",
         "`284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b`.",
-        "Isolated local installation and network-denied import verification is the",
-        "next separately approved gate; it may not load a checkpoint or model.",
+        "A later explicit approval installed that exact closure into a fresh isolated",
+        "CPython 3.12.10 runtime. Thirteen direct modules imported under OS network",
+        "denial with zero connect or DNS calls, checkpoint/audio opens or `torch.load`",
+        "calls. Requests performed one contained `::1` capability-bind probe. Runtime",
+        "installation/import authority is consumed; strict weights-only construction",
+        "and loading is the next separate gate and remains unauthorized.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",
