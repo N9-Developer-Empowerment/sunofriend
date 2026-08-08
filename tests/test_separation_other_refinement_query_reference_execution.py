@@ -9,19 +9,8 @@ import wave
 
 import numpy as np
 import pytest
-import torch
 
-from sunofriend import separation_other_refinement_query_forward_adapter as forward_module
 from sunofriend import separation_other_refinement_query_reference_report as report_module
-from sunofriend.separation_other_refinement_query_forward_adapter import (
-    BoundedBanquetReferenceForward,
-)
-from sunofriend.separation_other_refinement_query_reference_audio import (
-    build_pcm24_accounting,
-    read_pcm24,
-    read_wav_window,
-    write_pcm24,
-)
 from sunofriend.separation_other_refinement_query_reference_contract import (
     build_query_reference_input_contract,
     validate_query_reference_input_contract,
@@ -66,6 +55,12 @@ def test_reference_input_contract_binds_frozen_plan_and_six_files() -> None:
 
 
 def test_reference_wav_decode_resamples_exact_window(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("torchaudio")
+    from sunofriend.separation_other_refinement_query_reference_audio import (
+        read_wav_window,
+    )
+
     rate = 48_000
     times = np.arange(rate * 2, dtype=np.float32) / rate
     source = np.column_stack(
@@ -85,6 +80,14 @@ def test_reference_wav_decode_resamples_exact_window(tmp_path: Path) -> None:
 
 
 def test_pcm24_accounting_is_exact_after_shared_attenuation(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("torchaudio")
+    from sunofriend.separation_other_refinement_query_reference_audio import (
+        build_pcm24_accounting,
+        read_pcm24,
+        write_pcm24,
+    )
+
     mixture = torch.linspace(-0.9, 0.9, 200, dtype=torch.float32).reshape(1, 2, 100)
     target = mixture * 2.4
     result = build_pcm24_accounting(mixture, target)
@@ -104,6 +107,14 @@ def test_pcm24_accounting_is_exact_after_shared_attenuation(tmp_path: Path) -> N
 
 
 def test_reference_forward_consumes_exactly_nine_attempts(monkeypatch: pytest.MonkeyPatch) -> None:
+    torch = pytest.importorskip("torch")
+    from sunofriend import (
+        separation_other_refinement_query_forward_adapter as forward_module,
+    )
+    from sunofriend.separation_other_refinement_query_forward_adapter import (
+        BoundedBanquetReferenceForward,
+    )
+
     calls = []
 
     def fake(_model: object, mixture: torch.Tensor, query: torch.Tensor) -> torch.Tensor:
