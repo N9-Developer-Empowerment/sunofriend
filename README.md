@@ -191,6 +191,23 @@ feedback cannot trigger a query hunt. See
 The incremental code-structure work is tracked in
 [Separation maintainability plan](docs/SEPARATION_MAINTAINABILITY_PLAN.md).
 
+The next bounded challenger is now **synth first**, then guitar and wind;
+acoustic piano is only an optional control and no longer stands in for modern
+keys. The no-effects plan audits the public MVSep Mega 53 Stems release and an
+exact Apple-native BS-RoFormer source revision. It writes only a future native
+`synth` candidate plus a transparent residual, separates audible target
+presence from model usefulness, and permits one configuration with no
+post-feedback tuning loop. The 1,368,919,887-byte checkpoint has a declared
+hash but has not been downloaded or locally verified, and its checkpoint terms
+remain unreviewed. Inspect the plan without effects:
+
+```bash
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-next-challenger.py
+```
+
+See [Synth-first fine-stem challenger](docs/OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
+
 After the local page exports your listening JSON, bind it to the exact result
 without selecting a source or starting MIDI:
 

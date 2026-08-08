@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-08.5 -->
+<!-- sunofriend-interface-contract: 2026-08-08.6 -->
 
 # Sunofriend
 
@@ -90,11 +90,21 @@ on.
   approval completed the frozen reference-query canary: nine song-disjoint CPU
   attempts finished under network denial in 64.01 seconds at 3.26 GB peak RSS.
   All 36 private PCM24 artifacts matched their hashes and reconstructed within
-  zero LSB, with no forbidden audio, network or checkpoint access. Musical
-  listening remains pending, the approved authority is consumed, and the
-  profile remains unregistered, unselected and unavailable to MIDI. Do not run
-  further inference, activate a source or create MIDI without a new reviewed
-  plan and explicit approval.
+  zero LSB, with no forbidden audio, network or checkpoint access. The completed
+  review rated eight targets not useful and one quiet keyboard target partly
+  useful, so Banquet is technically valid but musically unsuccessful. The
+  authority is consumed and the profile remains unregistered, unselected and
+  unavailable to MIDI.
+  The next no-effects plan is
+  `scripts/plan-separation-other-refinement-next-challenger.py`. It makes
+  `synth` the first target, followed by guitar and wind; acoustic piano is only
+  an optional control and is never a modern-keys proxy. The proposed MVSep
+  Mega-53/BS-RoFormer MLX candidate is unregistered and non-executable. Its
+  1,368,919,887-byte checkpoint identity is declared but not locally verified,
+  and checkpoint terms remain unreviewed. The plan downloads and loads nothing,
+  reads no audio, forbids upstream automatic/unrestricted loaders, separates
+  audible target presence from usefulness scoring, and grants no inference,
+  activation, source selection or MIDI authority.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

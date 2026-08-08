@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-08.5"
+INTERFACE_CONTRACT_VERSION = "2026-08-08.6"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -227,6 +227,14 @@ def render_skill_interface_reference() -> str:
         "unsuccessful. It is not registered or executable; another inference run,",
         "activation, source selection or MIDI requires new explicit authority.",
         "Its CC BY-NC-SA checkpoint permits no hosted or commercial-default claim.",
+        "The next static challenger makes `synth` the first target, followed by",
+        "guitar and wind. Acoustic piano is only an optional control and never a",
+        "proxy for modern keys. The proposed MVSep Mega-53/BS-RoFormer MLX profile",
+        "is unregistered and non-executable. Its 1,368,919,887-byte checkpoint has",
+        "a declared identity but is not locally verified, and its terms remain",
+        "unreviewed. The no-effects plan forbids automatic and unrestricted loaders,",
+        "separates audible target presence from model usefulness, and grants no",
+        "download, loading, inference, activation, source-selection or MIDI authority.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",
