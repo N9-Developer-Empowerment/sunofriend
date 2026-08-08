@@ -109,6 +109,46 @@ local checkpoint with
 and dtype before strict conversion, disable automatic downloads with
 `download_missing=False`, and run with network denied.
 
+## Exact runtime closure
+
+The separately approved evidence-only dependency gate resolved 29 exact
+CPython 3.12/macOS-arm64 wheels. The closure is 127,527,173 bytes, against a
+1,610,612,736-byte cap; peak staged evidence was 128,346,422 bytes. Static
+inspection ran with network denied, checked every wheel ZIP, parsed package and
+dependency metadata, and hashed bundled licence files. It did not install or
+import a package, execute wheel code, load a checkpoint, construct a model,
+run inference or read audio.
+
+The exact lock is
+`separation-other-refinement-next-runtime-requirements.txt`, SHA-256
+`284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b`.
+The immutable static-evidence document SHA-256 is
+`d8488079a9c82961056e296fa1050e07f2d341602293b01ed3e5b1de32ae5327`.
+Direct pins include Torch 2.2.2, MLX 0.31.2, MLX-Spectro 0.7.0 and NumPy
+1.26.4. All 29 wheels have licence metadata or bundled licence-file evidence;
+no contradiction with private local evaluation was found. Binary
+redistribution still needs a separate composite-notice review, and this audit
+does not change the checkpoint's provisional local-noncommercial boundary.
+
+The single bounded resolver remediation made two compatibility constraints
+explicit: MLX 0.31.2 requires a macOS 14-or-later arm64 wheel target, and
+rotary-embedding-torch 0.9.1 requires Torch 2.4 or later. The lock therefore
+uses the newest compatible 0.8 release, rotary-embedding-torch 0.8.9, while
+retaining the already proven Torch 2.2.2 and NumPy 1.26.4 baseline.
+
+The completed evidence command was:
+
+```bash
+scripts/setup-separation-other-refinement-next-challenger-macos.sh \
+  --runtime-wheel-evidence-only \
+  --accept-runtime-wheel-evidence
+```
+
+That authority is consumed. The next gate is a fresh isolated installation
+from the local wheel cache plus network-denied import verification, and needs
+separate explicit approval. It may not load either checkpoint or construct the
+model.
+
 ## Evaluation without false failures
 
 The earlier corpus exposed an evaluation flaw: some windows may not audibly
@@ -141,8 +181,8 @@ The remaining gates are deliberately one-way:
 
 1. **Complete:** evidence-only artifact download and exact hash verification;
 2. **Complete:** network-denied, non-loading static inspection;
-3. **Next, not yet approved:** a fully hash-locked macOS-arm64 dependency closure;
-4. isolated install and import verification;
+3. **Complete:** a fully hash-locked CPython 3.12/macOS 14+ arm64 dependency closure;
+4. **Next, not yet approved:** isolated install and import verification;
 5. strict weights-only construction and load;
 6. one generated-tensor objective forward; and
 7. one four-song synth canary.

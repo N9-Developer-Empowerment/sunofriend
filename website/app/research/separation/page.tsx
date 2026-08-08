@@ -185,11 +185,15 @@ export default function SeparationResearch() {
                 RoFormer architecture. Its approved evidence-only gate locally
                 verified the 1,368,919,887-byte checkpoint and 4,184-byte
                 configuration, then inspected the checkpoint under network
-                denial without loading it. Terms remain unreviewed under the
-                acknowledged provisional local-noncommercial boundary. The plan
-                permits one configuration, separates audible target presence
-                from model usefulness, forbids automatic or unrestricted loaders,
-                and grants no execution or MIDI authority.
+                denial without loading it. A later evidence-only gate resolved
+                29 exact CPython 3.12/macOS 14+ arm64 wheels totalling
+                127,527,173 bytes and inspected their metadata and licence files
+                without installing or importing them. Terms remain unreviewed
+                under the acknowledged provisional local-noncommercial boundary.
+                Isolated install and import verification is the next separate
+                gate. The plan permits one configuration, separates audible
+                target presence from model usefulness, forbids automatic or
+                unrestricted loaders, and grants no execution or MIDI authority.
               </p>
             </div>
             <div className="agent-card">

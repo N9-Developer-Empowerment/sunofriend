@@ -5,11 +5,16 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPOSITORY_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 PLAN_SCRIPT="$REPOSITORY_ROOT/scripts/plan-separation-other-refinement-next-challenger.py"
 INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-next-challenger-artifacts.py"
+WHEEL_DOWNLOAD_SCRIPT="$REPOSITORY_ROOT/scripts/download-separation-other-refinement-next-runtime-wheels.py"
+WHEEL_INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-next-runtime-wheels.py"
+RUNTIME_REQUIREMENTS="$REPOSITORY_ROOT/separation-other-refinement-next-runtime-requirements.txt"
 DATA_ROOT=${SUNOFRIEND_SEPARATION_ROOT:-"$HOME/.local/share/sunofriend/separation"}
 EVIDENCE_ROOT=${SUNOFRIEND_MEGA53_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-synth-v1"}
+RUNTIME_WHEEL_EVIDENCE_ROOT=${SUNOFRIEND_MEGA53_RUNTIME_WHEEL_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-runtime-wheels-macos-arm64-py312-v1"}
 ACTION=plan
 ACCEPTED_PROVISIONAL_TERMS=false
 ACCEPTED_CHECKPOINT_USE=false
+ACCEPTED_RUNTIME_WHEEL_EVIDENCE=false
 CHECKPOINT_FILE=mvsep_mega_model_bs_roformer_53_stems_v1.ckpt
 CHECKPOINT_BYTES=1368919887
 CHECKPOINT_SHA256=c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f
@@ -20,17 +25,21 @@ CONFIG_SHA256=7e198062a251587088adb91215a4f44ab59e67bd62fcc805cf54d6e7dfc51103
 CONFIG_URL='https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/download/v1.0.21/mvsep_mega_model_bs_roformer_53_stems.yaml'
 EXPECTED_TOTAL_BYTES=1368924071
 MAX_DOWNLOAD_BYTES=1610612736
+RUNTIME_WHEEL_CAP_BYTES=1610612736
+RUNTIME_REQUIREMENTS_SHA256=284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b
 
 usage() {
-    echo "Usage: scripts/setup-separation-other-refinement-next-challenger-macos.sh [--plan | --evidence-only --accept-provisional-local-noncommercial-terms --accept-checkpoint-use]"
+    echo "Usage: scripts/setup-separation-other-refinement-next-challenger-macos.sh [--plan | --evidence-only --accept-provisional-local-noncommercial-terms --accept-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence]"
 }
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --plan) ACTION=plan ;;
         --evidence-only) ACTION=evidence-only ;;
+        --runtime-wheel-evidence-only) ACTION=runtime-wheel-evidence-only ;;
         --accept-provisional-local-noncommercial-terms) ACCEPTED_PROVISIONAL_TERMS=true ;;
         --accept-checkpoint-use) ACCEPTED_CHECKPOINT_USE=true ;;
+        --accept-runtime-wheel-evidence) ACCEPTED_RUNTIME_WHEEL_EVIDENCE=true ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
@@ -51,6 +60,147 @@ PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
 if [ "$ACTION" = plan ]; then
     echo ""
     echo "Plan only; nothing was downloaded, installed, loaded or executed."
+    exit 0
+fi
+
+if [ "$ACTION" = runtime-wheel-evidence-only ]; then
+    if [ "$ACCEPTED_RUNTIME_WHEEL_EVIDENCE" != true ]; then
+        echo "--runtime-wheel-evidence-only requires --accept-runtime-wheel-evidence after reviewing the exact boundary" >&2
+        exit 2
+    fi
+    if [ "$(uname -s)" != Darwin ] || [ "$(uname -m)" != arm64 ]; then
+        echo "The approved wheel closure targets macOS on Apple silicon only" >&2
+        exit 2
+    fi
+    for required_command in sandbox-exec shasum python3.12; do
+        if ! command -v "$required_command" >/dev/null 2>&1; then
+            echo "$required_command is required for runtime evidence" >&2
+            exit 2
+        fi
+    done
+    RUNTIME_WHEEL_PYTHON=$(command -v python3.12)
+    if [ "$("$RUNTIME_WHEEL_PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" != 3.12 ]; then
+        echo "Selected Mega-53 resolver must be Python 3.12: $RUNTIME_WHEEL_PYTHON" >&2
+        exit 2
+    fi
+    if [ -e "$RUNTIME_WHEEL_EVIDENCE_ROOT" ] || [ -L "$RUNTIME_WHEEL_EVIDENCE_ROOT" ]; then
+        echo "Refusing to overwrite existing Mega-53 runtime wheel evidence: $RUNTIME_WHEEL_EVIDENCE_ROOT" >&2
+        exit 2
+    fi
+    RUNTIME_WHEEL_PARENT=$(dirname "$RUNTIME_WHEEL_EVIDENCE_ROOT")
+    mkdir -p "$RUNTIME_WHEEL_PARENT"
+    RUNTIME_WHEEL_STAGING=$(mktemp -d "$RUNTIME_WHEEL_PARENT/.bs-roformer-mega-53-runtime-wrapper.XXXXXX")
+    rmdir "$RUNTIME_WHEEL_STAGING"
+    preserve_failed_runtime_staging() {
+        mega53_runtime_exit_code=$?
+        if [ -n "${RUNTIME_WHEEL_STAGING:-}" ] && [ -d "$RUNTIME_WHEEL_STAGING" ]; then
+            failed_root="$RUNTIME_WHEEL_PARENT/bs-roformer-mega-53-runtime-wheels.failed.$$.evidence"
+            if [ ! -e "$failed_root" ] && [ ! -L "$failed_root" ]; then
+                chmod -R go-w "$RUNTIME_WHEEL_STAGING" 2>/dev/null || true
+                mv "$RUNTIME_WHEEL_STAGING" "$failed_root"
+                RUNTIME_WHEEL_STAGING=
+                echo "Preserved failed runtime evidence staging: $failed_root" >&2
+            fi
+        fi
+        exit "$mega53_runtime_exit_code"
+    }
+    trap preserve_failed_runtime_staging EXIT HUP INT TERM
+
+    "$PLAN_PYTHON" -B "$WHEEL_DOWNLOAD_SCRIPT" \
+        --python "$RUNTIME_WHEEL_PYTHON" \
+        --destination "$RUNTIME_WHEEL_STAGING" \
+        --cap-bytes "$RUNTIME_WHEEL_CAP_BYTES" \
+        --report "$RUNTIME_WHEEL_STAGING/DOWNLOAD-RECEIPT.json"
+
+    PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
+        sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+        "$PLAN_PYTHON" -B "$WHEEL_INSPECT_SCRIPT" "$RUNTIME_WHEEL_STAGING/wheels" \
+        > "$RUNTIME_WHEEL_STAGING/STATIC-EVIDENCE.json"
+
+    PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
+        sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+        "$PLAN_PYTHON" -B - \
+        "$RUNTIME_WHEEL_STAGING/STATIC-EVIDENCE.json" \
+        "$RUNTIME_WHEEL_STAGING/APPROVAL-RECEIPT.json" \
+        "$RUNTIME_WHEEL_STAGING/requirements.txt" <<'PY'
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import sys
+
+from sunofriend.separation_other_refinement_next_runtime_evidence import (
+    validate_runtime_wheel_evidence,
+)
+
+evidence_path = Path(sys.argv[1])
+receipt_path = Path(sys.argv[2])
+requirements_path = Path(sys.argv[3])
+evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+validate_runtime_wheel_evidence(evidence)
+requirements = [
+    "# Mega-53 / BS-RoFormer CPython 3.12 macOS-arm64 wheel closure",
+    "# Evidence only: installation and import require separate approval.",
+    "--only-binary=:all:",
+    *evidence["hash_locked_requirements"],
+]
+requirements_path.write_text("\n".join(requirements) + "\n", encoding="utf-8")
+receipt = {
+    "schema": "sunofriend.mega53-runtime-wheel-evidence-approval.v1",
+    "status": "evidence_only_complete_no_install_or_import_authority",
+    "recorded_at": datetime.now(timezone.utc).isoformat(),
+    "profile_id": "bs-roformer-mega-53-synth-v1",
+    "runtime_source": evidence["runtime_source"],
+    "runtime_wheel_evidence_sha256": evidence["evidence_sha256"],
+    "package_count": evidence["package_count"],
+    "wheel_bytes": evidence["wheel_bytes"],
+    "approved_cap_bytes": 1_610_612_736,
+    "network_denied_during_static_inspection": True,
+    "not_approved": [
+        "dependency_installation",
+        "package_import",
+        "checkpoint_loading",
+        "model_construction",
+        "inference",
+        "audio_processing",
+        "public_activation",
+        "source_selection",
+        "midi",
+        "hosting",
+        "redistribution",
+    ],
+}
+receipt_path.write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+PY
+
+    GENERATED_REQUIREMENTS_SHA256=$(shasum -a 256 "$RUNTIME_WHEEL_STAGING/requirements.txt" | awk '{print $1}')
+    if [ "$GENERATED_REQUIREMENTS_SHA256" != "$RUNTIME_REQUIREMENTS_SHA256" ]; then
+        echo "Generated Mega-53 runtime lock SHA-256 differs: $GENERATED_REQUIREMENTS_SHA256" >&2
+        exit 2
+    fi
+    if ! cmp -s "$RUNTIME_WHEEL_STAGING/requirements.txt" "$RUNTIME_REQUIREMENTS"; then
+        echo "Generated Mega-53 runtime lock differs from the reviewed committed lock" >&2
+        exit 2
+    fi
+    rmdir "$RUNTIME_WHEEL_STAGING/tmp"
+    chmod 0444 \
+        "$RUNTIME_WHEEL_STAGING/DOWNLOAD-RECEIPT.json" \
+        "$RUNTIME_WHEEL_STAGING/STATIC-EVIDENCE.json" \
+        "$RUNTIME_WHEEL_STAGING/APPROVAL-RECEIPT.json" \
+        "$RUNTIME_WHEEL_STAGING/requirements.txt" \
+        "$RUNTIME_WHEEL_STAGING/PIP-DOWNLOAD.log" \
+        "$RUNTIME_WHEEL_STAGING"/wheels/*.whl
+    chmod -R go-w "$RUNTIME_WHEEL_STAGING"
+    mv "$RUNTIME_WHEEL_STAGING" "$RUNTIME_WHEEL_EVIDENCE_ROOT"
+    RUNTIME_WHEEL_STAGING=
+    trap - EXIT HUP INT TERM
+
+    echo ""
+    echo "Evidence-only Mega-53 runtime closure complete: $RUNTIME_WHEEL_EVIDENCE_ROOT"
+    echo "No package was installed or imported; no checkpoint, model or audio was opened."
     exit 0
 fi
 
