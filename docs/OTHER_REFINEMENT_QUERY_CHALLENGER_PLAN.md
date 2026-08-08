@@ -168,22 +168,14 @@ The command prints a deterministic, hash-bound plan. It performs no network
 request, reads no audio and installs nothing. It records the completed private
 checkpoint-evidence step without reading the cached checkpoint.
 
-The completed Banquet evidence approval did not authorize the PaSST artifact,
-dependencies, loading or inference. The runtime audit is now complete. The
-smallest next gate is an evidence-only PaSST download and network-denied static
-inspection:
-
-```text
-I approve a capped evidence-only download of the OpenMIC PaSST checkpoint
-openmic-passt-s-f128-10sec-p16-s10-ap.85.pt up to 375 MiB, acknowledge the
-PaSST Apache-2.0 and OpenMIC-2018 CC-BY-4.0 evidence, and approve
-network-denied non-loading static inspection to establish its exact SHA-256.
-This does not approve dependency installation, checkpoint loading, model
-construction, inference, audio processing, public activation, source selection
-or MIDI.
-```
-
-Once explicitly approved, the exact command is:
+The separately approved PaSST evidence step completed on 2026-08-08. The exact
+341,546,630-byte release artifact has SHA-256
+`dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`.
+Its ZIP metadata and 4,917 pickle opcodes were inspected under network denial;
+the checkpoint was not deserialized and tensor storage payloads were not read.
+The retained evidence document has SHA-256
+`990348267a373e2fe62c2fc87a13914411d7fe763b160568c87127a315f58362`.
+The completed command was:
 
 ```bash
 scripts/setup-separation-other-refinement-query-runtime-macos.sh \
@@ -192,6 +184,9 @@ scripts/setup-separation-other-refinement-query-runtime-macos.sh \
   --accept-passt-checkpoint-use
 ```
 
-That evidence will make it possible to generate a fully hashed dependency and
-restricted-loading plan. Installation, construction and inference still need
-a later explicit approval.
+Both required model-artifact identities are now complete. The challenger is
+still blocked, unregistered and non-executable. The next bounded step is to
+prepare and review a fully hash-locked dependency and restricted-loading plan
+without installing or loading anything. Dependency-artifact downloads,
+installation, construction, inference, audio processing, activation, source
+selection and MIDI each remain outside the completed approval.

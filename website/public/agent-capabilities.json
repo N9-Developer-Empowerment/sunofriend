@@ -417,7 +417,7 @@
         "next_query_challenger": {
           "scope_id": "other-query-refinement-v1",
           "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
-          "status": "blocked_pending_passt_checkpoint_evidence",
+          "status": "blocked_pending_hash_locked_runtime_plan",
           "registered": false,
           "executable": false,
           "targets": ["guitar", "keyboard_synth"],
@@ -446,8 +446,11 @@
           "required_passt_checkpoint": {
             "file": "openmic-passt-s-f128-10sec-p16-s10-ap.85.pt",
             "published_bytes": 341546630,
-            "sha256": null,
-            "download_authorized": false,
+            "sha256": "dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da",
+            "evidence_sha256": "990348267a373e2fe62c2fc87a13914411d7fe763b160568c87127a315f58362",
+            "evidence_only_download_authorized": true,
+            "network_denied_static_inspection_complete": true,
+            "deserialized": false,
             "code_and_release_license_evidence": "Apache-2.0",
             "training_dataset": "OpenMIC-2018",
             "training_dataset_license": "CC-BY-4.0"
@@ -460,7 +463,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "obtain separate evidence-only approval for the required 341,546,630-byte OpenMIC PaSST checkpoint; do not install, load or infer"
+        "next_gate": "prepare and review a fully hash-locked dependency and restricted-loading plan; do not download dependencies, install, load or infer without separate approval"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

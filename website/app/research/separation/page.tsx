@@ -139,10 +139,11 @@ export default function SeparationResearch() {
                 opcode inspection without deserialization. The source audit
                 then found a second required 341,546,630-byte OpenMIC PaSST
                 checkpoint plus unsafe automatic upstream loaders. Sunofriend
-                will bypass those loaders; the challenger remains blocked,
-                unregistered and non-executable pending a separately approved
-                PaSST evidence download, hash-locked runtime work and
-                Apple-silicon qualification. Its
+                will bypass those loaders. A separately approved evidence-only
+                download established its exact SHA-256 under network-denied,
+                non-loading inspection. The challenger remains blocked,
+                unregistered and non-executable pending hash-locked runtime
+                work and Apple-silicon qualification. Its
                 CC BY-NC-SA checkpoint limits this route to local noncommercial
                 research.
               </p>

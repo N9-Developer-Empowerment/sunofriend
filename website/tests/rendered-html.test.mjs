@@ -590,7 +590,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.status,
-    "blocked_pending_passt_checkpoint_evidence",
+    "blocked_pending_hash_locked_runtime_plan",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -599,7 +599,18 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
-      .next_query_challenger.required_passt_checkpoint.download_authorized,
+      .next_query_challenger.required_passt_checkpoint.sha256,
+    "dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.required_passt_checkpoint
+      .evidence_only_download_authorized,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.required_passt_checkpoint.deserialized,
     false,
   );
   assert.equal(

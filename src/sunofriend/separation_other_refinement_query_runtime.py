@@ -34,7 +34,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
     audit: dict[str, Any] = {
         "schema": QUERY_RUNTIME_AUDIT_SCHEMA,
         "document_sha256": "",
-        "status": "blocked_pending_passt_checkpoint_evidence",
+        "status": "blocked_pending_hash_locked_runtime_plan",
         "checked_on": "2026-08-08",
         "scope_id": "other-query-refinement-v1",
         "proposed_profile_id": "query-bandit-ev-pre-aug-v1",
@@ -99,9 +99,15 @@ def build_query_runtime_audit() -> dict[str, Any]:
                     "openmic-passt-s-f128-10sec-p16-s10-ap.85.pt"
                 ),
                 "published_bytes": 341_546_630,
-                "sha256": None,
-                "evidence_complete": False,
-                "download_approved": False,
+                "sha256": (
+                    "dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da"
+                ),
+                "evidence_sha256": (
+                    "990348267a373e2fe62c2fc87a13914411d7fe763b160568c87127a315f58362"
+                ),
+                "evidence_complete": True,
+                "evidence_only_download_approved": True,
+                "network_denied_static_inspection_complete": True,
                 "loaded": False,
             },
         },
@@ -171,15 +177,18 @@ def build_query_runtime_audit() -> dict[str, Any]:
                 "torch-audiomentations",
                 "omegaconf",
             ],
-            "artifact_hashes_complete": False,
+            "model_artifact_hashes_complete": True,
+            "runtime_dependency_hashes_complete": False,
             "installation_approved": False,
             "apple_silicon_import_verified": False,
         },
         "next_gate": {
-            "kind": "evidence_only_passt_checkpoint",
-            "download_cap_bytes": 393_216_000,
-            "expected_bytes": 341_546_630,
-            "network_denied_static_inspection": True,
+            "kind": "review_hash_locked_runtime_plan",
+            "next_action": (
+                "prepare a fully hash-locked dependency and restricted-loading "
+                "plan without installing or loading anything"
+            ),
+            "dependency_artifact_download_approved": False,
             "dependency_installation": False,
             "model_loading": False,
             "model_construction": False,
@@ -187,20 +196,7 @@ def build_query_runtime_audit() -> dict[str, Any]:
             "audio_processing": False,
             "public_activation": False,
             "source_or_midi_activation": False,
-            "command_after_approval": (
-                "scripts/setup-separation-other-refinement-query-runtime-macos.sh "
-                "--passt-evidence-only --accept-passt-terms "
-                "--accept-passt-checkpoint-use"
-            ),
-            "approval_phrase": (
-                "I approve a capped evidence-only download of the OpenMIC PaSST "
-                "checkpoint openmic-passt-s-f128-10sec-p16-s10-ap.85.pt up to "
-                "375 MiB, acknowledge the PaSST Apache-2.0 and OpenMIC-2018 "
-                "CC-BY-4.0 evidence, and approve network-denied non-loading static "
-                "inspection to establish its exact SHA-256. This does not approve "
-                "dependency installation, checkpoint loading, model construction, "
-                "inference, audio processing, public activation, source selection or MIDI."
-            ),
+            "requires_separate_approval_before_download_or_install": True,
         },
         "effects": {
             "network_used_by_plan": False,

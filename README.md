@@ -130,8 +130,11 @@ step has now established SHA-256
 and a network-denied, non-deserializing static structure report; dependency
 installation, loading and inference remain unapproved. The source audit also
 found the required 341,546,630-byte OpenMIC PaSST checkpoint and rejected the
-upstream automatic download and unrestricted loaders. Its evidence-only
-download remains the next separately approved gate. See
+upstream automatic download and unrestricted loaders. Its separately approved
+evidence-only download established SHA-256
+`dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`
+without loading it. The challenger remains blocked while a fully hash-locked
+runtime plan is prepared. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 
 After the local page exports your listening JSON, bind it to the exact result
