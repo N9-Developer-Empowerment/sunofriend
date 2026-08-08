@@ -206,6 +206,7 @@ Inspect the next no-effects query-challenger plan with:
 
 ```bash
 .venv/bin/python scripts/plan-separation-other-refinement-query-runtime.py
+.venv/bin/python scripts/plan-separation-other-refinement-query-forward.py
 .venv/bin/python scripts/plan-separation-other-refinement-query-synthetic.py
 ```
 
@@ -225,10 +226,12 @@ checkpoint, establishing SHA-256
   denial. The approved restricted loader then constructed PaSST with
   `pretrained=False`, verified every state key, shape and dtype and strictly
   loaded both checkpoints under network denial. Do not use the upstream
-  downloader or loader. The second command prints the immutable synthetic
-  forward plan and exact next approval; running that command itself constructs
-  no model, performs no inference and reads no audio. Do not run inference or
-  process audio until that exact synthetic gate is explicitly approved.
+  downloader or loader. The second command prints a pure forward contract bound
+  to nine pinned upstream source/configuration hashes; it contains no executable
+  forward method. The third command prints the immutable synthetic-forward plan
+  and exact next approval. These planning commands construct no model, perform
+  no inference and read no audio. Do not run inference or process audio until
+  that exact synthetic gate is explicitly approved.
 
 ## Inspect before installing
 

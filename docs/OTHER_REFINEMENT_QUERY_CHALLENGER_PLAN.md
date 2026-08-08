@@ -271,15 +271,25 @@ loader. It does not prove separation quality, runtime resources or a working
 forward adapter.
 
 The challenger remains blocked, unregistered and non-executable. The next
-bounded gate now has an immutable, no-effects plan:
+bounded gate now has a pure forward contract and an immutable, no-effects plan:
 
 ```bash
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-query-forward.py
+
 .venv/bin/python \
   scripts/plan-separation-other-refinement-query-synthetic.py
 ```
 
-Its document SHA-256 is
-`cba97fbe41b59112ea85715250889eff924660277fcffef72b66af16a27a01bf`.
+The forward contract binds the exact setup-C topology and forward sequence to
+nine files at source revision
+`79ed5bb75e5c3a40cd319d9d990cee913fc65c26`; its document SHA-256 is
+`cb83fdcf04057779d5970147d10e1944df29128b099c2a16b5d3b2e2cb829888`.
+It describes STFT, 64-band splitting, sixteen alternating residual GRUs,
+PaSST query embedding, FiLM conditioning, complex-mask overlap-add and exact-
+length inverse STFT. It is design data only: no executable forward method was
+added. The synthetic plan document SHA-256 is
+`94e88409dfd475e4a87ed231f60be0de73f441f97ce6724c9aea8ba1a0f4266f`.
 It proposes one CPU-only forward with a generated two-second stereo mixture and
 generated ten-second stereo query, both held in memory, seed `0`, network
 denial, a 180-second timeout and a 12 GiB memory ceiling. It writes only an
@@ -295,7 +305,10 @@ synthetic execution and report validation are separate maintenance boundaries.
 The refactor validates the already-recorded load report without changing its
 canonical SHA-256. The topology and strict loading were then extracted into
 separate reusable modules; a fresh network-denied load produced a byte-identical
-report with zero network attempts, audio opens or inference runs.
+report with zero network attempts, audio opens or inference runs. The one-way
+network/audio/checkpoint enforcement is now a reusable execution guard rather
+than inline CLI logic, and the proposed forward is a pure source-bound contract
+rather than an inference implementation.
 
 The wider incremental restructuring sequence is recorded in
 [Separation maintainability plan](SEPARATION_MAINTAINABILITY_PLAN.md).

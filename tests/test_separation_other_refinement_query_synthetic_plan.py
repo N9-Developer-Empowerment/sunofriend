@@ -28,6 +28,13 @@ def test_synthetic_plan_is_bounded_and_has_no_effects() -> None:
     assert plan["proposed_single_run"]["query"]["shape"] == [1, 2, 441_000]
     assert plan["proposed_single_run"]["audio_files_read"] == 0
     assert plan["proposed_single_run"]["audio_files_written"] == 0
+    assert plan["evidence_binding"]["forward_contract_schema"] == (
+        "sunofriend.other-refinement-query-forward-contract.v1"
+    )
+    assert len(plan["evidence_binding"]["forward_contract_document_sha256"]) == 64
+    assert (
+        plan["implementation_boundary"]["load_adapter_has_forward_method"] is False
+    )
     assert plan["objective_acceptance"]["musical_usefulness_gate"] is False
     assert plan["next_approval"]["authorizes_inference_runs"] == 1
     assert plan["next_approval"]["authorizes_private_audio"] is False

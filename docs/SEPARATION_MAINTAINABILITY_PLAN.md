@@ -20,15 +20,17 @@ approval boundaries.
 
 1. **Contracts** — pure standard-library schemas, hashes and validators with no
    model or audio imports.
-2. **Adapters** — model topology and strict local checkpoint loading, isolated
+2. **Guards** — reusable one-way network, audio and checkpoint enforcement for
+   short-lived model processes, backed by operating-system network denial.
+3. **Adapters** — model topology and strict local checkpoint loading, isolated
    from CLI, setup and publication code.
-3. **Runners** — bounded synthetic, canary and resource execution with explicit
+4. **Runners** — bounded synthetic, canary and resource execution with explicit
    effects and stop conditions.
-4. **Publication** — PCM24 roles, residual accounting, atomic output roots and
+5. **Publication** — PCM24 roles, residual accounting, atomic output roots and
    immutable profile registry transitions.
-5. **Review** — report-bound local listening pages and text-only feedback with
+6. **Review** — report-bound local listening pages and text-only feedback with
    no automatic upload or source choice.
-6. **Interfaces** — small CLI/setup commands that orchestrate the modules above
+7. **Interfaces** — small CLI/setup commands that orchestrate the modules above
    and contain no duplicated validation logic.
 
 ## Incremental sequence
@@ -56,9 +58,12 @@ from an embedded Python heredoc into
 `separation_other_refinement_query_load_contract.py`. The setup shell now calls
 that pure contract. The 522-line construction/load CLI has also been split into
 an exact state-compatible topology module, a strict weights-only loading module
-that retains the two model objects, and a 168-line guarded evidence CLI. A
+that retains the two model objects, and a 118-line guarded evidence CLI. A
 network-denied rerun after extraction produced a byte-identical report with the
 same canonical SHA-256 and zero network, audio or inference effects. The next
-synthetic-forward plan is also a pure, no-effects document; forward math,
-synthetic execution and report validation remain separate boundaries before any
-inference implementation begins.
+synthetic-forward plan is also a pure, no-effects document. A reusable one-way
+execution guard now owns network, audio and exact-checkpoint enforcement. A
+separate pure forward contract binds the proposed math and exact setup-C values
+to nine pinned upstream source/configuration hashes. Forward math implementation,
+synthetic execution and report validation remain distinct boundaries before any
+inference begins.

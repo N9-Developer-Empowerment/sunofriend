@@ -163,7 +163,13 @@ def test_restricted_model_load_script_has_no_inference_or_audio_interface() -> N
         / "sunofriend"
         / "separation_other_refinement_query_model_loading.py"
     ).read_text(encoding="utf-8")
-    combined_source = runner_source + adapter_source + loading_source
+    guard_source = (
+        ROOT
+        / "src"
+        / "sunofriend"
+        / "separation_other_refinement_query_execution_guard.py"
+    ).read_text(encoding="utf-8")
+    combined_source = runner_source + adapter_source + loading_source + guard_source
 
     assert "def forward" not in combined_source
     assert 'parser.add_argument("--banquet"' in runner_source
@@ -177,7 +183,11 @@ def test_restricted_model_load_script_has_no_inference_or_audio_interface() -> N
     assert "sys.addaudithook" not in adapter_source
     assert "socket" not in loading_source
     assert "urllib.request" not in loading_source
-    assert "sys.addaudithook" in runner_source
+    assert "sys.addaudithook" not in runner_source
+    assert "sys.addaudithook" in guard_source
+    assert "QueryRestrictedExecutionGuard" in runner_source
+    assert "weights_only" in guard_source
+    assert 'map_location="cpu"' in guard_source
     assert "pretrained=False" in adapter_source
     assert "weights_only=True" in loading_source
     assert 'map_location="cpu"' in loading_source

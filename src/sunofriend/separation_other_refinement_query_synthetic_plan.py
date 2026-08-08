@@ -11,6 +11,9 @@ import hashlib
 import json
 from typing import Any
 
+from .separation_other_refinement_query_forward_contract import (
+    build_query_forward_contract,
+)
 from .separation_other_refinement_query_load_contract import (
     EXPECTED_CHECKPOINTS,
     QUERY_BANDIT_SOURCE_REVISION,
@@ -45,6 +48,7 @@ def query_synthetic_plan_sha256(value: dict[str, Any]) -> str:
 def build_query_synthetic_plan() -> dict[str, Any]:
     """Build the immutable plan without performing any approved action."""
 
+    forward_contract = build_query_forward_contract()
     plan: dict[str, Any] = {
         "schema": QUERY_SYNTHETIC_PLAN_SCHEMA,
         "document_sha256": "",
@@ -59,6 +63,10 @@ def build_query_synthetic_plan() -> dict[str, Any]:
             "source_revision": QUERY_BANDIT_SOURCE_REVISION,
             "model_load_report_sha256": MODEL_LOAD_REPORT_SHA256,
             "checkpoints": EXPECTED_CHECKPOINTS,
+            "forward_contract_schema": forward_contract["schema"],
+            "forward_contract_document_sha256": forward_contract[
+                "document_sha256"
+            ],
         },
         "implementation_boundary": {
             "load_adapter_has_forward_method": False,
@@ -72,12 +80,18 @@ def build_query_synthetic_plan() -> dict[str, Any]:
                 "restricted_checkpoint_loading": (
                     "separation_other_refinement_query_model_loading.py"
                 ),
+                "source_bound_forward_contract": (
+                    "separation_other_refinement_query_forward_contract.py"
+                ),
+                "reusable_effects_guard": (
+                    "separation_other_refinement_query_execution_guard.py"
+                ),
                 "guarded_evidence_cli": (
                     "verify-separation-other-refinement-query-model-load.py"
                 ),
             },
             "next_implementation_must_separate": [
-                "forward_math",
+                "forward_math_implementation",
                 "synthetic_forward_runner",
                 "synthetic_report_validation",
             ],
