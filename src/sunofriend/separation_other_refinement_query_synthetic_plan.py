@@ -62,11 +62,24 @@ def build_query_synthetic_plan() -> dict[str, Any]:
         },
         "implementation_boundary": {
             "load_adapter_has_forward_method": False,
-            "next_adapter_must_separate": [
-                "state_compatible_topology",
-                "restricted_checkpoint_loading",
+            "implemented_modules": {
+                "evidence_contract": (
+                    "separation_other_refinement_query_load_contract.py"
+                ),
+                "state_compatible_topology": (
+                    "separation_other_refinement_query_model_adapter.py"
+                ),
+                "restricted_checkpoint_loading": (
+                    "separation_other_refinement_query_model_loading.py"
+                ),
+                "guarded_evidence_cli": (
+                    "verify-separation-other-refinement-query-model-load.py"
+                ),
+            },
+            "next_implementation_must_separate": [
+                "forward_math",
                 "synthetic_forward_runner",
-                "report_validation",
+                "synthetic_report_validation",
             ],
             "upstream_cli_allowed": False,
             "upstream_download_or_checkpoint_loader_allowed": False,

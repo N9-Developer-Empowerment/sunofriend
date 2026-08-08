@@ -279,7 +279,7 @@ bounded gate now has an immutable, no-effects plan:
 ```
 
 Its document SHA-256 is
-`6a7dd5e0836ba572708d11d4bbd067dc39ca95bf7480ec92ecc20821e0f9a125`.
+`cba97fbe41b59112ea85715250889eff924660277fcffef72b66af16a27a01bf`.
 It proposes one CPU-only forward with a generated two-second stereo mixture and
 generated ten-second stereo query, both held in memory, seed `0`, network
 denial, a 180-second timeout and a 12 GiB memory ceiling. It writes only an
@@ -293,7 +293,9 @@ contract in
 small exclusive-write receipt command. Model identity, topology/loading,
 synthetic execution and report validation are separate maintenance boundaries.
 The refactor validates the already-recorded load report without changing its
-canonical SHA-256.
+canonical SHA-256. The topology and strict loading were then extracted into
+separate reusable modules; a fresh network-denied load produced a byte-identical
+report with zero network attempts, audio opens or inference runs.
 
 The wider incremental restructuring sequence is recorded in
 [Separation maintainability plan](SEPARATION_MAINTAINABILITY_PLAN.md).

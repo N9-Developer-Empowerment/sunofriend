@@ -54,6 +54,11 @@ functioning public profile available.
 The Banquet/PaSST load-report validator and approval-receipt builder have moved
 from an embedded Python heredoc into
 `separation_other_refinement_query_load_contract.py`. The setup shell now calls
-that pure contract. The next synthetic-forward plan is also a pure, no-effects
-document; topology, strict loading, forward execution and reporting are named
-as separate boundaries before any inference implementation begins.
+that pure contract. The 522-line construction/load CLI has also been split into
+an exact state-compatible topology module, a strict weights-only loading module
+that retains the two model objects, and a 168-line guarded evidence CLI. A
+network-denied rerun after extraction produced a byte-identical report with the
+same canonical SHA-256 and zero network, audio or inference effects. The next
+synthetic-forward plan is also a pure, no-effects document; forward math,
+synthetic execution and report validation remain separate boundaries before any
+inference implementation begins.

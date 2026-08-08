@@ -146,22 +146,44 @@ def test_query_runtime_plan_script_is_read_only() -> None:
 
 
 def test_restricted_model_load_script_has_no_inference_or_audio_interface() -> None:
-    source = (
+    runner_source = (
         ROOT
         / "scripts"
         / "verify-separation-other-refinement-query-model-load.py"
     ).read_text(encoding="utf-8")
+    adapter_source = (
+        ROOT
+        / "src"
+        / "sunofriend"
+        / "separation_other_refinement_query_model_adapter.py"
+    ).read_text(encoding="utf-8")
+    loading_source = (
+        ROOT
+        / "src"
+        / "sunofriend"
+        / "separation_other_refinement_query_model_loading.py"
+    ).read_text(encoding="utf-8")
+    combined_source = runner_source + adapter_source + loading_source
 
-    assert "def forward" not in source
-    assert 'parser.add_argument("--banquet"' in source
-    assert 'parser.add_argument("--passt"' in source
-    assert 'parser.add_argument("--audio"' not in source
-    assert 'pretrained=False' in source
-    assert 'weights_only=True' in source
-    assert 'map_location="cpu"' in source
-    assert '"inference_runs": 0' in source
-    assert '"audio_reads": 0' in source
-    assert '"public_activation": False' in source
+    assert "def forward" not in combined_source
+    assert 'parser.add_argument("--banquet"' in runner_source
+    assert 'parser.add_argument("--passt"' in runner_source
+    assert 'parser.add_argument("--audio"' not in combined_source
+    assert "class BanquetLoadAdapter" in adapter_source
+    assert "class BanquetLoadAdapter" not in runner_source
+    assert "load_query_models" in runner_source
+    assert "torch.load" not in adapter_source
+    assert "argparse" not in adapter_source
+    assert "sys.addaudithook" not in adapter_source
+    assert "socket" not in loading_source
+    assert "urllib.request" not in loading_source
+    assert "sys.addaudithook" in runner_source
+    assert "pretrained=False" in adapter_source
+    assert "weights_only=True" in loading_source
+    assert 'map_location="cpu"' in loading_source
+    assert '"inference_runs": 0' in runner_source
+    assert '"audio_reads": 0' in runner_source
+    assert '"public_activation": False' in runner_source
 
 
 def test_restricted_model_load_requires_its_explicit_acceptance_flag() -> None:
