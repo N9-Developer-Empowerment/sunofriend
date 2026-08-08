@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-07.2"
+INTERFACE_CONTRACT_VERSION = "2026-08-08.1"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -204,8 +204,14 @@ def render_skill_interface_reference() -> str:
         "checkpoint and rejected the upstream automatic and unrestricted loaders. The",
         "separately approved non-loading inspection established SHA-256",
         "`dc229428753176e8be0373d25887116fc15b490af86f671cecf9ed76a0f287da`.",
-        "It is not registered or executable, and its CC BY-NC-SA checkpoint permits no",
-        "hosted or commercial-default claim.",
+        "A separately approved evidence-only dependency step then resolved 28 exact",
+        "CPython-3.12/macOS-arm64 wheels (99,354,620 bytes), hashed them and inspected",
+        "their licence metadata under network denial without installation or import.",
+        "The lock SHA-256 is",
+        "`28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92`.",
+        "It is not registered or executable, installation/import still require separate",
+        "approval, and its CC BY-NC-SA checkpoint permits no hosted or",
+        "commercial-default claim.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

@@ -238,6 +238,8 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /normalization passed under network denial/);
   assert.match(html, /five-song, ten-report review demonstrated neither/);
   assert.match(html, /keyboard_synth/);
+  assert.match(html, /99,354,620 bytes/);
+  assert.match(html, /imported or installed nothing/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
   assert.match(html, /Help improve the next public slice/);
@@ -590,7 +592,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.status,
-    "blocked_pending_hash_locked_runtime_plan",
+    "blocked_pending_isolated_install_and_restricted_import_plan",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -611,6 +613,31 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_query_challenger.required_passt_checkpoint.deserialized,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_wheel_evidence.package_count,
+    28,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_wheel_evidence.wheel_bytes,
+    99354620,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_wheel_evidence.requirements_sha256,
+    "28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_wheel_evidence.dependency_installed,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_query_challenger.runtime_wheel_evidence.packages_imported,
     false,
   );
   assert.equal(

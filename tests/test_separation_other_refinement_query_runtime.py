@@ -20,7 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None:
     audit = build_query_runtime_audit()
 
-    assert audit["status"] == "blocked_pending_hash_locked_runtime_plan"
+    assert audit["status"] == (
+        "blocked_pending_isolated_install_and_restricted_import_plan"
+    )
     assert audit["registered"] is False
     assert audit["executable"] is False
     assert audit["source_audit"]["query_bandit"]["revision"] == (
@@ -49,13 +51,22 @@ def test_query_runtime_audit_names_hidden_artifact_and_forbids_loaders() -> None
     assert "weights_only=True" in contract["banquet_loader"]
     assert "weights_only=True" in contract["passt_loader"]
     assert audit["proposed_runtime_identity"]["model_artifact_hashes_complete"] is True
-    assert (
-        audit["proposed_runtime_identity"]["runtime_dependency_hashes_complete"]
-        is False
+    runtime = audit["proposed_runtime_identity"]
+    assert runtime["runtime_dependency_hashes_complete"] is True
+    assert runtime["wheel_evidence"]["package_count"] == 28
+    assert runtime["wheel_evidence"]["wheel_bytes"] == 99_354_620
+    assert runtime["wheel_evidence"]["requirements_sha256"] == (
+        "28249f5d6ab80d4b72a5f256ac435f3a2d150b1baa30d751754af44049c33b92"
     )
-    assert audit["next_gate"]["kind"] == "review_hash_locked_runtime_plan"
-    assert audit["next_gate"]["dependency_artifact_download_approved"] is False
+    assert runtime["wheel_evidence"]["dependency_installed"] is False
+    assert runtime["wheel_evidence"]["packages_imported"] is False
+    assert audit["next_gate"]["kind"] == (
+        "review_isolated_install_and_restricted_import_plan"
+    )
+    assert audit["next_gate"]["dependency_artifact_download_approved"] is True
+    assert audit["next_gate"]["dependency_artifact_download_complete"] is True
     assert audit["next_gate"]["dependency_installation"] is False
+    assert audit["next_gate"]["package_import"] is False
     assert audit["next_gate"]["model_loading"] is False
     assert not any(
         value is True
