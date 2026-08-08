@@ -39,6 +39,26 @@ from types import ModuleType
 from typing import Any, Iterator
 
 
+def _descriptor_numbers_at_harness_entry() -> tuple[int, ...]:
+    """Capture inherited descriptors before project imports open local handles."""
+
+    soft_limit, _hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft_limit == resource.RLIM_INFINITY:
+        raise RuntimeError("harness entry descriptor limit is unbounded")
+    descriptors: list[int] = []
+    for descriptor in range(int(soft_limit)):
+        try:
+            os.fstat(descriptor)
+        except OSError as error:
+            if error.errno == errno.EBADF:
+                continue
+            raise
+        descriptors.append(descriptor)
+    return tuple(descriptors)
+
+
+_HARNESS_ENTRY_DESCRIPTORS = _descriptor_numbers_at_harness_entry()
+
 _REPOSITORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPOSITORY / "src"))
 import sunofriend._separation_macos_loaded_images as _loaded_images  # noqa: E402
@@ -271,9 +291,7 @@ def _prepare_isolated_descriptor_limit() -> int:
 def _observe_outer_supervisor_descriptors() -> dict[str, Any]:
     """Observe the harness entry state before it performs any FD cleanup."""
 
-    descriptors = [
-        snapshot.descriptor for snapshot in snapshot_parent_descriptors()
-    ]
+    descriptors = list(_HARNESS_ENTRY_DESCRIPTORS)
     return {
         "observation_point": "harness_entry_before_descriptor_cleanup",
         "open_descriptors": descriptors,
