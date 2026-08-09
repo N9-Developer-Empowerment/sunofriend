@@ -612,7 +612,7 @@
         "next_synth_challenger": {
           "scope_id": "other-synth-refinement-v1",
           "proposed_profile_id": "bs-roformer-mega-53-synth-v1",
-          "status": "model_load_verified_synthetic_inference_not_authorized",
+          "status": "private_six_role_integration_qualified_not_public",
           "registered": false,
           "executable": false,
           "priority": ["synth", "guitar", "wind"],
@@ -712,6 +712,7 @@
           "synthetic_forward_plan": {
             "schema": "sunofriend.mega53-generated-tensor-forward-plan.v1",
             "status": "awaiting_explicit_generated_tensor_forward_approval",
+            "execution_status": "complete_authority_consumed",
             "command": ".venv/bin/python scripts/plan-separation-other-refinement-next-synthetic.py",
             "document_sha256": "1ac15c7082223fcf2bdfd1d7443320f782cae87b8ac6e89cf991c19553da9903",
             "published_chunk_size": 882000,
@@ -743,6 +744,53 @@
               "musical_usefulness_established": false
             }
           },
+          "private_canary_result": {
+            "status": "both_targets_qualified_for_private_studio_integration",
+            "confirmed_present_cases_per_target": 4,
+            "synth_report_sha256": "b985dd021c33564967f445cb30697c50cb03362c7407b8aee21a54449c3caabf",
+            "synth_review_sha256": "42b4cb99f515f813269602424857fe03083cdef6882da135eba5820bb3dca958",
+            "guitar_report_sha256": "b7bc8722d603719d3131c623a659c90816ad70eede9987daa16012789ae3fbbc",
+            "guitar_review_sha256": "8e840fb97595b7d38e1e042188ed555ff31d749c3d41fe3ee7ee99984c4b9efa",
+            "portfolio_outcome_sha256": "a2b73a607de1bef55fe04bff334a343fc815c0a0766efa6dec72133a689a37d4",
+            "synth_useful_or_partly_useful": 4,
+            "guitar_useful_or_partly_useful": 4,
+            "public_activation_authorized": false,
+            "midi_authorized": false
+          },
+          "six_role_integration_result": {
+            "status": "private_six_role_integration_qualified",
+            "plan_sha256": "9507d1ef182a0060270033a770a823b758ba024e75cc42e768117e66893f1dec",
+            "report_sha256": "af0533233c4469c3914fbe2cf4eae1195de1ee545847c122a8a9f023f350d513",
+            "review_document_sha256": "407e4bf0ab686ceee2bcaa77473eca0a76b307b13b217e070cf5ae8a8cdb31ce",
+            "outcome_document_sha256": "85b63909743da20a0b68e9d2fc130d0120f99e88036653586f7507766cf5d6f9",
+            "persisted_roles": ["vocals", "drums", "bass", "synth", "guitar", "residual_other"],
+            "review_case_count": 8,
+            "pcm24_artifact_count": 64,
+            "model_loads": 3,
+            "inference_attempts": 16,
+            "maximum_reconstruction_error_lsb": 0,
+            "all_outputs_noncatastrophic": true,
+            "synth_confirmed_present_useful": 2,
+            "synth_confirmed_present_partly_useful": 2,
+            "guitar_confirmed_present_useful": 4,
+            "downstream_midi_plan": {
+              "status": "ready_for_explicit_private_midi_canary_approval",
+              "document_sha256": "7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4",
+              "case_count": 8,
+              "candidate_transcription_attempts_planned": 8,
+              "grouped_other_control_transcription_attempts_planned": 8,
+              "separator_rerun": false,
+              "audio_opened": false,
+              "midi_created": false,
+              "automatic_source_choice": false,
+              "poor_feedback_disables_private_evidence": false
+            },
+            "downstream_midi_tested": false,
+            "registered": false,
+            "public_activation_authorized": false,
+            "source_selection_authorized": false,
+            "midi_authorized": false
+          },
           "dependency_install_authorized": false,
           "dependency_install_complete": true,
           "checkpoint_loading_authorized": false,
@@ -756,7 +804,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "prepare one four-song synth canary plan; song processing still requires separate explicit approval and cannot activate a profile, select a source or create MIDI"
+        "next_gate": "after separate explicit private MIDI authority, execute the frozen 16-attempt candidate-versus-grouped-other transcription canary; no separator rerun, activation or automatic source choice is implied"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

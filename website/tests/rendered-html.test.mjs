@@ -233,7 +233,7 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /Four roles, one immutable profile, no hidden tuning loop/);
   assert.match(html, /OPT-IN STUDIO CHALLENGER/);
   assert.match(html, /other-refinement-v1/);
-  assert.match(html, /Negative results retained; synth is next/);
+  assert.match(html, /Negative results retained; private six-role now qualifies/);
   assert.match(html, /Apple-native htdemucs_6s MLX/);
   assert.match(html, /normalization passed under network denial/);
   assert.match(html, /five-song, ten-report review demonstrated neither/);
@@ -248,7 +248,7 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /exactly nine song-disjoint CPU calls/);
   assert.match(html, /All 36 private PCM24 artifacts/);
   assert.match(html, /eight targets not useful/);
-  assert.match(html, /targets <code>synth<\/code> first/);
+  assert.match(html, /targeted <code>synth<\/code> first/);
   assert.match(html, /followed by guitar and wind/);
   assert.match(html, /Acoustic piano is only an optional control/);
   assert.match(html, /13,571 converted/);
@@ -256,6 +256,10 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /expansion split of 4\/2/);
   assert.match(html, /881,664 and 440,832/);
   assert.match(html, /without padding or cropping/);
+  assert.match(html, /combined review, synth was useful in two cases/);
+  assert.match(html, /guitar was useful in all four target-present cases/);
+  assert.match(html, /no-effects MIDI-usefulness plan is now frozen/);
+  assert.match(html, /opens no audio and makes no automatic source choice/);
   assert.match(html, /technically valid but musically unsuccessful/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);

@@ -143,7 +143,8 @@ def test_model_load_route_is_exact_offline_and_has_no_forward_or_audio() -> None
     assert '"$RUNTIME_IMPORT_ROOT/runtime/bin/python" -I -B "$MODEL_LOAD_SCRIPT"' in setup
     assert "weights_only=True, map_location=\"cpu\"" in loader
     assert "model.load_weights(list(converted.items()), strict=True)" in loader
-    assert "_compare_state(constructed, converted)" in loader
+    assert "compare_exact_mlx_state(constructed, converted)" in loader
+    assert "from .separation_bs_roformer_mlx_runtime import" in loader
     assert "forward_calls = 0" in guard
     assert "AUDIO_SUFFIXES" in guard
     assert "load_mega53_model(" in verifier

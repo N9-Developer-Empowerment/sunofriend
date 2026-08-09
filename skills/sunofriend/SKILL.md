@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-09.12 -->
+<!-- sunofriend-interface-contract: 2026-08-09.16 -->
 
 # Sunofriend
 
@@ -135,9 +135,26 @@ on.
   The separately approved one-call forward then passed in 18.19 seconds at
   15,424,362,972-byte peak MLX allocation with exact finite 53-role output,
   `9.313225746154785e-10` reconstruction-accounting error and zero network or
-  audio attempts. That authority is consumed. It proves adapter execution, not
-  synth usefulness. The four-song synth canary is the next separately approved
-  gate; do not infer song processing authority from the synthetic result.
+  audio attempts. The later bounded private canaries completed under network
+  denial. Synth was partly useful in 4/4 confirmed-present cases; guitar was
+  useful or partly useful in 4/4. All eight decisions reported no catastrophic
+  defect, bleed, artefact or timing problem, so both profiles clear the frozen
+  60% private-Studio integration gate. The later exact integration completed
+  over the same eight windows: three sequential model loads made 16 bounded
+  attempts and published 64 finite PCM24 artifacts with zero-LSB
+  reconstruction and no network access. The combined review rated synth
+  `useful` in 2/4 confirmed-present cases and `partly_useful` in 2/4; guitar was
+  `useful` in 4/4. All eight outputs had no catastrophic defect. The pure
+  outcome is `private_six_role_integration_qualified`. The profiles remain
+  unregistered and non-public; downstream MIDI execution is untested, three synth cases
+  retained some missing content and absent-role ratings are not scored. Use
+  `scripts/record-fine-stem-six-role-integration-outcome.py` only to reproduce
+  the no-effects outcome. The separate immutable MIDI comparison plan is now
+  frozen as
+  `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`;
+  it binds exact candidate/control identities but opens no audio and writes no
+  MIDI. No activation, selection, MIDI, hosting,
+  redistribution or upload follows from it.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

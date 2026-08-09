@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-09.12"
+INTERFACE_CONTRACT_VERSION = "2026-08-09.16"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -236,8 +236,8 @@ def render_skill_interface_reference() -> str:
         "`torch.load`. The evidence SHA-256 is",
         "`d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24`.",
         "Its terms remain unreviewed under a provisional local-",
-        "noncommercial boundary. The download authority is consumed; loading,",
-        "inference, activation, source-selection and MIDI remain unauthorized. A",
+        "noncommercial boundary. Hosted use, redistribution, public activation,",
+        "source-selection and MIDI remain outside this evaluation. A",
         "separately approved evidence-only gate resolved 29 exact",
         "CPython 3.12/macOS 14+ arm64 wheels totalling 127,527,173 bytes and",
         "inspected their ZIP metadata and licence evidence under network denial",
@@ -259,7 +259,26 @@ def render_skill_interface_reference() -> str:
         "The separately approved one-call forward passed in 18.19 seconds at 15.42 GB",
         "peak MLX allocation with exact finite 53-role output and zero network or",
         "audio attempts. That authority is consumed and proves execution, not musical",
-        "usefulness. A four-song synth canary is the next separate unapproved gate.",
+        "usefulness. The later four-song Mega-53 synth and BS-RoFormer-SW guitar",
+        "canaries completed under network denial after exact target-presence review.",
+        "Synth was partly useful in all four cases; guitar was useful or partly useful",
+        "in all four. No case reported a catastrophic defect, bleed, artefact or timing",
+        "problem, so both clear the frozen 60% private-Studio integration gate.",
+        "The later exact integration reconciled both estimates inside SCNet grouped",
+        "other and published mutually exclusive vocals, drums, bass, synth, guitar and",
+        "residual other for the same eight reviewed windows. Its 64 PCM24 artifacts were",
+        "finite and reconstructed within zero LSB. The combined review rated synth",
+        "`useful` in 2/4 confirmed-present cases and `partly_useful` in 2/4; guitar was",
+        "`useful` in 4/4. All eight outputs had no catastrophic defect, so the pure",
+        "outcome is `private_six_role_integration_qualified`. The profiles remain",
+        "unregistered and non-public. Downstream MIDI execution is untested, three synth cases",
+        "reported some missing content, and absent-role ratings are excluded. The",
+        "outcome grants no retry, activation, selection, MIDI, hosting, redistribution",
+        "or upload. A no-effects candidate-versus-grouped-other MIDI plan now binds",
+        "the same eight role-present artifacts with SHA-256",
+        "`7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.",
+        "It opens no audio and writes no MIDI. Musical feedback cannot disable the",
+        "core-four route or erase the private six-role evidence.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

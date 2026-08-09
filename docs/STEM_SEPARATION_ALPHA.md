@@ -32,15 +32,34 @@ Use `sunofriend-separate review-other RESULT_ROOT REVIEW_JSON --out FRESH.json`
 to bind an explicit guitar/keys listening export without selecting or
 activating either frontier.
 
-A separate audit now tracks a query-conditioned candidate for
+A completed bounded evaluation tracked a query-conditioned candidate for
 guitar and broad `keyboard_synth`—electric piano, organ, synth pad and synth
-lead. Its exact runtime and restricted construction/load gate now pass under
-network denial, including all state keys, shapes and dtypes. No inference or
-audio ran. It remains blocked, unregistered and non-executable pending a
-separate explicit synthetic-inference approval. Its published no-effects plan
-allows inspection of the proposed single generated-tensor run with:
-`python3 scripts/plan-separation-other-refinement-query-synthetic.py`. See
+lead. Its objective runtime, load, synthetic and nine-case private audio gates
+passed, but the bound human review rated eight targets not useful and one
+partly useful. It remains negative evidence, not a working product claim. See
 [Guitar and keyboard/synth query-challenger plan](OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
+
+The synth-first Mega-53 and specialised BS-RoFormer-SW guitar canaries and their
+fixed six-role integration are now complete. Source presence was confirmed
+before inference in four song-disjoint cases per target. The combined
+network-denied worker constrained both specialists inside SCNet grouped other
+and published mutually exclusive vocals, drums, bass, synth, guitar and
+residual other. All eight persisted sets were finite and reconstructed within
+zero PCM24 LSB.
+
+The combined review rated synth `useful` in 2/4 confirmed-present cases and
+`partly_useful` in 2/4; guitar was `useful` in 4/4. All eight outputs had no
+catastrophic defect. The pure outcome is
+`private_six_role_integration_qualified`. Neither model is registered,
+publicly executable or selected for MIDI. Downstream MIDI remains untested,
+three synth cases retained some missing content, and absent-role ratings were
+excluded from qualification. The no-effects downstream-MIDI plan is now bound
+to the eight exact role-present artifacts with SHA-256
+`7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
+It ran no separator, audio or MIDI. Its separately authorised execution is the
+next bounded step and poor results cannot disable the private six-role evidence.
+See
+[Synth-first fine-stem challenger](OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 
 Inspect the executable default and immutable profiles at any time:
 

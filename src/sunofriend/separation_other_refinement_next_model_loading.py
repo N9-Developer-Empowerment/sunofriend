@@ -3,97 +3,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
-import json
-from pathlib import Path
 import importlib
-import sys
-from types import ModuleType, SimpleNamespace
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
+
+from .separation_bs_roformer_mlx_runtime import (
+    checkpoint_state_dict,
+    compare_exact_mlx_state,
+    install_verified_source_package,
+    tensor_inventory,
+)
 
 
 @dataclass(frozen=True)
 class Mega53ModelLoadResult:
     model: Any
     evidence: dict[str, Any]
-
-
-def _inventory(values: dict[str, Any]) -> dict[str, Any]:
-    tensors = {
-        key: {
-            "shape": [int(size) for size in value.shape],
-            "dtype": str(value.dtype),
-            "numel": int(value.numel()) if callable(getattr(value, "numel", None)) else _numel(value.shape),
-        }
-        for key, value in sorted(values.items())
-    }
-    return {
-        "key_count": len(tensors),
-        "total_numel": sum(item["numel"] for item in tensors.values()),
-        "inventory_sha256": hashlib.sha256(
-            json.dumps(tensors, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        ).hexdigest(),
-    }
-
-
-def _numel(shape: Any) -> int:
-    result = 1
-    for size in shape:
-        result *= int(size)
-    return result
-
-
-def _state_dict(document: Any) -> dict[str, Any]:
-    import torch
-
-    candidate = document.get("state_dict") if isinstance(document, dict) else None
-    if candidate is None and isinstance(document, dict):
-        candidate = document
-    if not isinstance(candidate, dict) or not candidate:
-        raise RuntimeError("Mega-53 checkpoint has no state dictionary")
-    candidate.pop("_metadata", None)
-    if any(not isinstance(key, str) for key in candidate):
-        raise RuntimeError("Mega-53 checkpoint has a non-string state key")
-    if any(not torch.is_tensor(value) for value in candidate.values()):
-        raise RuntimeError("Mega-53 checkpoint state contains a non-tensor value")
-    return candidate
-
-
-def _install_source_package(source_root: Path) -> None:
-    package_root = source_root / "src" / "bs_roformer"
-    if not package_root.is_dir():
-        raise RuntimeError("verified BS-RoFormer source package is missing")
-    package = ModuleType("bs_roformer")
-    package.__path__ = [str(package_root)]
-    package.__package__ = "bs_roformer"
-    package.__file__ = str(package_root / "__init__.py")
-    sys.modules["bs_roformer"] = package
-
-
-def _compare_state(model_values: dict[str, Any], weights: dict[str, Any]) -> None:
-    model_keys = set(model_values)
-    weight_keys = set(weights)
-    missing = sorted(model_keys - weight_keys)
-    unexpected = sorted(weight_keys - model_keys)
-    if missing or unexpected:
-        raise RuntimeError(
-            "Mega-53 converted state keys differ: "
-            f"missing={missing[:8]}, unexpected={unexpected[:8]}"
-        )
-    shapes = []
-    dtypes = []
-    for key in sorted(model_keys):
-        if tuple(model_values[key].shape) != tuple(weights[key].shape):
-            shapes.append(
-                (key, tuple(model_values[key].shape), tuple(weights[key].shape))
-            )
-        if model_values[key].dtype != weights[key].dtype:
-            dtypes.append((key, str(model_values[key].dtype), str(weights[key].dtype)))
-    if shapes or dtypes:
-        raise RuntimeError(
-            "Mega-53 converted tensor contracts differ: "
-            f"shapes={shapes[:4]}, dtypes={dtypes[:4]}"
-        )
 
 
 def _checkpoint_expansion_factor(weights: dict[str, Any], dim: int) -> int:
@@ -162,7 +88,7 @@ def load_mega53_model(
     from mlx.utils import tree_flatten
     import torch
 
-    _install_source_package(source_root)
+    install_verified_source_package(source_root)
     from bs_roformer.backends.mlx_backend import MLXBackend
     from bs_roformer.mlx import BSRoformerMLX, convert_torch_to_mlx_weights
 
@@ -172,10 +98,10 @@ def load_mega53_model(
         audio=SimpleNamespace(**config_document["audio"]),
     )
     document = torch.load(checkpoint, weights_only=True, map_location="cpu")
-    state = _state_dict(document)
-    checkpoint_inventory = _inventory(state)
+    state = checkpoint_state_dict(document)
+    checkpoint_inventory = tensor_inventory(state)
     converted = convert_torch_to_mlx_weights(state, variant=None)
-    converted_inventory = _inventory(converted)
+    converted_inventory = tensor_inventory(converted)
     model_args = MLXBackend._model_args(config, variation=None)
     declared_expansion = int(model_args["mlp_expansion_factor"])
     checkpoint_expansion = _checkpoint_expansion_factor(
@@ -200,13 +126,13 @@ def load_mega53_model(
     model.set_dtype(checkpoint_dtype)
     model.eval()
     constructed = dict(tree_flatten(model.parameters()))
-    constructed_inventory = _inventory(constructed)
-    _compare_state(constructed, converted)
+    constructed_inventory = tensor_inventory(constructed)
+    compare_exact_mlx_state(constructed, converted)
 
     model.load_weights(list(converted.items()), strict=True)
     mx.eval(model.parameters())
     loaded = dict(tree_flatten(model.parameters()))
-    loaded_inventory = _inventory(loaded)
+    loaded_inventory = tensor_inventory(loaded)
     if loaded_inventory != constructed_inventory:
         raise RuntimeError("Mega-53 loaded model inventory differs from construction")
 

@@ -113,7 +113,7 @@ export default function SeparationResearch() {
             </div>
             <div className="agent-card">
               <span className="card-number">OPT-IN STUDIO CHALLENGER</span>
-              <h3>Negative results retained; synth is next</h3>
+              <h3>Negative results retained; private six-role now qualifies</h3>
               <p>
                 <code>other-refinement-v1</code> now binds one exact grouped-other
                 parent to one requested guitar or keys target plus a transparent
@@ -178,7 +178,7 @@ export default function SeparationResearch() {
                 research.
               </p>
               <p>
-                The next bounded plan now targets <code>synth</code> first,
+                The later bounded plan targeted <code>synth</code> first,
                 followed by guitar and wind. Acoustic piano is only an optional
                 control—not a proxy for modern keys. The public MVSep Mega-53
                 release exposes those roles through a different Band-Split
@@ -208,11 +208,23 @@ export default function SeparationResearch() {
                 both on the 512-sample STFT clock without padding or cropping.
                 The separately approved one-call forward passed in 18.19 seconds
                 at 15.42 GB peak MLX allocation with exact finite 53-role output
-                and zero network or audio attempts. This proves adapter execution,
-                not synth usefulness. The next unapproved gate is a four-song
-                synth canary. The plan separates audible target
-                presence from model usefulness and grants no song, activation,
-                source-selection or MIDI authority.
+                and zero network or audio attempts. Four target-present synth
+                and four target-present guitar canaries then passed their frozen
+                private-Studio gate. The fixed integration constrained both
+                specialists inside SCNet grouped other and published eight
+                mutually exclusive vocals, drums, bass, synth, guitar and
+                residual-other review sets with zero-LSB reconstruction. In the
+                combined review, synth was useful in two cases and partly useful
+                in two; guitar was useful in all four target-present cases. No
+                output had a catastrophic defect. This qualifies a private
+                six-role integration, not a public product: the models remain
+                unregistered, MIDI execution is untested, Mega-53 exceeded the original
+                12 GiB target and checkpoint terms constrain release. The next
+                no-effects MIDI-usefulness plan is now frozen over the eight
+                existing role-present artifacts. It compares each isolated
+                target with grouped other under identical settings, opens no
+                audio and makes no automatic source choice. A later private
+                execution remains a separate decision.
               </p>
             </div>
             <div className="agent-card">
