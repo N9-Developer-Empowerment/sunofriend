@@ -1048,6 +1048,51 @@ guided forms.
   multi-track MIDI, preserve both outputs and never promote from reconstruction
   accuracy or metrics alone. A separately requested broadband transient window
   may improve attacks but can admit simultaneous instruments.
+- Fine-stem model canary: before any synth or guitar inference, serve the exact
+  source-presence package and require four song-disjoint source windows
+  explicitly marked `present` for that target. If the completed
+  `fine-stem-target-presence-v1` result is insufficient, permit only the frozen
+  `fine-stem-target-presence-v2` source-selection replacement package, followed
+  by the exact two-case `fine-stem-target-presence-v3` addition when v2 still
+  provides only three present songs per target. Preserve
+  `absent` and `cannot_tell` as valid source evidence and never count them as
+  model failures. Do not ask for a listened checkbox: record each audio
+  player's first playback, mark a case listened only after all its players have
+  played, and save playback/form progress to browser-local and atomic server
+  storage after a short debounce. Once both reviews are complete, use
+  `scripts/compose-fine-stem-target-presence-qualified.py`; it must accept only
+  exactly four song-disjoint present cases per target, preserve each reviewed
+  source hash and refuse automatic replacement.
+  `scripts/run-fine-stem-canary.py` is a
+  guarded private developer runner, not a public command: plan first, then use
+  `--execute --confirm-rights` only with exact verified local artifacts and one
+  fresh output. It permits no download, automatic retry, source selection,
+  activation or MIDI. After an objective pass, use
+  `scripts/serve-fine-stem-canary-review.py RESULT_ROOT`; its catastrophic
+  check is separate from usefulness and negative musical feedback cannot
+  disable the functioning core-four profile.
+  After both exact reviews complete, record the pure portfolio outcome. A
+  target qualifies for private Studio integration at 60% `useful` or
+  `partly_useful` across its four confirmed-present cases with no catastrophic
+  defect. The completed Mega-53 synth and BS-RoFormer-SW guitar reviews both
+  scored 4/4 and qualify. This does not make either profile public. The exact
+  combined run later completed under its one approved plan: its fixed
+  projection allocated both specialists only inside SCNet grouped other,
+  preserved vocals/drums/bass and constructed residual other last. The bound
+  review qualified synth at 4/4 (`useful` twice, `partly_useful` twice) and
+  guitar at 4/4 (`useful` four times), with no catastrophic output. Record the
+  pure result with
+  `scripts/record-fine-stem-six-role-integration-outcome.py`; it must score only
+  the confirmed-present cohort for each role. The resulting
+  `private_six_role_integration_qualified` status is private evidence, not
+  public activation, source selection or MIDI authority. The next bounded step
+  has now been frozen as a no-effects downstream MIDI usefulness plan over
+  existing role-present artifacts, with no separator rerun. Run
+  `scripts/plan-fine-stem-downstream-midi.py` only to reproduce plan SHA-256
+  `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
+  Its future 16-attempt candidate-versus-grouped-other transcription run needs
+  separate private MIDI authority; poor results cannot disable the six-role
+  evidence.
 - Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
   44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
   checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source

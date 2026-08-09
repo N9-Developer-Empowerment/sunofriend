@@ -118,3 +118,42 @@ sealed source or leaking model details into setup shell. The pure
 tensor identity, 53-role order, single-attempt authority and aligned chunk/step
 math. A later runner must remain similarly isolated; song decoding and
 publication stay out until that objective boundary passes.
+
+The private song-canary increment now keeps source qualification outside the
+model runner. `separation_target_presence_qualification.py` validates each
+complete bound review, accepts only target-present cases, requires four
+song-disjoint tracks per target and copies byte-identical reviewed PCM24 source
+excerpts into one immutable cohort. It performs no model load or inference and
+cannot select a replacement automatically. The localhost presence page records
+individual player state without a manual listened checkbox, saves to both
+browser-local and atomic server storage, and is rendered from the currently
+validated manifest so a repaired server cannot serve stale JavaScript from an
+older package. The completed reviews are reduced by the pure
+`separation_fine_stem_canary_outcome.py` module; it applies the frozen 60%
+threshold without activating a profile or touching audio.
+
+The completed integration increment kept reconciliation separate again.
+`separation_fine_stem_integration_plan.py` binds the exact outcome, reports and
+reviews and produces only a hashed no-effects plan. The model-free
+`separation_fine_stem_integration_audio.py` owns the fixed grouped-other-
+constrained STFT projection and exact six-role PCM24 accounting. Model workers,
+private package publication and review remain outside those modules. The
+completed eight-window worker published exact six-role artifacts and the human
+review qualified synth and guitar on their confirmed-present cohorts. The new
+pure `separation_fine_stem_integration_outcome.py` reducer scores only those
+cohorts and grants no activation, selection or MIDI permission.
+
+The follow-on planning increment stays pure as well.
+`separation_fine_stem_midi_plan.py` binds the qualified outcome, all eight
+candidate identities, exact non-guessed track metadata and grouped-other
+control inputs. It specifies one identical-parameter A/B transcription contract
+per case while keeping every audio/model/MIDI effect at zero. A small CLI writes
+that immutable plan; any future executor and review UI must remain separate.
+
+The review failure also exposed avoidable generated-JavaScript risk. The
+six-role page now builds readable raw JavaScript separately from the Python
+HTML f-string, loads browser-local progress before writing defaults, records
+playback through `play`, `playing` and positive `timeupdate`, and waits for a
+successful atomic save before downloading. Rendered-script syntax and the
+server save/download contract are regression-tested. Future review pages should
+reuse these primitives instead of embedding new one-line scripts.

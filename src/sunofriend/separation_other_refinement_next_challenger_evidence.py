@@ -163,11 +163,13 @@ def _inspect_checkpoint(
     *,
     expected_bytes: int,
     expected_sha256: str,
+    artifact_file: str = CHECKPOINT_FILE,
+    maximum_bytes: int = APPROVED_TOTAL_BYTES,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     descriptor, before = _open_regular(path)
     try:
         sha256, byte_count = _hash_descriptor(
-            descriptor, maximum_bytes=APPROVED_TOTAL_BYTES
+            descriptor, maximum_bytes=maximum_bytes
         )
         if byte_count != expected_bytes:
             raise ValueError("checkpoint byte count differs from reviewed identity")
@@ -243,7 +245,7 @@ def _inspect_checkpoint(
         os.close(descriptor)
 
     return (
-        {"file": CHECKPOINT_FILE, "bytes": byte_count, "sha256": sha256},
+        {"file": artifact_file, "bytes": byte_count, "sha256": sha256},
         archive_evidence,
         pickle_evidence,
     )

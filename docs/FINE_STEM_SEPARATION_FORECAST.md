@@ -35,31 +35,59 @@ be published.
 - `htdemucs_6s` produced no demonstrated useful guitar or piano-proxy result.
 - Banquet produced eight not-useful targets and one partly-useful quiet
   keyboard target in its bounded canary.
-- Mega-53 now passes strict construction and one generated-tensor MLX forward:
-  18.19 seconds, 15,424,362,972-byte peak MLX allocation, finite
-  `[1, 53, 2, 881664]` output and zero audio or network attempts. This removes
-  substantial runtime uncertainty but says nothing about musical quality.
-- The full repository regression after that forward passed: 3,637 tests, 17
-  skipped, in 801.68 seconds.
+- The source-presence process completed before inference and produced four
+  song-disjoint, confirmed-present cases for each target. The exact qualified
+  package preserves every reviewed PCM24 source hash.
+- The Mega-53 synth canary completed four attempts in 37.44 seconds at
+  15,424,362,972-byte peak MLX allocation. All outputs were finite, network and
+  forbidden-audio attempts were zero, and persisted target plus residual
+  reconstructed within zero PCM24 LSB.
+- The BS-RoFormer-SW guitar canary completed its four overlap-add cases in
+  52.79 seconds at 8,512,054,588-byte peak MLX allocation. Its corresponding
+  objective gates also passed with zero-LSB reconstruction and no network,
+  forbidden-audio or external-checkpoint attempts.
+- The bound review rated synth `partly_useful` in 4/4 cases. It rated guitar
+  `partly_useful` in 3/4 and `useful` in 1/4. All eight cases reported no
+  catastrophic defect, bleed, artefact or timing problem. Missing content was
+  `some` for all synth cases and three guitar cases.
+- Both targets therefore pass the frozen 60% private-Studio integration gate
+  at 100%. That observed result replaces the earlier 35–50% forecast for both
+  pretrained targets passing their first canary.
+- The exact six-role integration then completed over the same eight windows.
+  Three sequential model loads made 16 bounded attempts and published 64
+  finite PCM24 artifacts. All eight persisted role sets reconstructed within
+  zero LSB and the worker recorded no network access or automatic retry.
+- In the combined review, synth was `useful` in 2/4 confirmed-present windows
+  and `partly_useful` in 2/4; guitar was `useful` in 4/4. All eight outputs had
+  no catastrophic defect. Three synth windows still reported some missing
+  content; ratings on explicitly absent complementary roles are retained but
+  excluded from qualification.
+- The pure, hash-bound outcome status is
+  `private_six_role_integration_qualified`. It grants no public activation,
+  source selection or MIDI permission. Downstream MIDI usefulness remains the
+  main unresolved musical-product question.
+- The full repository regression after the review/qualification repair passed:
+  3,659 tests, 17 skipped, in 758.41 seconds. The only warning was the existing
+  `pkg_resources` deprecation emitted by the Python 3.9 test environment.
 
-## Probability and duration by route
+## Probability and duration from the current evidence
 
-The percentages are engineering confidence ranges, not measured frequencies.
-They assume a 36 GB M3 Max for local inference and, where training is listed, a
-single RTX 40-series machine with 24 GB GPU memory. Less GPU memory lengthens
-or can invalidate the training estimate. “Delivery” means a reproducible
-Studio profile and local review path, not hosted processing or automatic MIDI
-selection.
+The model-selection and short-window reconciliation risks have now resolved
+positively. The remaining uncertainty is whether these estimates improve
+editable synth/guitar MIDI, whether the six-role package remains useful beyond
+the eight frozen windows, and whether checkpoint terms and memory requirements
+permit a distributable product. The percentages below are revised engineering
+confidence ranges, not measured frequencies.
 
-| Route | Synth success | Guitar success | Both targets | Decisive evidence | Delivery if successful |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Current Mega-53 alone | 45–60% | 35–50% | 20–35% | 1–2 working days | 1–2 weeks |
-| Mega-53 synth plus BS-RoFormer-SW guitar | 45–60% | 65–80% | 35–50% | 1–3 weeks | 2–4 weeks |
-| LoRA specialists using clean/open stems plus a curated pseudo-labelled catalogue | 70–85% | 70–85% | 60–75% | 4–6 weeks | 8–12 weeks |
-| LoRA using provider estimates alone | 50–65% | 55–70% | 35–55% | 3–5 weeks | 6–10 weeks |
-| Reproduce the CP-JKU eight-stem training programme on one RTX 40-series GPU | 55–70% | 65–80% | 45–65% | 6–10 weeks | 12–20 weeks |
-| New separator trained from scratch on provider estimates | 30–50% | 35–55% | 20–40% | 8–12 weeks | 16–30 weeks |
-| Provider-assisted import rather than a Sunofriend model | 70–90% | 80–95% | 65–85% | 1–3 days | 1–2 weeks |
+| Remaining milestone | Probability | Decisive evidence | Delivery if successful |
+| --- | ---: | ---: | ---: |
+| Coherent private six-role canary | **Achieved** | Completed objective run and listen | Completed |
+| Synth/guitar estimates improve downstream editable MIDI | 55–75% | One frozen role-present MIDI bake-off | 2–4 working days |
+| Product-integrated private Studio challenger | 85–95% | Import/review plumbing and explicit no-auto-selection boundary | 3–7 working days |
+| Private challenger useful beyond the eight canary windows | 70–85% | 2–3 additional song-disjoint full-song reviews | 2–4 weeks |
+| Public opt-in six-role preview with resolved terms and supported resources | 45–65% | Terms, installer, 16 GiB fallback or a narrower supported class | 4–8 weeks |
+| Training-backed specialist fallback using clean/open stems and curated teacher estimates | 70–85% | 4–6 weeks | 8–12 weeks |
+| Provider-assisted import for an individual musician | 65–85% | 1–3 days | 1–2 weeks |
 
 The provider-assisted row can meet an individual musician's stem need, but it
 does not meet the independent local-separator goal and remains an import and
@@ -67,31 +95,42 @@ benchmark route.
 
 ## Recommended portfolio and cumulative forecast
 
-Do not make one model carry all of the risk:
+The pretrained portfolio and fixed six-role integration have passed their
+first musical gates. The next sequence remains intentionally short:
 
-1. complete the four-song Mega-53 synth canary;
-2. if synth passes, retain it immediately as a Studio challenger;
-3. evaluate the six-stem BS-RoFormer-SW native guitar output rather than
-   relying on Mega-53's weaker broad-role promise;
-4. begin a data audit and one-epoch LoRA fit probe without waiting for either
-   listening result; and
-5. proceed to full specialist training only if the fit probe improves a fixed
-   song-disjoint validation set.
+1. **Complete:** freeze the positive canary and six-role outcome without public
+   selection;
+2. **Complete:** implement and review the grouped-other projection, exact PCM24
+   accounting and combined listening package;
+3. **Complete:** freeze a no-effects downstream MIDI comparison over the
+   already persisted role-present synth/guitar artifacts—plan SHA-256
+   `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`;
+4. after explicit private MIDI authority, compare editable target MIDI with the honest
+   residual/grouped-other control and record `cannot_tell` or `not_useful`
+   without blocking private Studio access;
+5. expose the reviewed six-role package only as a private Studio challenger
+   with no automatic source choice; and
+6. start LoRA or broader training only if broader validation exposes a real
+   quality ceiling, not merely because more tuning is possible.
 
-Allowing for correlated model failures, this portfolio gives the following
-forecast for reaching useful synth **and** guitar:
+The revised cumulative forecast is:
 
 | Time from this status date | Cumulative probability |
 | --- | ---: |
-| 2 weeks | 35–50% |
-| 6 weeks | 55–70% |
-| 12 weeks | 70–80% |
-| 16 weeks, with adequate clean training data | 75–85% |
+| Now: reviewed objective six-role integration evidence | **Achieved** |
+| 1 week: downstream MIDI evidence and private Studio packaging | 75–90% |
+| 4 weeks: broader private validation | 70–85% |
+| 8 weeks: public opt-in candidate, subject to terms/resources | 45–65% |
+| 12 weeks: training-backed fallback if required | 75–85% |
 
-The quickest credible success date is therefore within two weeks; the planning
-date for a training-backed result should be 8–12 weeks. If no route succeeds
-after the one pretrained portfolio and one specialist-training cycle, the
-forecast must be reduced rather than starting an unlimited tuning loop.
+The credible private six-role result has been achieved in the frozen canary.
+The next useful answer should arrive within one working week: whether those
+separate synth and guitar estimates materially improve editable MIDI. Public
+availability is less certain because Mega-53 retains a provisional
+local-noncommercial evidence boundary, BS-RoFormer-SW is noncommercial, and the
+Mega-53 forward exceeded the original 12 GiB/16 GB-class goal. If the bounded
+MIDI and broader-song checks are poor, retain the private evidence and switch
+focus rather than starting an unlimited tuning loop.
 
 ## Why the alternatives receive those probabilities
 

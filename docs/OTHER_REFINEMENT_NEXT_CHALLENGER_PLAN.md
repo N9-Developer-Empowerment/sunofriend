@@ -250,17 +250,32 @@ The synth evaluation separates two questions:
 2. Only an audibly present case receives `useful`, `partly_useful`,
    `not_useful` or `cannot_tell` model feedback.
 
-`absent` and `cannot_tell` remain valid reports. They are not counted as model
-failures and do not trigger a search for replacement windows. This prevents
-both false negatives and a post-result hunt for favourable examples.
+`absent` and `cannot_tell` remain valid reports and are never counted as model
+failures. They also cannot enter an instrument canary: the source-presence gate
+replaces that case before inference. Replacement is still bounded and occurs
+from source-only listening, never after seeing separator output. If four
+song-disjoint present cases cannot be established from the authorised local
+corpus, the run stops and requests new authorised samples instead of searching
+model results for favourable examples.
 
-The first round freezes one 15-second window from each of four
-owner-authorised Ezzye tracks, one model configuration and at most four
-inference calls. Provider stems remain independent comparison estimates, not
-truth. There is at most one remediation cycle, and only for an objective
-execution fault. Poor or mixed musical feedback is published and informs the
-next candidate; it cannot start automatic tuning, select a source, activate
-MIDI or remove the functioning core-four route.
+The first source-only round froze one 15-second window from each of four
+owner-authorised Ezzye tracks. The completed review established three present
+synth cases and one present guitar case; the other judgements remain valid
+source evidence, not model failures. The single source-selection replacement
+cycle used eight independently frozen high-activity windows across five
+authorised tracks and established three present songs for each target. One
+additional independently frozen `Uni Ava` synth window and one `Like Fire`
+guitar window have been listened to, but their two radio decisions were lost
+by the original browser page and require re-entry before inference. The
+repaired localhost page has no listened checkbox: each case is marked listened
+after every player emits playback, and playback/form state is saved to both
+browser-local and atomic server storage. A model-free qualification composer
+then requires exactly four song-disjoint `present` cases per target and copies
+the exact reviewed PCM24 source artifacts without another audition. Provider
+stems remain
+independent attention estimates, not truth. Poor or mixed musical feedback
+cannot start automatic tuning, select a source, activate MIDI or remove the
+functioning core-four route.
 
 ## Ordered gates
 
@@ -273,7 +288,133 @@ The remaining gates are deliberately one-way:
 5. **Complete:** strict weights-only construction and load;
 6. **Complete:** one generated-tensor objective forward under the frozen
    881,664/440,832 alignment contract; and
-7. **Next, not approved:** one four-song synth canary.
+7. **Complete but insufficient:** the first source-only localhost review
+   records all eight listening attestations and decisions, without running a
+   model. It established three present synth cases and one present guitar case;
+8. **Complete but insufficient:** the one allowed source-selection replacement
+   package recorded all eight decisions and established three present songs for
+   each target without running a model;
+9. **Complete:** the final source-only addition plus explicit listening
+   attestation established `Uni Ava` synth and `Like Fire` guitar as present.
+   The immutable qualified package contains exactly four target-present,
+   song-disjoint cases per role and preserves every reviewed source hash;
+10. **Complete:** the separately approved Mega-53 synth and BS-RoFormer-SW
+   guitar canaries ran once under network denial with no retry. Both objective
+   reports contain finite artifacts, exact identities and zero-LSB PCM24
+   reconstruction;
+11. **Complete:** both bound reviews contain four no-catastrophic decisions.
+   Synth was `partly_useful` in 4/4 cases. Guitar was `partly_useful` in 3/4
+   and `useful` in 1/4. Neither review reported bleed, artefacts or timing
+   problems. Both pass the frozen 60% private-Studio integration threshold; and
+12. **Complete:** the approved integration reconciled both specialists inside
+   SCNet grouped other as mutually exclusive synth, guitar and residual-other.
+   Three sequential model loads made exactly 16 bounded attempts over the eight
+   reviewed windows. All 64 PCM24 artifacts were finite and reconstructed
+   within zero LSB. The report SHA-256 is
+   `af0533233c4469c3914fbe2cf4eae1195de1ee545847c122a8a9f023f350d513`;
+13. **Complete:** the bound review recorded all eight roles in all eight cases.
+   On confirmed-present cohorts, synth was `useful` in 2/4 and
+   `partly_useful` in 2/4; guitar was `useful` in 4/4. All outputs had no
+   catastrophic defect. The pure outcome status is
+   `private_six_role_integration_qualified`; and
+14. **Complete, no MIDI authority implied:** the no-effects downstream MIDI
+   usefulness plan binds all eight exact role-present artifacts. It compares
+   each isolated synth/guitar candidate with a sample-exact grouped-other
+   control under identical track metadata and transcription settings. Its
+   SHA-256 is
+   `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`;
+   and
+15. **Next, separate authority required:** execute exactly 16 private MIDI
+   transcription attempts without rerunning a separator, review candidate
+   versus control blindly, and retain `cannot_tell`, `not_tested` and poor
+   results without disabling private six-role evidence.
+
+The completed synth report SHA-256 is
+`b985dd021c33564967f445cb30697c50cb03362c7407b8aee21a54449c3caabf`;
+its review SHA-256 is
+`42b4cb99f515f813269602424857fe03083cdef6882da135eba5820bb3dca958`.
+The completed guitar report SHA-256 is
+`b7bc8722d603719d3131c623a659c90816ad70eede9987daa16012789ae3fbbc`;
+its review SHA-256 is
+`8e840fb97595b7d38e1e042188ed555ff31d749c3d41fe3ee7ee99984c4b9efa`.
+The no-effects portfolio outcome SHA-256 is
+`a2b73a607de1bef55fe04bff334a343fc815c0a0766efa6dec72133a689a37d4`.
+
+The exact reviewed cohort can be reproduced without loading either model:
+
+```bash
+python3 scripts/compose-fine-stem-target-presence-qualified.py \
+  --source-root "$REPLACEMENT_PRESENCE_ROOT" \
+  --source-root "$ADDITION_PRESENCE_ROOT" \
+  --out "$QUALIFIED_PRESENCE_ROOT"
+```
+
+The following commands describe the two already-consumed canary plans; do not
+rerun them without fresh authority:
+
+```bash
+python3 scripts/run-fine-stem-canary.py \
+  --profile bs-roformer-mega-53-synth-v1 \
+  --presence-root "$PRESENCE_ROOT" \
+  --checkpoint "$MEGA53_CHECKPOINT" \
+  --config "$MEGA53_CONFIG"
+
+python3 scripts/run-fine-stem-canary.py \
+  --profile bs-roformer-sw-guitar-v1 \
+  --presence-root "$PRESENCE_ROOT" \
+  --checkpoint "$SW_CHECKPOINT" \
+  --config "$SW_CONFIG"
+```
+
+The report-bound review page used HTTP byte ranges, atomic server-side save and
+server-backed JSON download. It bound every decision to the exact profile,
+report and cases, with catastrophic defects separate from usefulness, bleed,
+missing content, artefacts, timing and downstream MIDI.
+
+The completed no-effects six-role plan can still be reproduced with:
+
+```bash
+python3 scripts/plan-fine-stem-six-role-integration.py \
+  --portfolio-outcome PORTFOLIO-OUTCOME.json \
+  --synth-root SYNTH-CANARY-ROOT \
+  --guitar-root GUITAR-CANARY-ROOT
+```
+
+It bound eight already reviewed 15-second references. Each case reused its
+persisted qualified primary estimate and proposed only the missing specialist
+estimate plus one SCNet core-four run. A fixed 4096/1024 grouped-other-
+constrained three-way Wiener mask allocates synth, guitar and residual other.
+The one approved execution is consumed. It allowed one configuration, no
+remediation cycle and no automatic retry. Public activation, source selection,
+MIDI, hosting, redistribution and upload remain false. Bind the completed
+review into its pure outcome with:
+
+```bash
+python3 scripts/record-fine-stem-six-role-integration-outcome.py \
+  SIX-ROLE-INTEGRATION-ROOT \
+  --out FRESH/fine-stem-six-role-integration-outcome-v1
+```
+
+The review document SHA-256 is
+`407e4bf0ab686ceee2bcaa77473eca0a76b307b13b217e070cf5ae8a8cdb31ce`;
+the outcome document SHA-256 is
+`85b63909743da20a0b68e9d2fc130d0120f99e88036653586f7507766cf5d6f9`.
+
+The downstream-MIDI plan can be reproduced without opening audio or writing
+MIDI:
+
+```bash
+.venv/bin/python scripts/plan-fine-stem-downstream-midi.py \
+  SIX-ROLE-INTEGRATION-ROOT \
+  FRESH/fine-stem-six-role-integration-outcome-v1/INTEGRATION-OUTCOME.json \
+  --out FRESH/fine-stem-downstream-midi-plan-v1
+```
+
+Its SHA-256 is
+`7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
+The plan records exact BPM/key/tuning metadata rather than guessing, uses the
+existing synth transcriber and the disclosed conservative polyphonic-keys
+transcriber for guitar, and grants no execution or source-selection authority.
 
 The single approved forward completed in 18.19 seconds at 15,424,362,972-byte
 peak MLX allocation. Its exact `[1, 53, 2, 881664]` float32 output was finite,

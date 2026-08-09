@@ -219,24 +219,72 @@ dtypes, and retained the 53-stem model with zero network, audio or forward
 calls. That check also exposed and transparently adapted an upstream mismatch:
 the checkpoint requires transformer expansion 4, mask-head expansion 2 and
 float16 parameters, while the published adapter conflates the two expansion
-settings. The verified source was not mutated. Checkpoint terms remain
-unreviewed and the profile remains non-executable; one generated-tensor
-objective forward has now passed its one separately approved gate. The frozen no-effects
+settings. The verified source was not mutated. Checkpoint use remains
+provisional local noncommercial evaluation and the profile is not public; one
+generated-tensor objective forward has now passed its separately approved gate.
+The frozen no-effects
 contract resolves the published 882,000-sample/441,000-step mismatch to an
 881,664-sample chunk and 440,832-sample step, keeping both on the 512-sample
 STFT clock without padding, cropping or source mutation. It authorizes nothing
 by itself and permitted no automatic retry. The one call completed in 18.19
 seconds at 15.42 GB peak MLX allocation with exact finite 53-role output and
-zero network/audio attempts. This is adapter evidence, not synth usefulness;
-the next unapproved gate is a four-song synth canary.
-Inspect the current plan without effects:
+zero network/audio attempts. The later four-song Mega-53 synth canary completed
+in 37.44 seconds at 15.42 GB peak MLX allocation; the four-song
+BS-RoFormer-SW guitar canary completed in 52.79 seconds at 8.51 GB. Both ran
+under network denial, produced finite PCM24 target/residual artifacts and
+reconstructed within zero LSB. The bound human reviews found synth partly
+useful in 4/4 confirmed-present cases and guitar useful or partly useful in
+4/4, with no catastrophic defects, bleed, artefacts or timing problems. Both
+therefore passed the frozen 60% private-Studio gate. The later fixed
+integration completed over the same eight reviewed windows: three sequential
+model loads made 16 bounded inference attempts and published 64 finite PCM24
+artifacts with zero-LSB reconstruction and no network access. In the combined
+six-role review, synth was `useful` in 2/4 confirmed-present cases and
+`partly_useful` in 2/4; guitar was `useful` in 4/4. All eight outputs had no
+catastrophic defect. The exact no-effects outcome is
+`private_six_role_integration_qualified`. This is positive private Studio
+evidence, not a public six-stem product claim: downstream MIDI execution remains
+untested, three synth cases retained some content outside the synth estimate,
+and model terms/resources still constrain release tier.
+
+A no-effects integration plan bound the exact reports and reviews, reused the
+eight persisted primary estimates, and fixed a grouped-other-constrained
+three-way projection so synth, guitar and residual other could not be
+double-counted. The completed plan SHA-256 is
+`9507d1ef182a0060270033a770a823b758ba024e75cc42e768117e66893f1dec`;
+the objective report SHA-256 is
+`af0533233c4469c3914fbe2cf4eae1195de1ee545847c122a8a9f023f350d513`.
+Record the completed review as a pure outcome without loading a model or
+reading audio:
 
 ```bash
-.venv/bin/python \
-  scripts/plan-separation-other-refinement-next-challenger.py
-.venv/bin/python \
-  scripts/plan-separation-other-refinement-next-synthetic.py
+python3 scripts/record-fine-stem-six-role-integration-outcome.py \
+  SIX-ROLE-INTEGRATION-ROOT \
+  --out FRESH/fine-stem-six-role-integration-outcome-v1
 ```
+
+The completed review document SHA-256 is
+`407e4bf0ab686ceee2bcaa77473eca0a76b307b13b217e070cf5ae8a8cdb31ce`;
+the pure outcome document SHA-256 is
+`85b63909743da20a0b68e9d2fc130d0120f99e88036653586f7507766cf5d6f9`.
+
+The next no-effects plan is also complete. It binds all eight exact
+confirmed-present synth/guitar artifacts and compares each target candidate
+with a sample-exact grouped-other control under identical BPM, key, tuning and
+transcription settings. It opens no audio, runs no model or transcriber, writes
+no MIDI and selects nothing. Reproduce that plan with:
+
+```bash
+.venv/bin/python scripts/plan-fine-stem-downstream-midi.py \
+  SIX-ROLE-INTEGRATION-ROOT \
+  FRESH/fine-stem-six-role-integration-outcome-v1/INTEGRATION-OUTCOME.json \
+  --out FRESH/fine-stem-downstream-midi-plan-v1
+```
+
+The downstream-MIDI plan SHA-256 is
+`7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
+Its later execution requires a separate explicit private-MIDI decision and
+cannot disable the qualified six-role evidence if the musical result is poor.
 
 See [Synth-first fine-stem challenger](docs/OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 
