@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-09.11 -->
+<!-- sunofriend-interface-contract: 2026-08-09.12 -->
 
 # Sunofriend
 
@@ -132,9 +132,12 @@ on.
   881,664/440,832, so both are exact 512-sample-hop multiples. Its document
   SHA-256 is
   `1ac15c7082223fcf2bdfd1d7443320f782cae87b8ac6e89cf991c19553da9903`.
-  It loads or runs nothing. One generated-tensor objective forward remains the
-  next separately approved gate; do not infer it from the completed load
-  authority, and do not process song audio.
+  The separately approved one-call forward then passed in 18.19 seconds at
+  15,424,362,972-byte peak MLX allocation with exact finite 53-role output,
+  `9.313225746154785e-10` reconstruction-accounting error and zero network or
+  audio attempts. That authority is consumed. It proves adapter execution, not
+  synth usefulness. The four-song synth canary is the next separately approved
+  gate; do not infer song processing authority from the synthetic result.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

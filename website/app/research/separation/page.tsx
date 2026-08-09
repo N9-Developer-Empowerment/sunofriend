@@ -206,8 +206,11 @@ export default function SeparationResearch() {
                 no-effects contract resolves the published 882,000-sample chunk
                 and 441,000-sample overlap step to 881,664 and 440,832, keeping
                 both on the 512-sample STFT clock without padding or cropping.
-                One generated-tensor objective forward is the next separately
-                approved gate. The plan separates audible target
+                The separately approved one-call forward passed in 18.19 seconds
+                at 15.42 GB peak MLX allocation with exact finite 53-role output
+                and zero network or audio attempts. This proves adapter execution,
+                not synth usefulness. The next unapproved gate is a four-song
+                synth canary. The plan separates audible target
                 presence from model usefulness and grants no song, activation,
                 source-selection or MIDI authority.
               </p>

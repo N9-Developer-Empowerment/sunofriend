@@ -190,6 +190,9 @@ feedback cannot trigger a query hunt. See
 [Guitar and keyboard/synth query-challenger plan](docs/OTHER_REFINEMENT_QUERY_CHALLENGER_PLAN.md).
 The incremental code-structure work is tracked in
 [Separation maintainability plan](docs/SEPARATION_MAINTAINABILITY_PLAN.md).
+Probability, delivery time and the alternative synth/guitar portfolio are
+tracked separately in the
+[Fine-stem separation delivery forecast](docs/FINE_STEM_SEPARATION_FORECAST.md).
 
 The next bounded challenger is now **synth first**, then guitar and wind;
 acoustic piano is only an optional control and no longer stands in for modern
@@ -218,11 +221,14 @@ the checkpoint requires transformer expansion 4, mask-head expansion 2 and
 float16 parameters, while the published adapter conflates the two expansion
 settings. The verified source was not mutated. Checkpoint terms remain
 unreviewed and the profile remains non-executable; one generated-tensor
-objective forward is the next separately approved gate. The frozen no-effects
+objective forward has now passed its one separately approved gate. The frozen no-effects
 contract resolves the published 882,000-sample/441,000-step mismatch to an
 881,664-sample chunk and 440,832-sample step, keeping both on the 512-sample
 STFT clock without padding, cropping or source mutation. It authorizes nothing
-by itself and permits no automatic retry.
+by itself and permitted no automatic retry. The one call completed in 18.19
+seconds at 15.42 GB peak MLX allocation with exact finite 53-role output and
+zero network/audio attempts. This is adapter evidence, not synth usefulness;
+the next unapproved gate is a four-song synth canary.
 Inspect the current plan without effects:
 
 ```bash

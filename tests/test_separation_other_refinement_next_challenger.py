@@ -82,7 +82,10 @@ def test_next_challenger_pins_source_artifacts_and_safe_loader() -> None:
         "checkpoint_derived_mask_head_expansion"
     ] == 2
     assert model_load["upstream_chunk_alignment"]["valid_for_inference"] is False
-    assert plan["next_gate"]["kind"] == "one_generated_tensor_synthetic_objective_run"
+    assert plan["next_gate"]["kind"] == "one_four_song_synth_canary_plan"
+    assert plan["synthetic_forward_evidence"]["authority_consumed"] is True
+    assert plan["synthetic_forward_evidence"]["inference_attempts"] == 1
+    assert plan["synthetic_forward_evidence"]["musical_usefulness_established"] is False
     assert plan["next_gate"]["requires_separate_approval"] is True
     assert plan["next_gate"]["runtime_wheel_download"] is False
 
