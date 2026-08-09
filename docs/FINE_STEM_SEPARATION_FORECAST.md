@@ -105,9 +105,11 @@ first musical gates. The next sequence remains intentionally short:
 3. **Complete:** freeze a no-effects downstream MIDI comparison over the
    already persisted role-present synth/guitar artifacts—plan SHA-256
    `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`;
-4. after explicit private MIDI authority, compare editable target MIDI with the honest
-   residual/grouped-other control and record `cannot_tell` or `not_useful`
-   without blocking private Studio access;
+4. **Complete technically, review pending:** the approved network-denied worker
+   made exactly 16 same-settings attempts over the eight candidate/control
+   pairs and published bound MIDI plus loudness-matched previews. Complete the
+   blind review and record `cannot_tell` or `not_useful` without blocking
+   private Studio access;
 5. expose the reviewed six-role package only as a private Studio challenger
    with no automatic source choice; and
 6. start LoRA or broader training only if broader validation exposes a real
@@ -118,7 +120,8 @@ The revised cumulative forecast is:
 | Time from this status date | Cumulative probability |
 | --- | ---: |
 | Now: reviewed objective six-role integration evidence | **Achieved** |
-| 1 week: downstream MIDI evidence and private Studio packaging | 75–90% |
+| Now: objective downstream MIDI package, human review pending | **Achieved** |
+| 1 week: reviewed downstream MIDI evidence and private Studio packaging | 80–95% |
 | 4 weeks: broader private validation | 70–85% |
 | 8 weeks: public opt-in candidate, subject to terms/resources | 45–65% |
 | 12 weeks: training-backed fallback if required | 75–85% |

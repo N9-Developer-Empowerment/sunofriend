@@ -32,6 +32,16 @@ from sunofriend.separation_fine_stem_midi_plan import (
     build_fine_stem_midi_plan,
     validate_fine_stem_midi_plan,
 )
+from sunofriend.separation_fine_stem_midi_canary import (
+    execute_fine_stem_midi_canary,
+    validate_fine_stem_midi_canary,
+)
+from sunofriend.separation_fine_stem_midi_review import (
+    build_midi_review_seed,
+    build_midi_review_server,
+    render_midi_canary_review,
+    validate_midi_review,
+)
 from sunofriend.separation_fine_stem_integration_review import (
     build_integration_review_seed,
     build_integration_review_server,
@@ -268,6 +278,177 @@ def test_downstream_midi_plan_rejects_wrong_outcome_binding() -> None:
         assert "outcome/report binding" in str(error)
     else:
         raise AssertionError("wrong integration outcome binding was accepted")
+
+
+def _execute_test_midi_canary(tmp_path: Path) -> tuple[Path, dict, list[tuple[str, str]]]:
+    import soundfile as sf
+
+    root = tmp_path / "integration"
+    inputs = root / "INPUTS"
+    technical = root / "TECHNICAL"
+    inputs.mkdir(parents=True)
+    technical.mkdir()
+    clock = np.arange(661_500, dtype=np.float64) / 44_100
+    artifacts = {}
+    for role, amplitude, frequency in (
+        ("synth", 0.025, 220.0),
+        ("guitar", 0.020, 330.0),
+        ("other", 0.015, 440.0),
+    ):
+        path = inputs / f"{role}.wav"
+        mono = amplitude * np.sin(2 * np.pi * frequency * clock)
+        sf.write(path, np.column_stack((mono, mono)), 44_100, subtype="PCM_24")
+        artifacts[role] = {
+            "relative_path": f"INPUTS/{role}.wav",
+            "bytes": path.stat().st_size,
+            "sha256": file_sha256(path),
+            "sample_rate_hz": 44_100,
+            "channels": 2,
+            "frames": 661_500,
+            "subtype": "PCM_24",
+        }
+
+    report = _report()
+    track_ids = list(TRACK_METADATA)
+    for index, case in enumerate(report["cases"]):
+        case["track_id"] = track_ids[index % len(track_ids)]
+        for role in ("synth", "guitar", "other"):
+            case["artifacts"][role] = dict(artifacts[role])
+    report["report_sha256"] = integration_report_sha256(report)
+    (technical / "INTEGRATION-REPORT.json").write_text(json.dumps(report))
+    plan = validate_fine_stem_midi_plan(
+        build_fine_stem_midi_plan(
+            report=report,
+            outcome=_qualified_outcome(report),
+        )
+    )
+    plan_path = tmp_path / "MIDI-PLAN.json"
+    plan_path.write_text(json.dumps(plan))
+    calls: list[tuple[str, str]] = []
+
+    def transcribe(path: str, *, kind: str, **parameters: float) -> list:
+        assert parameters == {
+            "onset_threshold": 0.5,
+            "frame_threshold": 0.3,
+            "min_note_ms": 60.0,
+        }
+        calls.append((Path(path).name, kind))
+        from sunofriend.models import NoteEvent
+
+        return [NoteEvent(0.25, 0.75, 60 + len(calls) % 5, 90)]
+
+    def render(_midi: Path, wav: Path) -> None:
+        tone = 0.02 * np.sin(2 * np.pi * 440 * np.arange(44_100) / 44_100)
+        sf.write(wav, np.column_stack((tone, tone)), 44_100, subtype="PCM_16")
+
+    destination = tmp_path / "midi-canary"
+    result = execute_fine_stem_midi_canary(
+        plan_path,
+        root,
+        out_dir=destination,
+        expected_plan_sha256=plan["document_sha256"],
+        transcribe=transcribe,
+        render=render,
+        network_observation=lambda: {
+            "os_network_denial_enforced": True,
+            "python_network_attempts": 0,
+        },
+    )
+    return destination, result, calls
+
+
+def test_downstream_midi_canary_runs_exact_budget_and_reconstructs_control(
+    tmp_path: Path,
+) -> None:
+    import soundfile as sf
+
+    destination, result, calls = _execute_test_midi_canary(tmp_path)
+    validated = validate_fine_stem_midi_canary(result)
+    assert len(calls) == 16
+    assert [row["attempt_number"] for row in validated["attempts"]] == list(
+        range(1, 17)
+    )
+    assert validated["effects"]["private_audio_input_identities"] == 24
+    assert validated["effects"]["separator_inference_attempts"] == 0
+    assert validated["effects"]["source_selected"] is False
+    for case in validated["cases"]:
+        control = destination / case["grouped_other_control"]["artifact"][
+            "relative_path"
+        ]
+        persisted = sf.read(control, dtype="float64", always_2d=True)[0]
+        source_sum = sum(
+            sf.read(destination.parent / "integration" / "INPUTS" / f"{role}.wav", dtype="float64", always_2d=True)[0]
+            for role in ("synth", "guitar", "other")
+        )
+        assert np.array_equal(
+            np.rint(persisted * 2**23).astype(np.int64),
+            np.rint(source_sum * 2**23).astype(np.int64),
+        )
+        assert case["grouped_other_control"]["maximum_reconstruction_error_lsb"] == 0
+        assert set(case["blind_order"]) == {"candidate", "control"}
+
+
+def test_downstream_midi_review_is_checkbox_free_bound_and_saved(
+    tmp_path: Path,
+) -> None:
+    destination, report, _calls = _execute_test_midi_canary(tmp_path)
+    page = render_midi_canary_review(report)
+    assert "Playback recorded automatically" in page
+    assert "currentTime > 0" in page
+    assert 'type="checkbox"' not in page
+    assert "await save();" in page
+    assert "fetch('/download-review'" in page
+    seed = build_midi_review_seed(report)
+    for case in seed["cases"]:
+        case["played_items"] = ["A", "B"]
+        case["listened"] = True
+        case["recognisable_notes"] = "partly_useful"
+        case["timing_usefulness"] = "useful"
+        case["edit_workload"] = "moderate"
+        case["candidate_vs_control"] = "candidate_better"
+    seed["status"] = "human_listening_complete_no_selection"
+    validated = validate_midi_review(seed, report)
+    assert validated["status"] == "human_listening_complete_no_selection"
+    assert validated["boundaries"]["review_selects_source"] is False
+
+    server = build_midi_review_server(destination, port=0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        connection = http.client.HTTPConnection(*server.server_address, timeout=5)
+        route = "/" + report["cases"][0]["outputs"]["candidate"]["preview"][
+            "relative_path"
+        ]
+        connection.request("GET", route, headers={"Range": "bytes=1-4"})
+        response = connection.getresponse()
+        assert response.status == 206
+        assert len(response.read()) == 4
+        connection.request(
+            "POST",
+            "/save-review",
+            body=json.dumps(seed),
+            headers={"Content-Type": "application/json"},
+        )
+        saved = connection.getresponse()
+        assert saved.status == 200
+        assert json.loads(saved.read())["document_sha256"] == validated[
+            "document_sha256"
+        ]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_downstream_midi_runner_requires_sandbox_and_one_worker_call() -> None:
+    source = (
+        Path(__file__).parents[1]
+        / "scripts/run-fine-stem-downstream-midi-canary.py"
+    ).read_text()
+    assert source.count("subprocess.run(") == 1
+    assert '"(version 1)(deny network*)(allow default)"' in source
+    assert '"--network-denial-enforced"' in source
+    assert "the single downstream-MIDI canary attempt failed; no retry was run" in source
 
 
 def test_six_role_review_server_ranges_and_saves(tmp_path: Path) -> None:

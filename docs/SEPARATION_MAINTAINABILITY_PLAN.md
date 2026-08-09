@@ -148,7 +148,13 @@ The follow-on planning increment stays pure as well.
 candidate identities, exact non-guessed track metadata and grouped-other
 control inputs. It specifies one identical-parameter A/B transcription contract
 per case while keeping every audio/model/MIDI effect at zero. A small CLI writes
-that immutable plan; any future executor and review UI must remain separate.
+that immutable plan. The later approved executor remains a separate module: it
+verifies the plan and 24 input identities, constructs eight sample-exact
+controls, owns only the 16-call transcription/MIDI/neutral-preview boundary and
+atomically publishes one private report. Its localhost review module separately
+owns blind display order, automatic playback recording, schema validation and
+atomic save/download. Neither layer imports or reruns a separator, chooses a
+source or activates a profile.
 
 The review failure also exposed avoidable generated-JavaScript risk. The
 six-role page now builds readable raw JavaScript separately from the Python

@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-09.16 -->
+<!-- sunofriend-interface-contract: 2026-08-09.17 -->
 
 # Sunofriend
 
@@ -146,14 +146,19 @@ on.
   `useful` in 2/4 confirmed-present cases and `partly_useful` in 2/4; guitar was
   `useful` in 4/4. All eight outputs had no catastrophic defect. The pure
   outcome is `private_six_role_integration_qualified`. The profiles remain
-  unregistered and non-public; downstream MIDI execution is untested, three synth cases
-  retained some missing content and absent-role ratings are not scored. Use
+  unregistered and non-public; downstream MIDI musical usefulness is unreviewed,
+  three synth cases retained some missing content and absent-role ratings are not scored. Use
   `scripts/record-fine-stem-six-role-integration-outcome.py` only to reproduce
   the no-effects outcome. The separate immutable MIDI comparison plan is now
   frozen as
   `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`;
-  it binds exact candidate/control identities but opens no audio and writes no
-  MIDI. No activation, selection, MIDI, hosting,
+  it binds exact candidate/control identities. Its separately approved private
+  execution verified all 24 PCM24 inputs, wrote eight exact grouped-other
+  controls and completed exactly 16 same-settings transcription attempts under
+  OS network denial. It published 16 private MIDI files and 16 loudness-matched
+  neutral previews; report SHA-256 is
+  `5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.
+  Human A/B review remains pending. No activation, selection, hosting,
   redistribution or upload follows from it.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,

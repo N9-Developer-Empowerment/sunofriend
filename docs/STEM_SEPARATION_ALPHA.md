@@ -51,13 +51,19 @@ The combined review rated synth `useful` in 2/4 confirmed-present cases and
 `partly_useful` in 2/4; guitar was `useful` in 4/4. All eight outputs had no
 catastrophic defect. The pure outcome is
 `private_six_role_integration_qualified`. Neither model is registered,
-publicly executable or selected for MIDI. Downstream MIDI remains untested,
-three synth cases retained some missing content, and absent-role ratings were
-excluded from qualification. The no-effects downstream-MIDI plan is now bound
+publicly executable or selected for MIDI. Downstream MIDI musical usefulness
+remains unreviewed, three synth cases retained some missing content, and
+absent-role ratings were excluded from qualification. The no-effects
+downstream-MIDI plan is bound
 to the eight exact role-present artifacts with SHA-256
 `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
-It ran no separator, audio or MIDI. Its separately authorised execution is the
-next bounded step and poor results cannot disable the private six-role evidence.
+The later separately authorised execution verified all 24 inputs and completed
+exactly 16 candidate/control transcriptions under network denial without
+rerunning separation or selecting a source. It published 16 private MIDI files
+and 16 loudness-matched neutral previews. Report SHA-256:
+`5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.
+The blind musical review is pending and poor results cannot disable the private
+six-role evidence.
 See
 [Synth-first fine-stem challenger](OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 

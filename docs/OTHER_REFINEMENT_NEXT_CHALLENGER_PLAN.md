@@ -324,10 +324,16 @@ The remaining gates are deliberately one-way:
    SHA-256 is
    `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`;
    and
-15. **Next, separate authority required:** execute exactly 16 private MIDI
-   transcription attempts without rerunning a separator, review candidate
-   versus control blindly, and retain `cannot_tell`, `not_tested` and poor
-   results without disabling private six-role evidence.
+15. **Complete, review pending:** the separately approved executor verified all
+   24 bound PCM24 inputs under OS network denial, wrote eight sample-exact
+   grouped-other controls, and completed exactly 16 same-settings transcription
+   attempts in 7.01 seconds. It published 16 MIDI files and 16 loudness-matched
+   neutral PCM24 previews. The report SHA-256 is
+   `5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`;
+   and
+16. **Next:** complete the blind candidate-versus-control review. Retain
+   `cannot_tell`, `not_tested` and poor results without disabling private
+   six-role evidence or choosing a source.
 
 The completed synth report SHA-256 is
 `b985dd021c33564967f445cb30697c50cb03362c7407b8aee21a54449c3caabf`;
