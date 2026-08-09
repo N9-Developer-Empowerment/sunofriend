@@ -883,7 +883,14 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(downstreamMidi.network_attempts, 0);
   assert.equal(downstreamMidi.separator_inference_attempts, 0);
   assert.equal(downstreamMidi.automatic_source_choice, false);
-  assert.equal(downstreamMidi.human_review_complete, false);
+  assert.equal(downstreamMidi.human_review_complete, true);
+  assert.equal(
+    downstreamMidi.human_review_document_sha256,
+    "dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103",
+  );
+  assert.equal(downstreamMidi.review_source_reference_present, false);
+  assert.equal(downstreamMidi.repaired_review_source_reference_present, true);
+  assert.equal(downstreamMidi.guitar_candidate_better_cases, 3);
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .parent_and_children_cannot_both_enter_midi,

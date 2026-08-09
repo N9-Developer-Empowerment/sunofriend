@@ -18,10 +18,21 @@ from sunofriend.separation_fine_stem_midi_review import (  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", type=Path)
+    parser.add_argument(
+        "--integration-root",
+        type=Path,
+        required=True,
+        help="exact six-role integration package containing source references",
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8772)
     args = parser.parse_args()
-    server = build_midi_review_server(args.root, host=args.host, port=args.port)
+    server = build_midi_review_server(
+        args.root,
+        integration_root=args.integration_root,
+        host=args.host,
+        port=args.port,
+    )
     print(
         f"Serving private fine-stem MIDI review at "
         f"http://{args.host}:{args.port}/",

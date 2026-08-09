@@ -290,8 +290,24 @@ controls, made exactly 16 same-settings transcription attempts and published
 separator, checkpoint, network, selection or activation attempts. The report
 SHA-256 is
 `5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.
-Human A/B review remains pending and cannot disable the qualified six-role
-evidence if the musical result is poor.
+The eight-case A/B review is complete with review SHA-256
+`dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103`.
+Guitar candidate MIDI was preferred to its grouped-other control in 3/4 cases;
+synth was equivalent once and `cannot_tell` in 3/4. Recognisable-note and
+timing ratings were synth `useful` once and `partly_useful` three times, and
+guitar `partly_useful` three times and `not_useful` once. The completed review
+omitted the source reference, so these are methodology-limited findings rather
+than promotion evidence. The repaired local review now shows the exact source
+window beside A/B without changing the saved answers or requiring another
+checkbox. Poor results cannot disable the qualified six-role evidence.
+
+Serve that repaired review with:
+
+```bash
+.venv/bin/python scripts/serve-fine-stem-downstream-midi-review.py \
+  PRIVATE-MIDI-CANARY-ROOT \
+  --integration-root SIX-ROLE-INTEGRATION-ROOT
+```
 
 See [Synth-first fine-stem challenger](docs/OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 

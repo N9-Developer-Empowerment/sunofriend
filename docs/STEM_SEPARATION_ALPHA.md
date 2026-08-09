@@ -62,8 +62,13 @@ exactly 16 candidate/control transcriptions under network denial without
 rerunning separation or selecting a source. It published 16 private MIDI files
 and 16 loudness-matched neutral previews. Report SHA-256:
 `5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.
-The blind musical review is pending and poor results cannot disable the private
-six-role evidence.
+The blind review is complete at SHA-256
+`dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103`.
+Guitar candidate MIDI beat the grouped-other control in 3/4 cases; synth was
+the same once and `cannot_tell` three times. The page used for that review
+omitted source audio, so the usefulness result is methodology-limited. The
+repaired local page includes exact source references and no checkbox. Poor
+results cannot disable the private six-role evidence.
 See
 [Synth-first fine-stem challenger](OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 

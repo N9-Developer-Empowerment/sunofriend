@@ -1095,7 +1095,13 @@ guided forms.
   candidate-versus-control transcription run under OS network denial. It wrote
   16 MIDI files and 16 loudness-matched neutral previews; report SHA-256 is
   `5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.
-  Human review is pending; poor results cannot disable the six-role evidence.
+  The completed eight-case review SHA-256 is
+  `dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103`.
+  Guitar candidate MIDI beat the control 3/4 times; synth was the same once and
+  `cannot_tell` three times. Because the first page omitted its source player,
+  usefulness ratings are methodology-limited. The repaired localhost page
+  serves the exact source window, retains saved answers and adds no listened
+  checkbox. Poor results cannot disable the six-role evidence.
 - Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
   44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
   checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source

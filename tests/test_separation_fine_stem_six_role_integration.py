@@ -307,6 +307,21 @@ def _execute_test_midi_canary(tmp_path: Path) -> tuple[Path, dict, list[tuple[st
             "frames": 661_500,
             "subtype": "PCM_24",
         }
+    reference_path = inputs / "reference.wav"
+    reference_audio = sum(
+        sf.read(inputs / f"{role}.wav", dtype="float64", always_2d=True)[0]
+        for role in ("synth", "guitar", "other")
+    )
+    sf.write(reference_path, reference_audio, 44_100, subtype="PCM_24")
+    reference_artifact = {
+        "relative_path": "INPUTS/reference.wav",
+        "bytes": reference_path.stat().st_size,
+        "sha256": file_sha256(reference_path),
+        "sample_rate_hz": 44_100,
+        "channels": 2,
+        "frames": 661_500,
+        "subtype": "PCM_24",
+    }
 
     report = _report()
     track_ids = list(TRACK_METADATA)
@@ -314,6 +329,7 @@ def _execute_test_midi_canary(tmp_path: Path) -> tuple[Path, dict, list[tuple[st
         case["track_id"] = track_ids[index % len(track_ids)]
         for role in ("synth", "guitar", "other"):
             case["artifacts"][role] = dict(artifacts[role])
+        case["artifacts"]["reference"] = dict(reference_artifact)
     report["report_sha256"] = integration_report_sha256(report)
     (technical / "INTEGRATION-REPORT.json").write_text(json.dumps(report))
     plan = validate_fine_stem_midi_plan(
@@ -393,6 +409,9 @@ def test_downstream_midi_review_is_checkbox_free_bound_and_saved(
 ) -> None:
     destination, report, _calls = _execute_test_midi_canary(tmp_path)
     page = render_midi_canary_review(report)
+    assert "Source reference" in page
+    assert "Original 15-second mix window" in page
+    assert "audio[data-player-id]" in page
     assert "Playback recorded automatically" in page
     assert "currentTime > 0" in page
     assert 'type="checkbox"' not in page
@@ -411,7 +430,11 @@ def test_downstream_midi_review_is_checkbox_free_bound_and_saved(
     assert validated["status"] == "human_listening_complete_no_selection"
     assert validated["boundaries"]["review_selects_source"] is False
 
-    server = build_midi_review_server(destination, port=0)
+    server = build_midi_review_server(
+        destination,
+        integration_root=destination.parent / "integration",
+        port=0,
+    )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -423,6 +446,11 @@ def test_downstream_midi_review_is_checkbox_free_bound_and_saved(
         response = connection.getresponse()
         assert response.status == 206
         assert len(response.read()) == 4
+        reference_route = f"/reference/{report['cases'][0]['case_id']}.wav"
+        connection.request("GET", reference_route, headers={"Range": "bytes=2-5"})
+        reference_response = connection.getresponse()
+        assert reference_response.status == 206
+        assert len(reference_response.read()) == 4
         connection.request(
             "POST",
             "/save-review",

@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-09.17 -->
+<!-- sunofriend-interface-contract: 2026-08-09.18 -->
 
 # Sunofriend
 
@@ -158,8 +158,14 @@ on.
   OS network denial. It published 16 private MIDI files and 16 loudness-matched
   neutral previews; report SHA-256 is
   `5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.
-  Human A/B review remains pending. No activation, selection, hosting,
-  redistribution or upload follows from it.
+  The eight-case A/B review is complete at SHA-256
+  `dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103`:
+  guitar candidate MIDI beat its control in 3/4 cases, while synth was the same
+  once and `cannot_tell` three times. The completed review lacked its source
+  player, so treat usefulness ratings as methodology-limited. The repaired
+  localhost review serves exact source windows without changing saved answers
+  or adding a listened checkbox. No activation, selection, hosting,
+  redistribution or upload follows from the review.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

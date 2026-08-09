@@ -10,8 +10,12 @@ from pathlib import Path
 import re
 import stat
 from typing import Any, Mapping
+from urllib.parse import quote
 
 from .separation_fine_stem_canary_audio import file_sha256
+from .separation_fine_stem_integration_report import (
+    validate_fine_stem_integration_report,
+)
 from .separation_fine_stem_midi_canary import (
     validate_fine_stem_midi_canary,
 )
@@ -182,7 +186,7 @@ let running = false;
 let queued = false;
 
 function playback(card) {
-  const players = [...card.querySelectorAll('audio')];
+  const players = [...card.querySelectorAll('audio[data-player-id]')];
   const played = players
     .filter(player => player.dataset.played === 'true')
     .map(player => player.dataset.playerId);
@@ -337,7 +341,7 @@ function recordPlayback(player) {
   schedule();
 }
 
-cards.forEach(card => card.querySelectorAll('audio').forEach(player => {
+cards.forEach(card => card.querySelectorAll('audio[data-player-id]').forEach(player => {
   player.addEventListener('play', () => recordPlayback(player));
   player.addEventListener('playing', () => recordPlayback(player));
   player.addEventListener('timeupdate', () => {
@@ -393,7 +397,14 @@ def render_midi_canary_review(report: Mapping[str, Any]) -> str:
     cards = []
     for index, case in enumerate(objective["cases"]):
         order = case["blind_order"]
-        players = []
+        case_id = quote(case["case_id"], safe="")
+        players = [
+            '<section class="player reference"><h3>Source reference</h3>'
+            '<audio controls preload="metadata" '
+            f'src="/reference/{case_id}.wav"></audio>'
+            '<p>Original 15-second mix window; playback is optional and is not '
+            'stored in the review JSON.</p></section>'
+        ]
         if len(order) != 2:
             raise ValueError("fine-stem MIDI blind order differs")
         for display, kind in zip(("A", "B"), order):
@@ -409,7 +420,7 @@ def render_midi_canary_review(report: Mapping[str, Any]) -> str:
                 "</section>"
             )
         cards.append(
-            f'''<section class="case" data-index="{index}" data-a-kind="{order[0]}" data-b-kind="{order[1]}"><p class="eyebrow">{html.escape(case["confirmed_present_target_role"])} · private MIDI comparison</p><h2>{html.escape(case["title"])}</h2><p>{case["metadata"]["bpm"]:g} BPM · {html.escape(case["metadata"]["key"])} · frozen {case["window_seconds"][0]}–{case["window_seconds"][1]} seconds.</p><div class="players">{''.join(players)}</div><p class="playback" data-playback>Playback recorded automatically: 0 of 2 previews played.</p><p>Rate the isolated {html.escape(case["confirmed_present_target_role"])} MIDI. Then compare it with the same-transcriber grouped-other control. A dry General MIDI sound is only a neutral note/timing proxy.</p><div class="fields"><label>Recognisable notes{_select('data-field="recognisable_notes"', usefulness)}</label><label>Timing usefulness{_select('data-field="timing_usefulness"', usefulness)}</label><label>Expected edit workload{_select('data-field="edit_workload"', workload)}</label><label>Blind comparison{_select('data-field="display_preference"', comparison)}</label></div><label>Notes<textarea data-field="notes" rows="3"></textarea></label></section>'''
+            f'''<section class="case" data-index="{index}" data-a-kind="{order[0]}" data-b-kind="{order[1]}"><p class="eyebrow">{html.escape(case["confirmed_present_target_role"])} · private MIDI comparison</p><h2>{html.escape(case["title"])}</h2><p>{case["metadata"]["bpm"]:g} BPM · {html.escape(case["metadata"]["key"])} · frozen {case["window_seconds"][0]}–{case["window_seconds"][1]} seconds.</p><div class="players">{''.join(players)}</div><p class="playback" data-playback>Playback recorded automatically: 0 of 2 MIDI previews played.</p><p>Use the source to recall the musical phrase, then rate the isolated {html.escape(case["confirmed_present_target_role"])} MIDI. Compare MIDI A and B blindly; one is the isolated-stem candidate and one is the same-transcriber grouped-other control. A dry General MIDI sound is only a neutral note/timing proxy.</p><div class="fields"><label>Recognisable notes{_select('data-field="recognisable_notes"', usefulness)}</label><label>Timing usefulness{_select('data-field="timing_usefulness"', usefulness)}</label><label>Expected edit workload{_select('data-field="edit_workload"', workload)}</label><label>Blind comparison{_select('data-field="display_preference"', comparison)}</label></div><label>Notes<textarea data-field="notes" rows="3"></textarea></label></section>'''
         )
     seed_json = json.dumps(seed, sort_keys=True).replace("</", "<\\/")
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sunofriend fine-stem MIDI review</title><style>:root{{color-scheme:dark;background:#06101e;color:#f7f8fb;font:17px system-ui,sans-serif}}body{{max-width:1200px;margin:auto;padding:30px}}.notice,.case{{background:#102033;border:1px solid #31516e;border-radius:18px;padding:22px;margin:20px 0}}.players,.fields{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}}.player{{background:#091827;border:1px solid #294965;border-radius:14px;padding:16px}}label{{display:grid;gap:8px;margin:12px 0;font-weight:700}}audio,select,textarea{{width:100%}}audio{{height:54px}}select,textarea{{font:inherit;padding:10px}}button{{font:inherit;font-weight:750;border:0;border-radius:999px;padding:14px 22px;margin:8px;background:#53d7e8;color:#06101e}}button.secondary{{background:#2a5576;color:white}}a{{color:#75e4f1}}.eyebrow{{color:#53d7e8;font-weight:800;text-transform:uppercase;letter-spacing:.08em}}.playback,#status{{color:#82e7b3;font-weight:700}}#fallback{{min-height:180px;font:13px ui-monospace,monospace}}</style></head><body><p>Sunofriend Studio evidence · local private review</p><h1>Does an isolated synth or guitar stem improve editable MIDI?</h1><div class="notice"><b>There is no pass rating.</b> Poor, mixed, cannot-tell and not-tested outcomes are valid. Playback is recorded automatically; there is no listened checkbox. Saving never selects a source or activates a profile.</div>{''.join(cards)}<section class="case"><h2>Local review record</h2><p>No audio, filenames, paths or telemetry enter this JSON.</p><button id="save">Save review locally</button><button class="secondary" id="download">Download saved JSON</button><p id="status"></p><label>Always-available fallback JSON<textarea id="fallback" readonly></textarea></label></section><script id="seed" type="application/json">{seed_json}</script><script>{_review_script()}</script></body></html>'''
@@ -436,7 +447,11 @@ def _regular_artifact(root: Path, evidence: Mapping[str, Any]) -> Path:
 
 
 def build_midi_review_server(
-    root: str | Path, *, host: str = "127.0.0.1", port: int = 8772
+    root: str | Path,
+    *,
+    integration_root: str | Path,
+    host: str = "127.0.0.1",
+    port: int = 8772,
 ) -> ThreadingHTTPServer:
     if host not in {"127.0.0.1", "localhost"}:
         raise ValueError("fine-stem MIDI review must bind to localhost")
@@ -448,10 +463,33 @@ def build_midi_review_server(
             )
         )
     )
+    integration_package = Path(integration_root).resolve(strict=True)
+    integration_report = validate_fine_stem_integration_report(
+        json.loads(
+            (
+                integration_package / "TECHNICAL/INTEGRATION-REPORT.json"
+            ).read_text(encoding="utf-8")
+        )
+    )
+    if integration_report["report_sha256"] != report["integration"]["report_sha256"]:
+        raise ValueError("fine-stem MIDI review integration binding differs")
+    integration_cases = {
+        case["case_id"]: case for case in integration_report["cases"]
+    }
+    if set(integration_cases) != {case["case_id"] for case in report["cases"]}:
+        raise ValueError("fine-stem MIDI review reference cases differ")
     page = render_midi_canary_review(report).encode("utf-8")
     result_path = package / "REVIEW/MIDI-LISTENING.json"
     routes: dict[str, tuple[Path, str]] = {}
     for case in report["cases"]:
+        reference_evidence = integration_cases[case["case_id"]]["artifacts"][
+            "reference"
+        ]
+        reference = _regular_artifact(integration_package, reference_evidence)
+        routes[f"/reference/{quote(case['case_id'], safe='')}.wav"] = (
+            reference,
+            "audio/wav",
+        )
         for output in case["outputs"].values():
             preview = _regular_artifact(package, output["preview"])
             midi = _regular_artifact(package, output["midi"])

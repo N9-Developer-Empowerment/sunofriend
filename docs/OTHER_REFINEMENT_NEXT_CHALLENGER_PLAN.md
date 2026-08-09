@@ -324,15 +324,22 @@ The remaining gates are deliberately one-way:
    SHA-256 is
    `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`;
    and
-15. **Complete, review pending:** the separately approved executor verified all
+15. **Complete:** the separately approved executor verified all
    24 bound PCM24 inputs under OS network denial, wrote eight sample-exact
    grouped-other controls, and completed exactly 16 same-settings transcription
    attempts in 7.01 seconds. It published 16 MIDI files and 16 loudness-matched
    neutral PCM24 previews. The report SHA-256 is
    `5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`;
    and
-16. **Next:** complete the blind candidate-versus-control review. Retain
-   `cannot_tell`, `not_tested` and poor results without disabling private
+16. **Complete, methodology-limited:** the blind review document SHA-256 is
+   `dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103`.
+   Guitar candidate MIDI beat its control in 3/4 cases; synth was the same once
+   and `cannot_tell` three times. Recognisable-note and timing ratings were
+   synth `useful` once/`partly_useful` three times and guitar `partly_useful`
+   three times/`not_useful` once. The completed page omitted the source
+   reference, so these findings cannot promote either route. The repaired
+   localhost page serves each exact source window without changing saved
+   answers or adding a checkbox. Retain poor results without disabling private
    six-role evidence or choosing a source.
 
 The completed synth report SHA-256 is
