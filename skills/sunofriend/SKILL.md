@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-08.9 -->
+<!-- sunofriend-interface-contract: 2026-08-09.10 -->
 
 # Sunofriend
 
@@ -108,10 +108,9 @@ on.
   opcodes without deserializing or calling `torch.load`; evidence SHA-256 is
   `d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24`.
   Checkpoint terms remain unreviewed under the acknowledged provisional local
-  noncommercial boundary. The download authority is consumed. No dependency
-  installation, model loading, inference, audio processing, activation, source
-  selection or MIDI is authorized. A separately approved evidence-only runtime
-  gate resolved 29 exact CPython 3.12/macOS 14+ arm64 wheels totalling
+  noncommercial boundary. The download authority is consumed and did not by
+  itself authorize installation or execution. A separately approved
+  evidence-only runtime gate resolved 29 exact CPython 3.12/macOS 14+ arm64 wheels totalling
   127,527,173 bytes. Network-denied ZIP/METADATA and licence inspection ran
   without installation or import. The committed lock SHA-256 is
   `284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b`;
@@ -121,8 +120,15 @@ on.
   CPython 3.12.10 runtime and imported thirteen direct modules under OS network
   denial. There were zero connect/DNS calls, checkpoint or audio opens, or
   `torch.load` calls; `requests` made one contained `::1` capability-bind probe.
-  That authority is consumed. Strict weights-only construction and load is the
-  next separately approved gate; it must not be inferred from setup approval.
+  That runtime authority is consumed. A later approval materialised and sealed
+  the exact 144,791-byte source archive, then constructed and strictly loaded
+  the 53-stem MLX model once. All 13,571 converted parameter keys, shapes and
+  dtypes matched; the guard recorded zero network, audio or forward calls. The
+  process-local adapter records the checkpoint-required transformer/mask-head
+  expansion split of 4/2 and float16 without mutating the verified source. The
+  profile remains unregistered and non-executable. One generated-tensor
+  objective forward is the next separately approved gate; do not infer it from
+  the completed load authority, and do not process song audio.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

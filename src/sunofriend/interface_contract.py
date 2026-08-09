@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-08.9"
+INTERFACE_CONTRACT_VERSION = "2026-08-09.10"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -247,8 +247,13 @@ def render_skill_interface_reference() -> str:
         "CPython 3.12.10 runtime. Thirteen direct modules imported under OS network",
         "denial with zero connect or DNS calls, checkpoint/audio opens or `torch.load`",
         "calls. Requests performed one contained `::1` capability-bind probe. Runtime",
-        "installation/import authority is consumed; strict weights-only construction",
-        "and loading is the next separate gate and remains unauthorized.",
+        "installation/import authority is consumed. A later explicit approval",
+        "materialised the exact 144,791-byte source archive and strictly loaded the",
+        "53-stem MLX topology once after all 13,571 converted keys, shapes and dtypes",
+        "matched. There were zero forward, audio or network calls. The checkpoint-",
+        "derived transformer/mask-head expansion split is 4/2 at float16; the verified",
+        "source remains immutable. Generated-tensor inference is the next separate gate",
+        "and remains unauthorized.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

@@ -135,6 +135,37 @@ keyboard/synth query-based experiment is prepared.
 > Human listening still decides whether to keep the grouped parent or use both
 > refined children. https://sunofriend.com/research/separation/
 
+## Synth-first research update — not yet a product capability
+
+Use this only as a development update. Do not say Sunofriend can yet extract a
+usable synth stem with this model; no inference or song processing has run.
+
+### Short factual post
+
+> Sunofriend's next fine-stem experiment is synth first, then guitar and wind.
+> We have now reproduced and strictly loaded the public 53-role BS-RoFormer
+> checkpoint locally on Apple silicon: 13,571 converted model parameters matched
+> by key, shape and dtype, with zero network, audio or inference calls. The audit
+> also caught an upstream config/adapter mismatch instead of hiding it. This is
+> load evidence—not a claim that synth separation works yet. One bounded
+> generated-tensor test comes next; poor later listening will be recorded without
+> disabling the working core-four preview. सुनो = listen · Independent of Suno
+> Inc. https://sunofriend.com/research/separation/
+
+### Engineering / BBC Slack version
+
+> The synth-first Mega-53 challenger has crossed its strict construction/load
+> gate. Sunofriend sealed the exact 144,791-byte source archive and used one
+> `torch.load(weights_only=True, map_location="cpu")` under OS network denial.
+> All 13,571 converted MLX parameter keys, shapes and float16 dtypes matched the
+> constructed 53-stem model; no forward or audio call occurred. The checker
+> exposed that the upstream port conflates transformer and mask-head expansion:
+> this checkpoint needs 4 and 2 respectively. A process-local adapter records
+> that split without modifying sealed source. The published 882,000-sample chunk
+> is also misaligned with the 512-sample STFT hop, so the next gate is an explicit
+> aligned-chunk contract plus one generated-tensor forward—not a song demo or a
+> product rollout. https://sunofriend.com/research/separation/
+
 ## What the words mean
 
 - **Stems** are separate audio parts such as drums, bass, keys and vocals.

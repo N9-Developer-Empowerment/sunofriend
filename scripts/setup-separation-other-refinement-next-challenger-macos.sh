@@ -8,16 +8,23 @@ INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-nex
 WHEEL_DOWNLOAD_SCRIPT="$REPOSITORY_ROOT/scripts/download-separation-other-refinement-next-runtime-wheels.py"
 WHEEL_INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-next-runtime-wheels.py"
 RUNTIME_IMPORT_SCRIPT="$REPOSITORY_ROOT/scripts/verify-separation-other-refinement-next-runtime-imports.py"
+SOURCE_INSPECT_SCRIPT="$REPOSITORY_ROOT/scripts/inspect-separation-other-refinement-next-source.py"
+MODEL_LOAD_SCRIPT="$REPOSITORY_ROOT/scripts/verify-separation-other-refinement-next-model-load.py"
+MODEL_LOAD_RECEIPT_SCRIPT="$REPOSITORY_ROOT/scripts/record-separation-other-refinement-next-model-load.py"
 RUNTIME_REQUIREMENTS="$REPOSITORY_ROOT/separation-other-refinement-next-runtime-requirements.txt"
 DATA_ROOT=${SUNOFRIEND_SEPARATION_ROOT:-"$HOME/.local/share/sunofriend/separation"}
 EVIDENCE_ROOT=${SUNOFRIEND_MEGA53_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-synth-v1"}
 RUNTIME_WHEEL_EVIDENCE_ROOT=${SUNOFRIEND_MEGA53_RUNTIME_WHEEL_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-runtime-wheels-macos-arm64-py312-v1"}
 RUNTIME_IMPORT_ROOT=${SUNOFRIEND_MEGA53_RUNTIME_IMPORT_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-runtime-import-macos-arm64-py312-v1"}
+SOURCE_EVIDENCE_ROOT=${SUNOFRIEND_MEGA53_SOURCE_EVIDENCE_ROOT:-"$DATA_ROOT/evidence/bs-roformer-infer-de35ada-source-v1"}
+MODEL_LOAD_ROOT=${SUNOFRIEND_MEGA53_MODEL_LOAD_ROOT:-"$DATA_ROOT/evidence/bs-roformer-mega-53-model-load-v1"}
 ACTION=plan
 ACCEPTED_PROVISIONAL_TERMS=false
 ACCEPTED_CHECKPOINT_USE=false
 ACCEPTED_RUNTIME_WHEEL_EVIDENCE=false
 ACCEPTED_RUNTIME_INSTALL_AND_IMPORT=false
+ACCEPTED_SOURCE_EVIDENCE=false
+ACCEPTED_RESTRICTED_MODEL_LOAD=false
 CHECKPOINT_FILE=mvsep_mega_model_bs_roformer_53_stems_v1.ckpt
 CHECKPOINT_BYTES=1368919887
 CHECKPOINT_SHA256=c62820893bbf86d4e734f966bd142d9157cfc8bb8e79e9d8f9ea553f3ff3519f
@@ -30,9 +37,12 @@ EXPECTED_TOTAL_BYTES=1368924071
 MAX_DOWNLOAD_BYTES=1610612736
 RUNTIME_WHEEL_CAP_BYTES=1610612736
 RUNTIME_REQUIREMENTS_SHA256=284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b
+SOURCE_REVISION=de35ada5817b878da0194ee2860253dda3a9c2b2
+SOURCE_URL="https://github.com/openmirlab/bs-roformer-infer/archive/$SOURCE_REVISION.tar.gz"
+SOURCE_CAP_BYTES=33554432
 
 usage() {
-    echo "Usage: scripts/setup-separation-other-refinement-next-challenger-macos.sh [--plan | --evidence-only --accept-provisional-local-noncommercial-terms --accept-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence | --install-runtime --accept-runtime-install-and-import]"
+    echo "Usage: scripts/setup-separation-other-refinement-next-challenger-macos.sh [--plan | --evidence-only --accept-provisional-local-noncommercial-terms --accept-checkpoint-use | --runtime-wheel-evidence-only --accept-runtime-wheel-evidence | --install-runtime --accept-runtime-install-and-import | --source-evidence-only --accept-source-evidence | --construct-and-load-model --accept-restricted-model-load]"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -41,10 +51,14 @@ while [ "$#" -gt 0 ]; do
         --evidence-only) ACTION=evidence-only ;;
         --runtime-wheel-evidence-only) ACTION=runtime-wheel-evidence-only ;;
         --install-runtime) ACTION=install-runtime ;;
+        --source-evidence-only) ACTION=source-evidence-only ;;
+        --construct-and-load-model) ACTION=construct-and-load-model ;;
         --accept-provisional-local-noncommercial-terms) ACCEPTED_PROVISIONAL_TERMS=true ;;
         --accept-checkpoint-use) ACCEPTED_CHECKPOINT_USE=true ;;
         --accept-runtime-wheel-evidence) ACCEPTED_RUNTIME_WHEEL_EVIDENCE=true ;;
         --accept-runtime-install-and-import) ACCEPTED_RUNTIME_INSTALL_AND_IMPORT=true ;;
+        --accept-source-evidence) ACCEPTED_SOURCE_EVIDENCE=true ;;
+        --accept-restricted-model-load) ACCEPTED_RESTRICTED_MODEL_LOAD=true ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
@@ -65,6 +79,214 @@ PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
 if [ "$ACTION" = plan ]; then
     echo ""
     echo "Plan only; nothing was downloaded, installed, loaded or executed."
+    exit 0
+fi
+
+if [ "$ACTION" = source-evidence-only ]; then
+    if [ "$ACCEPTED_SOURCE_EVIDENCE" != true ]; then
+        echo "--source-evidence-only requires --accept-source-evidence after reviewing the exact source boundary" >&2
+        exit 2
+    fi
+    for required_command in curl sandbox-exec shasum; do
+        if ! command -v "$required_command" >/dev/null 2>&1; then
+            echo "$required_command is required for Mega-53 source evidence" >&2
+            exit 2
+        fi
+    done
+    if [ -e "$SOURCE_EVIDENCE_ROOT" ] || [ -L "$SOURCE_EVIDENCE_ROOT" ]; then
+        echo "Refusing to overwrite existing Mega-53 source evidence: $SOURCE_EVIDENCE_ROOT" >&2
+        exit 2
+    fi
+    SOURCE_EVIDENCE_PARENT=$(dirname "$SOURCE_EVIDENCE_ROOT")
+    mkdir -p "$SOURCE_EVIDENCE_PARENT"
+    STAGING=$(mktemp -d "$SOURCE_EVIDENCE_PARENT/.bs-roformer-source.building.XXXXXX")
+    preserve_failed_source_staging() {
+        source_exit_code=$?
+        if [ -n "${STAGING:-}" ] && [ -d "$STAGING" ]; then
+            failed_root="$SOURCE_EVIDENCE_PARENT/bs-roformer-infer-de35ada-source.failed.$$.evidence"
+            if [ ! -e "$failed_root" ] && [ ! -L "$failed_root" ]; then
+                chmod -R go-w "$STAGING" 2>/dev/null || true
+                mv "$STAGING" "$failed_root"
+                STAGING=
+                echo "Preserved failed Mega-53 source evidence: $failed_root" >&2
+            fi
+        fi
+        exit "$source_exit_code"
+    }
+    trap preserve_failed_source_staging EXIT HUP INT TERM
+    SOURCE_ARCHIVE="$STAGING/bs-roformer-infer-$SOURCE_REVISION.tar.gz"
+    (
+        ulimit -f 65536
+        curl --fail --location --retry 3 --silent --show-error \
+            --proto '=https' --tlsv1.2 --max-filesize "$SOURCE_CAP_BYTES" \
+            "$SOURCE_URL" --output "$SOURCE_ARCHIVE"
+    )
+    ACTUAL_SOURCE_BYTES=$(wc -c < "$SOURCE_ARCHIVE" | tr -d ' ')
+    if [ "$ACTUAL_SOURCE_BYTES" -le 0 ] || [ "$ACTUAL_SOURCE_BYTES" -gt "$SOURCE_CAP_BYTES" ]; then
+        echo "Mega-53 source archive exceeds the approved 32 MiB cap" >&2
+        exit 2
+    fi
+    mkdir "$STAGING/source"
+    PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
+        sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+        "$PLAN_PYTHON" -B "$SOURCE_INSPECT_SCRIPT" "$SOURCE_ARCHIVE" \
+        --extract-root "$STAGING/source" > "$STAGING/STATIC-EVIDENCE.json"
+
+    PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
+        "$PLAN_PYTHON" -B - "$STAGING/STATIC-EVIDENCE.json" \
+        "$STAGING/APPROVAL-RECEIPT.json" <<'PY'
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import sys
+
+from sunofriend.separation_other_refinement_next_source_evidence import (
+    validate_source_evidence,
+)
+
+evidence = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+validate_source_evidence(evidence)
+receipt = {
+    "schema": "sunofriend.mega53-source-evidence-approval.v1",
+    "status": "exact_source_materialized_no_model_authority_added",
+    "recorded_at": datetime.now(timezone.utc).isoformat(),
+    "profile_id": "bs-roformer-mega-53-synth-v1",
+    "source_revision": evidence["source_revision"],
+    "source_evidence_sha256": evidence["evidence_sha256"],
+    "archive": evidence["archive"],
+    "network_denied_during_static_inspection": True,
+    "source_imported": False,
+    "checkpoint_loaded": False,
+    "model_constructed": False,
+    "inference_performed": False,
+    "audio_processed": False,
+    "not_approved": [
+        "inference",
+        "audio_processing",
+        "public_activation",
+        "source_selection",
+        "midi",
+        "hosting",
+        "redistribution",
+    ],
+}
+Path(sys.argv[2]).write_text(
+    json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+PY
+
+    chmod 0444 "$SOURCE_ARCHIVE" "$STAGING/STATIC-EVIDENCE.json" "$STAGING/APPROVAL-RECEIPT.json"
+    chmod -R a-w "$STAGING/source"
+    chmod -R go-w "$STAGING"
+    mv "$STAGING" "$SOURCE_EVIDENCE_ROOT"
+    STAGING=
+    trap - EXIT HUP INT TERM
+    echo ""
+    echo "Exact Mega-53 source evidence complete: $SOURCE_EVIDENCE_ROOT"
+    echo "Observed source archive bytes: $ACTUAL_SOURCE_BYTES of $SOURCE_CAP_BYTES approved"
+    echo "Static inspection ran with network denied; no source code was imported or executed."
+    exit 0
+fi
+
+if [ "$ACTION" = construct-and-load-model ]; then
+    if [ "$ACCEPTED_RESTRICTED_MODEL_LOAD" != true ]; then
+        echo "--construct-and-load-model requires --accept-restricted-model-load after reviewing the exact no-inference boundary" >&2
+        exit 2
+    fi
+    if [ "$(uname -s)" != Darwin ] || [ "$(uname -m)" != arm64 ]; then
+        echo "The approved Mega-53 model load targets macOS on Apple silicon only" >&2
+        exit 2
+    fi
+    for required_command in sandbox-exec shasum; do
+        if ! command -v "$required_command" >/dev/null 2>&1; then
+            echo "$required_command is required for restricted Mega-53 model loading" >&2
+            exit 2
+        fi
+    done
+    if [ -e "$MODEL_LOAD_ROOT" ] || [ -L "$MODEL_LOAD_ROOT" ]; then
+        echo "Refusing to overwrite existing Mega-53 model-load evidence: $MODEL_LOAD_ROOT" >&2
+        exit 2
+    fi
+    for required_evidence in \
+        "$EVIDENCE_ROOT/$CHECKPOINT_FILE" \
+        "$EVIDENCE_ROOT/$CONFIG_FILE" \
+        "$EVIDENCE_ROOT/STATIC-EVIDENCE.json" \
+        "$RUNTIME_IMPORT_ROOT/IMPORT-REPORT.json" \
+        "$RUNTIME_IMPORT_ROOT/APPROVAL-RECEIPT.json" \
+        "$SOURCE_EVIDENCE_ROOT/STATIC-EVIDENCE.json" \
+        "$SOURCE_EVIDENCE_ROOT/APPROVAL-RECEIPT.json" \
+        "$SOURCE_EVIDENCE_ROOT/source"; do
+        if [ ! -e "$required_evidence" ] || [ -L "$required_evidence" ]; then
+            echo "Approved Mega-53 model-load prerequisite is missing: $required_evidence" >&2
+            exit 2
+        fi
+    done
+    if [ ! -x "$RUNTIME_IMPORT_ROOT/runtime/bin/python" ]; then
+        echo "Approved Mega-53 runtime Python is not executable" >&2
+        exit 2
+    fi
+    echo "$CHECKPOINT_SHA256  $EVIDENCE_ROOT/$CHECKPOINT_FILE" | shasum -a 256 -c - >/dev/null
+    echo "$CONFIG_SHA256  $EVIDENCE_ROOT/$CONFIG_FILE" | shasum -a 256 -c - >/dev/null
+    echo "567068a414c5ebc0cdb7cd47564934c5ec8f6b13c70425dd736c02af43892ac7  $RUNTIME_IMPORT_ROOT/IMPORT-REPORT.json" | shasum -a 256 -c - >/dev/null
+    echo "1e4a7c3f661171b4e62cf0efae55971a71eb51e0b52cd9b29176214e160080ed  $RUNTIME_IMPORT_ROOT/APPROVAL-RECEIPT.json" | shasum -a 256 -c - >/dev/null
+    echo "c6c6536708f27bb378e71ca19f6ab824b34e2ba99b8b4e87e058414f30d1a575  $SOURCE_EVIDENCE_ROOT/STATIC-EVIDENCE.json" | shasum -a 256 -c - >/dev/null
+    echo "9b95036b8219eb5cd7be61a29868e6633dd42df0078eda55a0f3710123551c73  $SOURCE_EVIDENCE_ROOT/bs-roformer-infer-$SOURCE_REVISION.tar.gz" | shasum -a 256 -c - >/dev/null
+    if [ "$("$RUNTIME_IMPORT_ROOT/runtime/bin/python" -c 'import platform, sys; print(f"{sys.version_info.major}.{sys.version_info.minor}:{platform.machine()}")')" != 3.12:arm64 ]; then
+        echo "Approved Mega-53 model-load runtime identity differs" >&2
+        exit 2
+    fi
+
+    MODEL_LOAD_PARENT=$(dirname "$MODEL_LOAD_ROOT")
+    mkdir -p "$MODEL_LOAD_PARENT"
+    STAGING=$(mktemp -d "$MODEL_LOAD_PARENT/.bs-roformer-mega-53-model-load.building.XXXXXX")
+    preserve_failed_model_load_staging() {
+        model_load_exit_code=$?
+        if [ -n "${STAGING:-}" ] && [ -d "$STAGING" ]; then
+            failed_root="$MODEL_LOAD_PARENT/bs-roformer-mega-53-model-load.failed.$$.evidence"
+            if [ ! -e "$failed_root" ] && [ ! -L "$failed_root" ]; then
+                chmod -R go-w "$STAGING" 2>/dev/null || true
+                mv "$STAGING" "$failed_root"
+                STAGING=
+                echo "Preserved failed Mega-53 model-load evidence: $failed_root" >&2
+            fi
+        fi
+        exit "$model_load_exit_code"
+    }
+    trap preserve_failed_model_load_staging EXIT HUP INT TERM
+    mkdir -p "$STAGING/home/cache" "$STAGING/home/torch"
+
+    HOME="$STAGING/home" XDG_CACHE_HOME="$STAGING/home/cache" \
+    TORCH_HOME="$STAGING/home/torch" HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
+    MLX_ENABLE_COMPILE=0 MLX_AUDIO_SEPARATOR_ROFORMER_GROUPED_BAND_SPLIT=0 \
+    MLX_AUDIO_SEPARATOR_ROFORMER_GROUPED_MASK_ESTIMATOR=0 \
+    MLX_AUDIO_SEPARATOR_ROFORMER_COMPILE_FULLGRAPH=0 \
+    sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+    "$RUNTIME_IMPORT_ROOT/runtime/bin/python" -I -B "$MODEL_LOAD_SCRIPT" \
+        --checkpoint "$EVIDENCE_ROOT/$CHECKPOINT_FILE" \
+        --config "$EVIDENCE_ROOT/$CONFIG_FILE" \
+        --source-root "$SOURCE_EVIDENCE_ROOT/source" \
+        --source-evidence "$SOURCE_EVIDENCE_ROOT/STATIC-EVIDENCE.json" \
+        > "$STAGING/MODEL-LOAD-REPORT.json" \
+        2> "$STAGING/CONSTRUCTION.log"
+
+    PYTHONPATH="$REPOSITORY_ROOT/src" PYTHONDONTWRITEBYTECODE=1 \
+        "$PLAN_PYTHON" -B "$MODEL_LOAD_RECEIPT_SCRIPT" \
+        --report "$STAGING/MODEL-LOAD-REPORT.json" \
+        --receipt "$STAGING/APPROVAL-RECEIPT.json" \
+        --published-root "$MODEL_LOAD_ROOT"
+
+    chmod 0444 "$STAGING"/*.json "$STAGING"/*.log
+    chmod -R go-w "$STAGING"
+    mv "$STAGING" "$MODEL_LOAD_ROOT"
+    STAGING=
+    trap - EXIT HUP INT TERM
+    echo ""
+    echo "Restricted Mega-53 model-load gate complete: $MODEL_LOAD_ROOT"
+    echo "The exact MLX model was constructed and loaded once with strict converted-state checks."
+    echo "No inference or audio ran, and nothing was activated, selected or sent to MIDI."
     exit 0
 fi
 

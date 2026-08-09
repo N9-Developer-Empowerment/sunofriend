@@ -84,13 +84,13 @@ models once, completed exactly nine calls and atomically published its private
 package. Model math remains outside the audio and review layers; the setup
 shells still contain neither inference nor product activation.
 
-The next increment is now a pure synth-first challenger document in
+The synth-first challenger remains a pure status document in
 `separation_other_refinement_next_challenger.py`, with a tiny print-only CLI.
 It records exact upstream identities, loader hazards, authority boundaries and
 evaluation semantics without importing a model or touching audio. Instrument
 presence is explicitly separated from model usefulness, so absent targets do
 not become false failures and do not trigger replacement-window hunting. Any
-future Mega-53 adapter must keep artifact verification, restricted loading,
+Mega-53 forward adapter must keep artifact verification, restricted loading,
 model math, PCM24 accounting, review and activation in separate modules rather
 than extending one of the legacy orchestration files.
 
@@ -102,3 +102,18 @@ shell only binds approval, network denial and atomic publication. The exact
 the isolated import gate, exact installed-distribution check and no-network,
 no-checkpoint and no-audio guards. The setup shell remains orchestration only;
 model construction and loading remain outside it.
+
+The completed source/load increment follows the target structure directly:
+`separation_other_refinement_next_source_evidence.py` safely inventories and
+extracts the capped immutable source archive; the pure
+`separation_other_refinement_next_model_load_contract.py` validates reports and
+receipts; `separation_other_refinement_next_execution_guard.py` owns the
+one-checkpoint effects boundary; and
+`separation_other_refinement_next_model_loading.py` owns only checkpoint-derived
+topology and strict MLX loading. The evidence CLI contains no forward call or
+audio interface. This separation made the upstream expansion-factor
+conflation visible and allowed one process-local adapter without mutating the
+sealed source or leaking model details into setup shell. The next refactor
+target is a similarly isolated generated-tensor runner plus a pure aligned-
+chunk contract; song decoding and publication stay out until that objective
+boundary passes.

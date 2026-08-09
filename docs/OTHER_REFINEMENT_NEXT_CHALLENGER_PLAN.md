@@ -65,8 +65,9 @@ The proposed Apple-silicon runtime is the MLX backend at exact
 `de35ada5817b878da0194ee2860253dda3a9c2b2`. Its git-archive SHA-256 is
 `e64fe7733a45f5efc53091bbc2ab6dd04a0ee7373a639f1c9b27275502f26691`.
 The source is MIT-licensed, but the published version string remains `0.1.5`
-and the released wheel predates this audited MLX revision. A future runtime
-must therefore pin this source revision, not merely a package version.
+and the released wheel predates this audited MLX revision. The completed
+evidence runtime therefore pins this source revision, not merely
+a package version, and never installs the stale released wheel.
 
 The upstream registry declares:
 
@@ -102,12 +103,21 @@ gate therefore used a capped evidence-only download under an explicit
 provisional local-noncommercial acknowledgement. It did not wait for a bespoke
 email, and grants nothing beyond the completed static evidence collection.
 
-The source's MLX backend currently reaches an unrestricted `torch.load`.
-Sunofriend will not use that loader. A future adapter must load one explicit
+The source's MLX backend reaches an unrestricted `torch.load`, so Sunofriend
+does not use that loader. The completed restricted adapter loaded one explicit
 local checkpoint with
-`torch.load(weights_only=True, map_location="cpu")`, compare every key, shape
-and dtype before strict conversion, disable automatic downloads with
-`download_missing=False`, and run with network denied.
+`torch.load(weights_only=True, map_location="cpu")`, compared every key, shape
+and dtype before strict conversion, disabled automatic downloads and ran with
+network denied.
+
+The exact GitHub source tarball was separately capped at 32 MiB and observed at
+144,791 bytes with SHA-256
+`9b95036b8219eb5cd7be61a29868e6633dd42df0078eda55a0f3710123551c73`.
+All 64 files (522,358 logical bytes) matched the sealed inventory, including
+the six previously audited critical-file hashes. Static extraction and
+inspection ran with network denied and imported or executed no source. The
+source-evidence document SHA-256 is
+`982ce7c2e9355be9a79d701c8f505237ada7da6ebad41695b48b70dc8c6aad97`.
 
 ## Exact runtime closure
 
@@ -174,10 +184,34 @@ scripts/setup-separation-other-refinement-next-challenger-macos.sh \
   --accept-runtime-install-and-import
 ```
 
-That authority is consumed. No checkpoint was loaded, no model was constructed,
-no inference or audio ran, and nothing was activated, selected, sent to MIDI,
-hosted or redistributed. Strict weights-only construction and load is the next
-gate and needs separate explicit approval.
+That runtime-install authority is consumed.
+
+## Strict construction and load gate
+
+The separately approved model gate constructed the exact MLX topology from the
+verified immutable source and loaded the checkpoint once with the required
+weights-only CPU call. The raw checkpoint contains 13,595 tensor entries and
+681,663,596 values. Its audited conversion skips 24 non-parameter rotary
+buffers (768 values), leaving 13,571 model parameters and 681,662,828 values.
+Every converted key, shape and dtype matched the constructed model before a
+strict load; the constructed, converted and loaded inventory SHA-256 is
+`565a9430061391486c8686d80eb4b6b65fdfd402b4bdeb603ab4ef5cf8c41fd8`.
+The canonical report SHA-256 is
+`798b5250eacf18d3f6193fde9d5c613ee68520490aed663395313a47eea4d666`.
+
+The bounded compatibility remediation records an upstream config/adapter
+contradiction rather than hiding it. Checkpoint tensor geometry requires
+transformer expansion 4 and mask-head expansion 2, while the audited MLX port
+feeds one setting to both. Sunofriend's process-local adapter splits those two
+checkpoint-derived values and casts the constructed parameters to the
+checkpoint's float16 dtype; it does not mutate the verified source. The gate
+recorded one checkpoint load, zero network attempts, zero audio opens and zero
+forward calls. It performed no inference, activation, selection or MIDI.
+
+The upstream inference chunk is 882,000 samples, which is not divisible by its
+512-sample STFT hop. Sunofriend recorded that objective mismatch and did not
+silently change it during model loading. A deterministic aligned-chunk adapter
+must be bound before the generated-tensor forward.
 
 ## Evaluation without false failures
 
@@ -213,8 +247,8 @@ The remaining gates are deliberately one-way:
 2. **Complete:** network-denied, non-loading static inspection;
 3. **Complete:** a fully hash-locked CPython 3.12/macOS 14+ arm64 dependency closure;
 4. **Complete:** isolated install and import verification;
-5. **Next, not yet approved:** strict weights-only construction and load;
-6. one generated-tensor objective forward; and
+5. **Complete:** strict weights-only construction and load;
+6. **Next, not yet approved:** one generated-tensor objective forward; and
 7. one four-song synth canary.
 
 Failure of an objective gate stops this candidate or uses its single

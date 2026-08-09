@@ -208,8 +208,19 @@ An explicit follow-up installed that exact closure into a fresh isolated
 CPython 3.12.10 runtime and imported thirteen direct modules under OS network
 denial. There were zero connect or DNS calls, checkpoint/audio opens or
 `torch.load` calls; `requests` made one contained `::1` capability-bind probe.
-Checkpoint terms remain unreviewed and the profile remains non-executable;
-strict weights-only construction and load is the next separately approved gate.
+The exact 144,791-byte source archive was then materialised and all 64 files
+were verified against the sealed source inventory. The separately approved
+construction gate loaded the checkpoint exactly once with
+`weights_only=True`, matched 13,571 converted MLX parameter keys, shapes and
+dtypes, and retained the 53-stem model with zero network, audio or forward
+calls. That check also exposed and transparently adapted an upstream mismatch:
+the checkpoint requires transformer expansion 4, mask-head expansion 2 and
+float16 parameters, while the published adapter conflates the two expansion
+settings. The verified source was not mutated. Checkpoint terms remain
+unreviewed and the profile remains non-executable; one generated-tensor
+objective forward is the next separately approved gate. The published
+882,000-sample chunk is not aligned to the 512-sample STFT hop and must be
+resolved objectively before any song canary.
 Inspect the current plan without effects:
 
 ```bash

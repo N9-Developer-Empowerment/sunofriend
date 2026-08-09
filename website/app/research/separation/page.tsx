@@ -193,12 +193,21 @@ export default function SeparationResearch() {
                 runtime. Thirteen direct modules imported under OS network denial
                 with zero connect/DNS calls, checkpoint/audio opens or
                 <code>torch.load</code> calls; <code>requests</code> made one
-                contained <code>::1</code> capability-bind probe. Terms remain
-                unreviewed under the acknowledged provisional local-noncommercial
-                boundary. Strict weights-only construction and load is the next
-                separate gate. The plan permits one configuration, separates audible
-                target presence from model usefulness, forbids automatic or
-                unrestricted loaders, and grants no execution or MIDI authority.
+                contained <code>::1</code> capability-bind probe. The exact
+                144,791-byte source archive was then sealed, and the separately
+                approved construction gate strictly loaded all 13,571 converted
+                MLX parameters after their keys, shapes and dtypes matched. It
+                recorded one checkpoint load and zero forward, audio or network
+                calls. A bounded adapter records the checkpoint-required
+                transformer/mask-head expansion split of 4/2 at float16 without
+                mutating the verified source. Terms remain unreviewed under the
+                acknowledged provisional local-noncommercial boundary. The
+                profile is still unregistered and non-executable; one generated-
+                tensor objective forward is the next separate gate. The published
+                882,000-sample chunk is not aligned to the 512-sample STFT hop and
+                will not be changed silently. The plan separates audible target
+                presence from model usefulness and grants no song, activation,
+                source-selection or MIDI authority.
               </p>
             </div>
             <div className="agent-card">

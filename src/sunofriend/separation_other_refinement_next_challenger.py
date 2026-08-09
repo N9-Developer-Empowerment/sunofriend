@@ -35,8 +35,8 @@ def build_next_challenger_plan() -> dict[str, Any]:
     plan: dict[str, Any] = {
         "schema": NEXT_CHALLENGER_SCHEMA,
         "document_sha256": "",
-        "status": "runtime_import_verified_model_load_not_authorized",
-        "checked_on": "2026-08-08",
+        "status": "model_load_verified_synthetic_inference_not_authorized",
+        "checked_on": "2026-08-09",
         "scope_id": "other-synth-refinement-v1",
         "proposed_profile_id": "bs-roformer-mega-53-synth-v1",
         "release_tier": "studio_challenger",
@@ -132,6 +132,23 @@ def build_next_challenger_plan() -> dict[str, Any]:
             "upstream_unrestricted_torch_load_allowed": False,
             "required_loader": "torch.load(weights_only=True, map_location='cpu')",
             "strict_keys_shapes_dtypes_required": True,
+        },
+        "source_evidence": {
+            "status": "exact_source_archive_verified_statically_not_imported",
+            "source_revision": "de35ada5817b878da0194ee2860253dda3a9c2b2",
+            "archive_bytes": 144_791,
+            "archive_sha256": (
+                "9b95036b8219eb5cd7be61a29868e6633dd42df0078eda55a0f3710123551c73"
+            ),
+            "source_evidence_sha256": (
+                "982ce7c2e9355be9a79d701c8f505237ada7da6ebad41695b48b70dc8c6aad97"
+            ),
+            "file_count": 64,
+            "logical_bytes": 522_358,
+            "critical_file_hashes_match": True,
+            "network_denied": True,
+            "source_imported_during_inspection": False,
+            "checkpoint_loaded_during_inspection": False,
         },
         "artifacts": {
             "checkpoint": {
@@ -295,6 +312,56 @@ def build_next_challenger_plan() -> dict[str, Any]:
                 ),
             },
         },
+        "model_load_evidence": {
+            "status": "exact_mlx_model_constructed_and_strictly_loaded_offline",
+            "report_sha256": (
+                "798b5250eacf18d3f6193fde9d5c613ee68520490aed663395313a47eea4d666"
+            ),
+            "report_file_sha256": (
+                "597ee1e7f3b9f52ad318c66fb28811b7919abebe6ab44c6543a6642099f770f6"
+            ),
+            "approval_receipt_file_sha256": (
+                "11f4855feeac22e6c62459f9dbe2429c94a84cbf5a0bd5b8a070c48e2fd5f4cc"
+            ),
+            "checkpoint_loads": 1,
+            "checkpoint_key_count": 13_595,
+            "checkpoint_total_numel": 681_663_596,
+            "checkpoint_inventory_sha256": (
+                "1855b41c7ff9cfe6a9d248a4fa1635b7abeb8be4044be7c19ecd9245fd725b10"
+            ),
+            "converted_parameter_key_count": 13_571,
+            "converted_parameter_total_numel": 681_662_828,
+            "converted_parameter_inventory_sha256": (
+                "565a9430061391486c8686d80eb4b6b65fdfd402b4bdeb603ab4ef5cf8c41fd8"
+            ),
+            "skipped_nonparameter_rotary_buffers": 24,
+            "skipped_nonparameter_rotary_numel": 768,
+            "state_keys_equal": True,
+            "state_shapes_equal": True,
+            "state_dtypes_equal": True,
+            "strict_load": True,
+            "network_attempts": 0,
+            "forward_calls": 0,
+            "audio_open_attempts": 0,
+            "inference_runs": 0,
+            "architecture_remediation": {
+                "maximum_cycles": 1,
+                "cycles_used": 1,
+                "checkpoint_derived_transformer_expansion": 4,
+                "checkpoint_derived_mask_head_expansion": 2,
+                "checkpoint_parameter_dtype": "float16",
+                "verified_source_mutated": False,
+            },
+            "upstream_chunk_alignment": {
+                "chunk_size": 882_000,
+                "stft_hop_length": 512,
+                "valid_for_inference": False,
+                "silently_changed": False,
+            },
+            "public_activation": False,
+            "source_selection": False,
+            "midi_created": False,
+        },
         "evaluation": {
             "configuration_count": 1,
             "remediation_cycle_limit": 1,
@@ -348,9 +415,11 @@ def build_next_challenger_plan() -> dict[str, Any]:
             "network-denied non-loading static pickle/config inspection",
             "fully hash-locked macOS-arm64 dependency closure",
             "isolated install and import verification",
+            "exact source archive materialisation and network-denied static verification",
+            "strict weights-only construction and load",
         ],
         "next_gate": {
-            "kind": "strict_weights_only_construction_and_load",
+            "kind": "one_generated_tensor_synthetic_objective_run",
             "maximum_download_bytes": 0,
             "artifact_download": False,
             "runtime_wheel_download": False,
@@ -359,6 +428,7 @@ def build_next_challenger_plan() -> dict[str, Any]:
             "checkpoint_loading": False,
             "model_construction": False,
             "inference": False,
+            "requires_separate_approval": True,
             "audio_processing": False,
             "public_activation": False,
             "source_selection": False,

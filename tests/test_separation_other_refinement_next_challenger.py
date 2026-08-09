@@ -25,7 +25,7 @@ def test_next_challenger_is_synth_first_and_no_effects() -> None:
     assert "never a proxy" in plan["piano_policy"]
     assert plan["registered"] is False
     assert plan["executable"] is False
-    assert plan["status"] == "runtime_import_verified_model_load_not_authorized"
+    assert plan["status"] == "model_load_verified_synthetic_inference_not_authorized"
     assert not any(plan["effects"].values())
     assert validate_next_challenger_plan(plan) == plan
 
@@ -66,7 +66,24 @@ def test_next_challenger_pins_source_artifacts_and_safe_loader() -> None:
     assert runtime_import["checkpoint_loaded"] is False
     assert runtime_import["model_constructed"] is False
     assert runtime_import["remediation"]["cycles_used"] == 1
-    assert plan["next_gate"]["kind"] == "strict_weights_only_construction_and_load"
+    source_evidence = plan["source_evidence"]
+    assert source_evidence["archive_bytes"] == 144_791
+    assert source_evidence["critical_file_hashes_match"] is True
+    model_load = plan["model_load_evidence"]
+    assert model_load["checkpoint_loads"] == 1
+    assert model_load["state_keys_equal"] is True
+    assert model_load["state_shapes_equal"] is True
+    assert model_load["state_dtypes_equal"] is True
+    assert model_load["forward_calls"] == 0
+    assert model_load["architecture_remediation"][
+        "checkpoint_derived_transformer_expansion"
+    ] == 4
+    assert model_load["architecture_remediation"][
+        "checkpoint_derived_mask_head_expansion"
+    ] == 2
+    assert model_load["upstream_chunk_alignment"]["valid_for_inference"] is False
+    assert plan["next_gate"]["kind"] == "one_generated_tensor_synthetic_objective_run"
+    assert plan["next_gate"]["requires_separate_approval"] is True
     assert plan["next_gate"]["runtime_wheel_download"] is False
 
 
