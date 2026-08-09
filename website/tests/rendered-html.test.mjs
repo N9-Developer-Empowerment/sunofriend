@@ -251,6 +251,10 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /targets <code>synth<\/code> first/);
   assert.match(html, /followed by guitar and wind/);
   assert.match(html, /Acoustic piano is only an optional control/);
+  assert.match(html, /13,571 converted/);
+  assert.match(html, /zero forward, audio or network calls/);
+  assert.match(html, /expansion split of 4\/2/);
+  assert.match(html, /not aligned to the 512-sample STFT hop/);
   assert.match(html, /technically valid but musically unsuccessful/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
@@ -782,7 +786,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_synth_challenger.plan_document_sha256,
-    "b1fa40c6b6d0701e728b05866ac3d0ea43994b91bda6937bbca5b357b65ad343",
+    "68ddcbc763771ac4edc5190c75db3233606a5e97a364664f690df192628b9c9a",
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
@@ -813,6 +817,21 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.other_refinement
       .next_synth_challenger.artifact_evidence_sha256,
     "d855138176807a7ca8738bd660141eb2b142676e41ccf56014be64e53f012a24",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.model_load_evidence.converted_parameter_keys,
+    13571,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.model_load_evidence.forward_calls,
+    0,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.model_load_evidence.chunk_alignment_valid_for_inference,
+    false,
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement

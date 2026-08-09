@@ -1500,7 +1500,13 @@ the 4,184-byte config SHA-256
 and a 29-wheel, 127,527,173-byte CPython 3.12/macOS 14+ arm64 dependency
 closure. The wheel lock SHA-256 is
 `284d198c43e9074a4d645f005d937dd4e93b99e22aa21d942caaa1822b13d10b`.
-No dependency was installed or imported.
+The later gates installed and imported that closure, materialised the exact
+144,791-byte source archive, and constructed the 53-stem MLX model under OS
+network denial. One exact weights-only checkpoint load matched all 13,571
+converted parameter keys, shapes and dtypes. The strict gate recorded zero
+forward calls and zero audio or network access. Its bounded adapter records the
+checkpoint-derived transformer/mask-head expansion split of 4/2 and float16
+parameters without mutating the verified source.
 
 It is still not a safe default or runnable profile:
 
@@ -1510,10 +1516,12 @@ It is still not a safe default or runnable profile:
 - the checkpoint registry still says `not-reviewed`, so evaluation remains
   within the explicitly acknowledged provisional local-noncommercial boundary;
   and
-- installation, import, restricted loading and inference remain separate
-  unapproved gates.
+- generated-tensor inference, song processing and any activation remain
+  separate unapproved gates; and
+- the published 882,000-sample chunk is not aligned to the 512-sample STFT hop,
+  so an objective adapter decision is required before inference.
 
-Treat it as a **verified static research candidate**, not an available
+Treat it as a **strictly load-verified research candidate**, not an available
 separator. Synth comes first; guitar and wind need later independent evidence.
 
 ### Narrow drum separation
