@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-09.10"
+INTERFACE_CONTRACT_VERSION = "2026-08-09.11"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -252,8 +252,11 @@ def render_skill_interface_reference() -> str:
         "53-stem MLX topology once after all 13,571 converted keys, shapes and dtypes",
         "matched. There were zero forward, audio or network calls. The checkpoint-",
         "derived transformer/mask-head expansion split is 4/2 at float16; the verified",
-        "source remains immutable. Generated-tensor inference is the next separate gate",
-        "and remains unauthorized.",
+        "source remains immutable. A pure no-effects plan now binds an 881,664-sample",
+        "chunk and 440,832-sample overlap step, both exact multiples of the 512-sample",
+        "STFT hop; its SHA-256 is",
+        "`1ac15c7082223fcf2bdfd1d7443320f782cae87b8ac6e89cf991c19553da9903`.",
+        "Generated-tensor inference is the next separate gate and remains unauthorized.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

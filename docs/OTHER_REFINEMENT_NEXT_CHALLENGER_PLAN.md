@@ -208,10 +208,33 @@ checkpoint's float16 dtype; it does not mutate the verified source. The gate
 recorded one checkpoint load, zero network attempts, zero audio opens and zero
 forward calls. It performed no inference, activation, selection or MIDI.
 
-The upstream inference chunk is 882,000 samples, which is not divisible by its
-512-sample STFT hop. Sunofriend recorded that objective mismatch and did not
-silently change it during model loading. A deterministic aligned-chunk adapter
-must be bound before the generated-tensor forward.
+The upstream inference chunk is 882,000 samples and its overlap-2 step is
+441,000 samples. Neither is divisible by the 512-sample STFT hop. Sunofriend
+recorded that objective mismatch and did not silently change it during model
+loading.
+
+The pure no-effects contract now applies one deterministic rule: choose the
+largest value no greater than the published chunk that is divisible by
+`stft_hop_length * num_overlap`. This produces an 881,664-sample chunk and a
+440,832-sample step—1,722 and 861 STFT hops respectively. The change is 336
+samples, or 7.62 ms, shorter than the publication. The generated tensor uses
+that exact length, so no input padding or output cropping is hidden. Verified
+source, configuration and checkpoint bytes remain unchanged.
+
+Inspect the frozen contract with:
+
+```bash
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-next-synthetic.py
+```
+
+Its canonical document SHA-256 is
+`1ac15c7082223fcf2bdfd1d7443320f782cae87b8ac6e89cf991c19553da9903`.
+The plan binds one seed-0 in-memory stereo float32 tensor with shape
+`[1, 2, 881664]`, the exact 53-role output order, `synth` at zero-based index
+38, one checkpoint reload, one construction and one forward attempt. It opens
+and persists no audio, permits no retry and performs no action merely by being
+printed.
 
 ## Evaluation without false failures
 
@@ -248,7 +271,8 @@ The remaining gates are deliberately one-way:
 3. **Complete:** a fully hash-locked CPython 3.12/macOS 14+ arm64 dependency closure;
 4. **Complete:** isolated install and import verification;
 5. **Complete:** strict weights-only construction and load;
-6. **Next, not yet approved:** one generated-tensor objective forward; and
+6. **Ready for explicit approval:** one generated-tensor objective forward
+   under the frozen 881,664/440,832 alignment contract; and
 7. one four-song synth canary.
 
 Failure of an objective gate stops this candidate or uses its single

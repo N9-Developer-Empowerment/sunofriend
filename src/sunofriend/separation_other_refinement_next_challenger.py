@@ -354,7 +354,9 @@ def build_next_challenger_plan() -> dict[str, Any]:
             },
             "upstream_chunk_alignment": {
                 "chunk_size": 882_000,
+                "step_size": 441_000,
                 "stft_hop_length": 512,
+                "num_overlap": 2,
                 "valid_for_inference": False,
                 "silently_changed": False,
             },
@@ -420,6 +422,20 @@ def build_next_challenger_plan() -> dict[str, Any]:
         ],
         "next_gate": {
             "kind": "one_generated_tensor_synthetic_objective_run",
+            "plan_command": (
+                ".venv/bin/python "
+                "scripts/plan-separation-other-refinement-next-synthetic.py"
+            ),
+            "plan_status": (
+                "awaiting_explicit_generated_tensor_forward_approval"
+            ),
+            "published_chunk_size": 882_000,
+            "published_step_size": 441_000,
+            "aligned_chunk_size": 881_664,
+            "aligned_step_size": 440_832,
+            "stft_hop_length": 512,
+            "num_overlap": 2,
+            "alignment_adjustment_samples": -336,
             "maximum_download_bytes": 0,
             "artifact_download": False,
             "runtime_wheel_download": False,

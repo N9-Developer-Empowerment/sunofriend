@@ -254,7 +254,8 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /13,571 converted/);
   assert.match(html, /zero forward, audio or network calls/);
   assert.match(html, /expansion split of 4\/2/);
-  assert.match(html, /not aligned to the 512-sample STFT hop/);
+  assert.match(html, /881,664 and 440,832/);
+  assert.match(html, /without padding or cropping/);
   assert.match(html, /technically valid but musically unsuccessful/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
@@ -831,6 +832,26 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .next_synth_challenger.model_load_evidence.chunk_alignment_valid_for_inference,
+    false,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.synthetic_forward_plan.document_sha256,
+    "1ac15c7082223fcf2bdfd1d7443320f782cae87b8ac6e89cf991c19553da9903",
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.synthetic_forward_plan.aligned_chunk_size,
+    881664,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.synthetic_forward_plan.aligned_step_size,
+    440832,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.synthetic_forward_plan.inference_authorized,
     false,
   );
   assert.equal(

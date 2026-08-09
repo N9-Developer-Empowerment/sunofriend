@@ -1518,8 +1518,9 @@ It is still not a safe default or runnable profile:
   and
 - generated-tensor inference, song processing and any activation remain
   separate unapproved gates; and
-- the published 882,000-sample chunk is not aligned to the 512-sample STFT hop,
-  so an objective adapter decision is required before inference.
+- the pure adapter contract resolves the published 882,000-sample chunk and
+  441,000-sample overlap step to 881,664 and 440,832 respectively, keeping both
+  on the 512-sample STFT clock without yet running inference.
 
 Treat it as a **strictly load-verified research candidate**, not an available
 separator. Synth comes first; guitar and wind need later independent evidence.

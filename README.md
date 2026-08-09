@@ -218,14 +218,18 @@ the checkpoint requires transformer expansion 4, mask-head expansion 2 and
 float16 parameters, while the published adapter conflates the two expansion
 settings. The verified source was not mutated. Checkpoint terms remain
 unreviewed and the profile remains non-executable; one generated-tensor
-objective forward is the next separately approved gate. The published
-882,000-sample chunk is not aligned to the 512-sample STFT hop and must be
-resolved objectively before any song canary.
+objective forward is the next separately approved gate. The frozen no-effects
+contract resolves the published 882,000-sample/441,000-step mismatch to an
+881,664-sample chunk and 440,832-sample step, keeping both on the 512-sample
+STFT clock without padding, cropping or source mutation. It authorizes nothing
+by itself and permits no automatic retry.
 Inspect the current plan without effects:
 
 ```bash
 .venv/bin/python \
   scripts/plan-separation-other-refinement-next-challenger.py
+.venv/bin/python \
+  scripts/plan-separation-other-refinement-next-synthetic.py
 ```
 
 See [Synth-first fine-stem challenger](docs/OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
