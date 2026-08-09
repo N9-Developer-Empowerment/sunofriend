@@ -271,9 +271,19 @@ The remaining gates are deliberately one-way:
 3. **Complete:** a fully hash-locked CPython 3.12/macOS 14+ arm64 dependency closure;
 4. **Complete:** isolated install and import verification;
 5. **Complete:** strict weights-only construction and load;
-6. **Ready for explicit approval:** one generated-tensor objective forward
-   under the frozen 881,664/440,832 alignment contract; and
-7. one four-song synth canary.
+6. **Complete:** one generated-tensor objective forward under the frozen
+   881,664/440,832 alignment contract; and
+7. **Next, not approved:** one four-song synth canary.
+
+The single approved forward completed in 18.19 seconds at 15,424,362,972-byte
+peak MLX allocation. Its exact `[1, 53, 2, 881664]` float32 output was finite,
+mapped `synth` at index 38 and reconstructed the generated input plus residual
+within `9.313225746154785e-10`. The guard recorded one checkpoint load, one
+forward call and zero network or audio attempts. Report SHA-256 is
+`07d8af0ccd913914f509a75015476c9a0efe85bb89639514032c138420ec3f10`.
+The authority is consumed. This proves the adapter executes; it is not musical
+usefulness evidence and grants no song processing, activation, selection or
+MIDI authority.
 
 Failure of an objective gate stops this candidate or uses its single
 remediation. Poor listening does not. Public activation, hosted conversion,

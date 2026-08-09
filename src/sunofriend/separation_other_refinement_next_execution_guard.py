@@ -19,15 +19,21 @@ CHECKPOINT_SUFFIXES = (".ckpt", ".pt", ".pth", ".safetensors")
 class Mega53RestrictedExecutionGuard:
     """Allow one exact weights-only load and reject network, audio and other models."""
 
-    def __init__(self, checkpoint: Path) -> None:
+    def __init__(self, checkpoint: Path, *, expected_forward_calls: int = 0) -> None:
         self.checkpoint = checkpoint.resolve()
         self.network_attempts: list[str] = []
         self.audio_open_attempts: list[str] = []
         self.external_checkpoint_open_attempts: list[str] = []
         self.load_calls: list[str] = []
         self.forward_calls = 0
+        self.expected_forward_calls = expected_forward_calls
         self._real_torch_load = torch.load
         self._installed = False
+
+    def record_forward(self) -> None:
+        if self.forward_calls >= self.expected_forward_calls:
+            raise RuntimeError("Mega-53 forward-call authority is exhausted")
+        self.forward_calls += 1
 
     def _audit(self, event: str, args: tuple[Any, ...]) -> None:
         if event.startswith("socket."):
@@ -79,7 +85,7 @@ class Mega53RestrictedExecutionGuard:
             self.network_attempts
             or self.audio_open_attempts
             or self.external_checkpoint_open_attempts
-            or self.forward_calls
+            or self.forward_calls != self.expected_forward_calls
         ):
             raise RuntimeError("Mega-53 model load crossed a forbidden effects boundary")
 

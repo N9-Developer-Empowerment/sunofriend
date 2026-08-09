@@ -419,16 +419,34 @@ def build_next_challenger_plan() -> dict[str, Any]:
             "isolated install and import verification",
             "exact source archive materialisation and network-denied static verification",
             "strict weights-only construction and load",
+            "one generated-tensor synthetic objective run",
         ],
+        "synthetic_forward_evidence": {
+            "status": "objective_pass",
+            "report_sha256": "07d8af0ccd913914f509a75015476c9a0efe85bb89639514032c138420ec3f10",
+            "report_file_sha256": "6a193c12d92f49e7d95d7a41dbf657e810151daaddd74070c294ba44f4e26831",
+            "plan_sha256": "1ac15c7082223fcf2bdfd1d7443320f782cae87b8ac6e89cf991c19553da9903",
+            "inference_attempts": 1,
+            "authority_consumed": True,
+            "elapsed_seconds": 18.186591000063345,
+            "peak_mlx_memory_bytes": 15_424_362_972,
+            "output_shape": [1, 53, 2, 881_664],
+            "output_dtype": "float32",
+            "all_samples_finite": True,
+            "maximum_reconstruction_error": 9.313225746154785e-10,
+            "synth_role_index": 38,
+            "network_attempts": 0,
+            "audio_open_attempts": 0,
+            "musical_usefulness_established": False,
+            "public_activation": False,
+        },
         "next_gate": {
-            "kind": "one_generated_tensor_synthetic_objective_run",
+            "kind": "one_four_song_synth_canary_plan",
             "plan_command": (
                 ".venv/bin/python "
                 "scripts/plan-separation-other-refinement-next-synthetic.py"
             ),
-            "plan_status": (
-                "awaiting_explicit_generated_tensor_forward_approval"
-            ),
+            "plan_status": "synthetic_authority_consumed_canary_not_authorized",
             "published_chunk_size": 882_000,
             "published_step_size": 441_000,
             "aligned_chunk_size": 881_664,

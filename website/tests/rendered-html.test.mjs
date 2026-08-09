@@ -856,6 +856,16 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.synthetic_forward_plan.result.authority_consumed,
+    true,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.synthetic_forward_plan.result.output_shape[1],
+    53,
+  );
+  assert.equal(
+    data.experiments.finished_mix_separation.other_refinement
       .parent_and_children_cannot_both_enter_midi,
     true,
   );

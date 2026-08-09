@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-09.11",
+  "interface_contract_version": "2026-08-09.12",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -728,7 +728,20 @@
             "automatic_retry": false,
             "audio_reads": 0,
             "audio_writes": 0,
-            "inference_authorized": false
+            "inference_authorized": false,
+            "result": {
+              "status": "objective_pass",
+              "report_sha256": "07d8af0ccd913914f509a75015476c9a0efe85bb89639514032c138420ec3f10",
+              "elapsed_seconds": 18.186591000063345,
+              "peak_mlx_memory_bytes": 15424362972,
+              "output_shape": [1, 53, 2, 881664],
+              "all_samples_finite": true,
+              "maximum_reconstruction_error": 9.313225746154785e-10,
+              "network_attempts": 0,
+              "audio_open_attempts": 0,
+              "authority_consumed": true,
+              "musical_usefulness_established": false
+            }
           },
           "dependency_install_authorized": false,
           "dependency_install_complete": true,
@@ -743,7 +756,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "run one generated-tensor Mega-53 objective forward under the frozen 881664-sample chunk and 440832-sample step only after separate explicit approval; do not process song audio, activate a profile, select a source or create MIDI"
+        "next_gate": "prepare one four-song synth canary plan; song processing still requires separate explicit approval and cannot activate a profile, select a source or create MIDI"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

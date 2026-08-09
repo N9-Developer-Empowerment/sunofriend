@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-09.11"
+INTERFACE_CONTRACT_VERSION = "2026-08-09.12"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -256,7 +256,10 @@ def render_skill_interface_reference() -> str:
         "chunk and 440,832-sample overlap step, both exact multiples of the 512-sample",
         "STFT hop; its SHA-256 is",
         "`1ac15c7082223fcf2bdfd1d7443320f782cae87b8ac6e89cf991c19553da9903`.",
-        "Generated-tensor inference is the next separate gate and remains unauthorized.",
+        "The separately approved one-call forward passed in 18.19 seconds at 15.42 GB",
+        "peak MLX allocation with exact finite 53-role output and zero network or",
+        "audio attempts. That authority is consumed and proves execution, not musical",
+        "usefulness. A four-song synth canary is the next separate unapproved gate.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",
