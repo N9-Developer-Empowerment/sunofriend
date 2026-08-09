@@ -113,7 +113,8 @@ one-checkpoint effects boundary; and
 topology and strict MLX loading. The evidence CLI contains no forward call or
 audio interface. This separation made the upstream expansion-factor
 conflation visible and allowed one process-local adapter without mutating the
-sealed source or leaking model details into setup shell. The next refactor
-target is a similarly isolated generated-tensor runner plus a pure aligned-
-chunk contract; song decoding and publication stay out until that objective
-boundary passes.
+sealed source or leaking model details into setup shell. The pure
+`separation_other_refinement_next_synthetic_plan.py` now owns the generated-
+tensor identity, 53-role order, single-attempt authority and aligned chunk/step
+math. A later runner must remain similarly isolated; song decoding and
+publication stay out until that objective boundary passes.

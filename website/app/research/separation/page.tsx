@@ -202,10 +202,12 @@ export default function SeparationResearch() {
                 transformer/mask-head expansion split of 4/2 at float16 without
                 mutating the verified source. Terms remain unreviewed under the
                 acknowledged provisional local-noncommercial boundary. The
-                profile is still unregistered and non-executable; one generated-
-                tensor objective forward is the next separate gate. The published
-                882,000-sample chunk is not aligned to the 512-sample STFT hop and
-                will not be changed silently. The plan separates audible target
+                profile is still unregistered and non-executable. The pure
+                no-effects contract resolves the published 882,000-sample chunk
+                and 441,000-sample overlap step to 881,664 and 440,832, keeping
+                both on the 512-sample STFT clock without padding or cropping.
+                One generated-tensor objective forward is the next separately
+                approved gate. The plan separates audible target
                 presence from model usefulness and grants no song, activation,
                 source-selection or MIDI authority.
               </p>

@@ -161,9 +161,10 @@ usable synth stem with this model; no inference or song processing has run.
 > constructed 53-stem model; no forward or audio call occurred. The checker
 > exposed that the upstream port conflates transformer and mask-head expansion:
 > this checkpoint needs 4 and 2 respectively. A process-local adapter records
-> that split without modifying sealed source. The published 882,000-sample chunk
-> is also misaligned with the 512-sample STFT hop, so the next gate is an explicit
-> aligned-chunk contract plus one generated-tensor forward—not a song demo or a
+> that split without modifying sealed source. The no-effects forward contract now
+> resolves the published 882,000/441,000 chunk/step mismatch to 881,664/440,832,
+> keeping both on the 512-sample STFT clock. It still grants no inference: the next
+> gate is one separately approved generated-tensor call—not a song demo or a
 > product rollout. https://sunofriend.com/research/separation/
 
 ## What the words mean
