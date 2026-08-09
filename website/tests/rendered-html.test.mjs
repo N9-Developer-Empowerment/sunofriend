@@ -258,8 +258,10 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /without padding or cropping/);
   assert.match(html, /combined review, synth was useful in two cases/);
   assert.match(html, /guitar was useful in all four target-present cases/);
-  assert.match(html, /no-effects MIDI-usefulness plan is now frozen/);
-  assert.match(html, /opens no audio and makes no automatic source choice/);
+  assert.match(html, /frozen MIDI-usefulness plan was later/);
+  assert.match(html, /verified all 24 inputs/);
+  assert.match(html, /completed 16 same-settings/);
+  assert.match(html, /Human A\/B review is pending/);
   assert.match(html, /technically valid but musically unsuccessful/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
@@ -868,6 +870,27 @@ test("publishes a versioned machine-readable capability contract", async () => {
       .next_synth_challenger.synthetic_forward_plan.result.output_shape[1],
     53,
   );
+  const downstreamMidi =
+    data.experiments.finished_mix_separation.other_refinement
+      .next_synth_challenger.six_role_integration_result
+      .downstream_midi_canary_result;
+  assert.equal(
+    downstreamMidi.document_sha256,
+    "5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09",
+  );
+  assert.equal(downstreamMidi.midi_transcription_attempts, 16);
+  assert.equal(downstreamMidi.neutral_preview_audio_files_written, 16);
+  assert.equal(downstreamMidi.network_attempts, 0);
+  assert.equal(downstreamMidi.separator_inference_attempts, 0);
+  assert.equal(downstreamMidi.automatic_source_choice, false);
+  assert.equal(downstreamMidi.human_review_complete, true);
+  assert.equal(
+    downstreamMidi.human_review_document_sha256,
+    "dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103",
+  );
+  assert.equal(downstreamMidi.review_source_reference_present, false);
+  assert.equal(downstreamMidi.repaired_review_source_reference_present, true);
+  assert.equal(downstreamMidi.guitar_candidate_better_cases, 3);
   assert.equal(
     data.experiments.finished_mix_separation.other_refinement
       .parent_and_children_cannot_both_enter_midi,

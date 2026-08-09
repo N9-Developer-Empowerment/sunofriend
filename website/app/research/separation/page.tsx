@@ -218,13 +218,15 @@ export default function SeparationResearch() {
                 in two; guitar was useful in all four target-present cases. No
                 output had a catastrophic defect. This qualifies a private
                 six-role integration, not a public product: the models remain
-                unregistered, MIDI execution is untested, Mega-53 exceeded the original
-                12 GiB target and checkpoint terms constrain release. The next
-                no-effects MIDI-usefulness plan is now frozen over the eight
-                existing role-present artifacts. It compares each isolated
-                target with grouped other under identical settings, opens no
-                audio and makes no automatic source choice. A later private
-                execution remains a separate decision.
+                unregistered, MIDI musical usefulness is unreviewed, Mega-53
+                exceeded the original 12 GiB target and checkpoint terms
+                constrain release. The frozen MIDI-usefulness plan was later
+                executed once under network denial over the eight existing
+                role-present artifacts. It verified all 24 inputs, wrote eight
+                exact grouped-other controls and completed 16 same-settings
+                transcriptions, publishing private MIDI and loudness-matched
+                neutral previews without rerunning separation or making a
+                source choice. Human A/B review is pending.
               </p>
             </div>
             <div className="agent-card">

@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-09.16"
+INTERFACE_CONTRACT_VERSION = "2026-08-09.18"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -271,14 +271,26 @@ def render_skill_interface_reference() -> str:
         "`useful` in 2/4 confirmed-present cases and `partly_useful` in 2/4; guitar was",
         "`useful` in 4/4. All eight outputs had no catastrophic defect, so the pure",
         "outcome is `private_six_role_integration_qualified`. The profiles remain",
-        "unregistered and non-public. Downstream MIDI execution is untested, three synth cases",
-        "reported some missing content, and absent-role ratings are excluded. The",
+        "unregistered and non-public. Downstream MIDI musical usefulness is unreviewed,",
+        "three synth cases reported some missing content, and absent-role ratings are excluded.",
+        "The",
         "outcome grants no retry, activation, selection, MIDI, hosting, redistribution",
         "or upload. A no-effects candidate-versus-grouped-other MIDI plan now binds",
         "the same eight role-present artifacts with SHA-256",
         "`7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.",
-        "It opens no audio and writes no MIDI. Musical feedback cannot disable the",
-        "core-four route or erase the private six-role evidence.",
+        "Its separately approved execution verified all 24 inputs, wrote eight exact",
+        "grouped-other controls and completed exactly 16 same-settings transcription",
+        "attempts under OS network denial. It wrote 16 private MIDI files and 16",
+        "loudness-matched neutral previews; report SHA-256 is",
+        "`5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.",
+        "The eight-case A/B review is complete at SHA-256",
+        "`dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103`.",
+        "Guitar candidate MIDI beat its control in 3/4 cases; synth was the same",
+        "once and `cannot_tell` three times. The completed review omitted its source",
+        "player, so usefulness ratings remain methodology-limited. The repaired local",
+        "page serves exact source windows without changing saved answers or adding a",
+        "listened checkbox. Musical feedback cannot disable the core-four route or",
+        "erase the private six-role evidence.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

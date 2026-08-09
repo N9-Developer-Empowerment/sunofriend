@@ -243,9 +243,9 @@ six-role review, synth was `useful` in 2/4 confirmed-present cases and
 `partly_useful` in 2/4; guitar was `useful` in 4/4. All eight outputs had no
 catastrophic defect. The exact no-effects outcome is
 `private_six_role_integration_qualified`. This is positive private Studio
-evidence, not a public six-stem product claim: downstream MIDI execution remains
-untested, three synth cases retained some content outside the synth estimate,
-and model terms/resources still constrain release tier.
+evidence, not a public six-stem product claim: downstream MIDI musical
+usefulness still awaits review, three synth cases retained some content outside
+the synth estimate, and model terms/resources still constrain release tier.
 
 A no-effects integration plan bound the exact reports and reviews, reused the
 eight persisted primary estimates, and fixed a grouped-other-constrained
@@ -283,8 +283,31 @@ no MIDI and selects nothing. Reproduce that plan with:
 
 The downstream-MIDI plan SHA-256 is
 `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
-Its later execution requires a separate explicit private-MIDI decision and
-cannot disable the qualified six-role evidence if the musical result is poor.
+Its separately approved private execution is complete. Under OS network denial,
+it verified all 24 input identities, wrote eight sample-exact grouped-other
+controls, made exactly 16 same-settings transcription attempts and published
+16 private MIDI files plus 16 loudness-matched neutral previews. It made zero
+separator, checkpoint, network, selection or activation attempts. The report
+SHA-256 is
+`5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.
+The eight-case A/B review is complete with review SHA-256
+`dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103`.
+Guitar candidate MIDI was preferred to its grouped-other control in 3/4 cases;
+synth was equivalent once and `cannot_tell` in 3/4. Recognisable-note and
+timing ratings were synth `useful` once and `partly_useful` three times, and
+guitar `partly_useful` three times and `not_useful` once. The completed review
+omitted the source reference, so these are methodology-limited findings rather
+than promotion evidence. The repaired local review now shows the exact source
+window beside A/B without changing the saved answers or requiring another
+checkbox. Poor results cannot disable the qualified six-role evidence.
+
+Serve that repaired review with:
+
+```bash
+.venv/bin/python scripts/serve-fine-stem-downstream-midi-review.py \
+  PRIVATE-MIDI-CANARY-ROOT \
+  --integration-root SIX-ROLE-INTEGRATION-ROOT
+```
 
 See [Synth-first fine-stem challenger](docs/OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 

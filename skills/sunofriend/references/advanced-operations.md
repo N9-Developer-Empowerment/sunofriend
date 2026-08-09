@@ -1090,9 +1090,18 @@ guided forms.
   existing role-present artifacts, with no separator rerun. Run
   `scripts/plan-fine-stem-downstream-midi.py` only to reproduce plan SHA-256
   `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
-  Its future 16-attempt candidate-versus-grouped-other transcription run needs
-  separate private MIDI authority; poor results cannot disable the six-role
-  evidence.
+  Its separately approved private worker then verified all 24 inputs, wrote
+  eight exact grouped-other controls and completed the frozen 16-attempt
+  candidate-versus-control transcription run under OS network denial. It wrote
+  16 MIDI files and 16 loudness-matched neutral previews; report SHA-256 is
+  `5f3ebf50c0097ca5a0169b63ed1eb4f2efc010d54b525321e5bfd3f621668b09`.
+  The completed eight-case review SHA-256 is
+  `dc766790f97341521363f1705f90ab3dfa1456b1925b0e97e5e13d35e94c2103`.
+  Guitar candidate MIDI beat the control 3/4 times; synth was the same once and
+  `cannot_tell` three times. Because the first page omitted its source player,
+  usefulness ratings are methodology-limited. The repaired localhost page
+  serves the exact source window, retains saved answers and adds no listened
+  checkbox. Poor results cannot disable the six-role evidence.
 - Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
   44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
   checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source
