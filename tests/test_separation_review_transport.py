@@ -6,11 +6,20 @@ import os
 import pytest
 
 from sunofriend.separation_review_transport import (
+    LocalReviewRequestHandler,
     ReviewRequestError,
     atomic_write_private_json,
     encode_review_json,
     parse_file_range,
 )
+
+
+class _DisconnectedWriter:
+    def __init__(self, error: OSError) -> None:
+        self.error = error
+
+    def write(self, _body: bytes) -> None:
+        raise self.error
 
 
 @pytest.mark.parametrize(
@@ -88,3 +97,11 @@ def test_atomic_write_private_json_refuses_to_create_evidence_tree(tmp_path) -> 
 def test_encode_review_json_rejects_non_finite_values() -> None:
     with pytest.raises(ValueError, match="Out of range float"):
         encode_review_json({"score": float("nan")})
+
+
+@pytest.mark.parametrize("error", [BrokenPipeError(), ConnectionResetError()])
+def test_review_media_stream_treats_browser_disconnect_as_normal(error: OSError) -> None:
+    handler = LocalReviewRequestHandler.__new__(LocalReviewRequestHandler)
+    handler.wfile = _DisconnectedWriter(error)
+
+    assert handler._write_client_bytes(b"audio") is False

@@ -213,3 +213,14 @@ zero separator effects, all three blind arms, byte-range audio and atomic
 review save/download. Implementing and testing this boundary does not execute
 the private comparison; that remains blocked only on explicit approval of the
 already frozen plan hash.
+
+That frozen plan has now been consumed exactly once. The network-denied worker
+completed all 12 same-transcriber attempts, published 12 private MIDI files and
+12 neutral previews, and retained the four source-visible blind review. The
+new pure `separation_fine_stem_synth_provider_midi_outcome.py` reducer owns only
+unblinding, aggregation and the downstream decision boundary. It records that
+grouped other was preferred in 4/4 cases while the current separator beat the
+provider estimate twice and tied it twice. This is a MIDI-method result, not a
+rejection of the earlier human-reviewed synth audio evidence. The reducer
+opens no audio, grants no source selection or activation, and explicitly keeps
+private Studio audio admission separate from the choice of MIDI input.

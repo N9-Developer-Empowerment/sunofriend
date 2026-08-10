@@ -184,8 +184,21 @@ on.
   `scripts/record-fine-stem-synth-provider-outcome.py` and
   `scripts/plan-fine-stem-synth-provider-midi.py` remain no-model steps. The
   latter can emit an exact 12-attempt plan only after all four provider targets
-  are human-confirmed present. Provider stems are comparison estimates, not
-  truth.
+  are human-confirmed present. That plan was approved and consumed once under
+  network denial: exactly 12 same-transcriber attempts wrote 12 private MIDI
+  files and 12 neutral previews with no separator rerun, source selection or
+  activation. The canary, completed review and pure outcome SHA-256 values are
+  `a290e0b207150564699e10b99d29d1febbd8130b9539749adf2214522eb0cd05`,
+  `3d6c1d29f63ae3456f2cdf57dc780d9330052368ebb0b8ca184b877f8f82ef81`
+  and `406ae9b8bc9a8db25871801654488ca8efa09cd21550a2a425d430b5ba322b92`.
+  The completed source-visible blind review chose grouped other in 4/4 cases.
+  Under the same transcriber, the current separator beat the provider
+  synth estimate twice and tied it twice. This records no isolated-synth MIDI
+  advantage, but does not veto the already qualified private synth audio
+  evidence. Reproduce the no-effects decision with
+  `scripts/record-fine-stem-synth-provider-midi-outcome.py`; do not turn it into
+  an automatic MIDI choice or another tuning loop. Provider stems remain
+  comparison estimates, not truth.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
