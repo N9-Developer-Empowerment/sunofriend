@@ -3,10 +3,12 @@ from __future__ import annotations
 import http.client
 import json
 from pathlib import Path
+import shutil
 import threading
 
 import numpy as np
 
+from sunofriend.models import NoteEvent
 from sunofriend.separation_fine_stem_canary_audio import file_sha256
 from sunofriend.separation_fine_stem_integration_report import (
     ARTIFACT_ROLES,
@@ -31,6 +33,17 @@ from sunofriend.separation_fine_stem_synth_provider_midi_plan import (
     MIDI_PLAN_STATUS,
     build_fine_stem_synth_provider_midi_plan,
     validate_fine_stem_synth_provider_midi_plan,
+)
+from sunofriend.separation_fine_stem_synth_provider_midi_canary import (
+    CANARY_STATUS,
+    execute_fine_stem_synth_provider_midi_canary,
+    validate_fine_stem_synth_provider_midi_canary,
+)
+from sunofriend.separation_fine_stem_synth_provider_midi_review import (
+    build_provider_synth_midi_review_seed,
+    build_provider_synth_midi_review_server,
+    render_provider_synth_midi_review,
+    validate_provider_synth_midi_review,
 )
 from sunofriend.separation_fine_stem_synth_provider_outcome import (
     INCOMPLETE_STATUS,
@@ -144,6 +157,8 @@ def _fixture(tmp_path: Path) -> tuple[dict, dict, Path, dict]:
                     "transcription": {
                         "processing_kind": "synth",
                         "public_role": "synth",
+                        "general_midi_channel": 5,
+                        "general_midi_program_zero_based": 81,
                     },
                     "parameters": {
                         "onset_threshold": 0.5,
@@ -489,3 +504,184 @@ def test_completed_presence_review_builds_exact_no_effects_12_attempt_plan(
         assert "not confirmed present" in str(error)
     else:
         raise AssertionError("incomplete provider target cohort produced a MIDI plan")
+
+
+def test_plan_bound_provider_synth_midi_executor_and_review_transport(
+    tmp_path: Path,
+) -> None:
+    import soundfile as sf
+
+    request, integration, integration_root, inputs = _fixture(tmp_path)
+    provider_root = tmp_path / "fine-stem-synth-provider-qualification-v1"
+    qualification = qualify_fine_stem_synth_provider_estimates(
+        request=request,
+        integration_report=integration,
+        integration_root=integration_root,
+        provider_inputs=inputs,
+        out_dir=provider_root,
+    )
+    presence_review = build_provider_review_seed(qualification)
+    for case in presence_review["cases"]:
+        case["played_items"] = ["source", "provider_synth"]
+        case["listened"] = True
+        case["provider_target_presence"] = "present"
+        case["provider_role_breadth"] = "synth_only"
+    presence_review["status"] = "human_provider_presence_review_complete_no_selection"
+    outcome = build_fine_stem_synth_provider_outcome(
+        report=qualification,
+        review=presence_review,
+    )
+    plan = build_fine_stem_synth_provider_midi_plan(
+        request=request,
+        qualification=qualification,
+        outcome=outcome,
+    )
+
+    integration_technical = integration_root / "TECHNICAL"
+    integration_technical.mkdir()
+    (integration_technical / "INTEGRATION-REPORT.json").write_text(
+        json.dumps(integration), encoding="utf-8"
+    )
+    (provider_root / "TECHNICAL/PROVIDER-PRESENCE-OUTCOME.json").write_text(
+        json.dumps(outcome), encoding="utf-8"
+    )
+    plan_path = tmp_path / "PROVIDER-SYNTH-MIDI-PLAN.json"
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+    grouped_root = tmp_path / "grouped-other"
+    for case in request["cases"]:
+        relative = Path(case["grouped_other_control"]["relative_path"])
+        target = grouped_root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(integration_root / relative, target)
+
+    transcription_paths: list[str] = []
+
+    def transcribe(path: str, **parameters: object) -> list[NoteEvent]:
+        assert parameters == {
+            "kind": "synth",
+            "onset_threshold": 0.5,
+            "frame_threshold": 0.3,
+            "min_note_ms": 60.0,
+        }
+        transcription_paths.append(path)
+        return [NoteEvent(start=0.1, end=0.5, pitch=60, velocity=90)]
+
+    def render(_midi_path: Path, wav_path: Path) -> None:
+        clock = np.arange(44_100, dtype=np.float64) / 44_100
+        mono = 0.05 * np.sin(2 * np.pi * 440 * clock)
+        sf.write(wav_path, np.column_stack((mono, mono)), 44_100)
+
+    def network() -> dict[str, object]:
+        return {
+            "os_network_denial_enforced": True,
+            "python_network_attempts": 0,
+        }
+    rejected_output = tmp_path / "wrong-hash-output"
+    try:
+        execute_fine_stem_synth_provider_midi_canary(
+            plan_path,
+            integration_root=integration_root,
+            provider_root=provider_root,
+            grouped_other_root=grouped_root,
+            out_dir=rejected_output,
+            expected_plan_sha256="0" * 64,
+            transcribe=transcribe,
+            render=render,
+            network_observation=network,
+        )
+    except ValueError as error:
+        assert "plan SHA-256 differs" in str(error)
+    else:
+        raise AssertionError("unapproved provider synth MIDI plan was executed")
+    assert not rejected_output.exists()
+    assert transcription_paths == []
+
+    output = tmp_path / "provider-synth-midi-canary"
+    report = validate_fine_stem_synth_provider_midi_canary(
+        execute_fine_stem_synth_provider_midi_canary(
+            plan_path,
+            integration_root=integration_root,
+            provider_root=provider_root,
+            grouped_other_root=grouped_root,
+            out_dir=output,
+            expected_plan_sha256=plan["document_sha256"],
+            transcribe=transcribe,
+            render=render,
+            network_observation=network,
+        )
+    )
+    assert report["status"] == CANARY_STATUS
+    assert len(transcription_paths) == 12
+    assert report["effects"]["midi_transcription_attempts"] == 12
+    assert report["effects"]["private_audio_input_identities"] == 16
+    assert report["effects"]["separator_inference_attempts"] == 0
+    assert all(
+        (output / case["outputs"][display]["midi"]["relative_path"]).is_file()
+        and (
+            output / case["outputs"][display]["preview"]["relative_path"]
+        ).is_file()
+        for case in report["cases"]
+        for display in ("A", "B", "C")
+    )
+
+    page = render_provider_synth_midi_review(report)
+    assert "Source reference" in page
+    assert "MIDI A" in page and "MIDI B" in page and "MIDI C" in page
+    assert "Playback recorded automatically" in page
+    assert "currentTime > 0" in page
+    assert "addEventListener('pause'" in page
+    assert 'type="checkbox"' not in page
+    assert "current_separator_estimate" not in page
+    assert "provider_synth_estimate" not in page
+    assert "grouped_other_control" not in page
+
+    review = build_provider_synth_midi_review_seed(report)
+    for case in review["cases"]:
+        case["played_items"] = ["source", "A", "B", "C"]
+        case["listened"] = True
+    review["status"] = "human_three_arm_listening_complete_no_selection"
+    validated_review = validate_provider_synth_midi_review(review, report)
+
+    server = build_provider_synth_midi_review_server(
+        output, provider_root=provider_root, port=0
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        connection = http.client.HTTPConnection(*server.server_address, timeout=5)
+        case_id = report["cases"][0]["case_id"]
+        connection.request(
+            "GET", f"/source/{case_id}.wav", headers={"Range": "bytes=2-5"}
+        )
+        source_response = connection.getresponse()
+        assert source_response.status == 206
+        assert len(source_response.read()) == 4
+        connection.request(
+            "GET", f"/preview/{case_id}/A.wav", headers={"Range": "bytes=-4"}
+        )
+        preview_response = connection.getresponse()
+        assert preview_response.status == 206
+        assert len(preview_response.read()) == 4
+        connection.request(
+            "POST",
+            "/save-review",
+            body=json.dumps(review),
+            headers={"Content-Type": "application/json"},
+        )
+        saved = connection.getresponse()
+        assert saved.status == 200
+        assert (
+            json.loads(saved.read())["document_sha256"]
+            == validated_review["document_sha256"]
+        )
+        connection.request("GET", "/download-review")
+        downloaded = connection.getresponse()
+        assert downloaded.status == 200
+        assert "attachment" in downloaded.getheader("Content-Disposition")
+        assert json.loads(downloaded.read())["status"].endswith(
+            "complete_no_selection"
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
