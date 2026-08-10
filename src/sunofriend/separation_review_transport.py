@@ -206,8 +206,18 @@ class LocalReviewRequestHandler(BaseHTTPRequestHandler):
                 block = handle.read(min(1024 * 1024, remaining))
                 if not block:
                     break
-                self.wfile.write(block)
+                if not self._write_client_bytes(block):
+                    return
                 remaining -= len(block)
+
+    def _write_client_bytes(self, body: bytes) -> bool:
+        """Return false when a browser abandons an in-flight media range."""
+
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            return False
+        return True
 
     def log_message(self, _format: str, *_args: Any) -> None:
         return

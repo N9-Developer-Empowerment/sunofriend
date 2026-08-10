@@ -45,6 +45,11 @@ from sunofriend.separation_fine_stem_synth_provider_midi_review import (
     render_provider_synth_midi_review,
     validate_provider_synth_midi_review,
 )
+from sunofriend.separation_fine_stem_synth_provider_midi_outcome import (
+    OUTCOME_STATUS,
+    build_fine_stem_synth_provider_midi_outcome,
+    validate_fine_stem_synth_provider_midi_outcome,
+)
 from sunofriend.separation_fine_stem_synth_provider_outcome import (
     INCOMPLETE_STATUS,
     READY_STATUS,
@@ -636,11 +641,60 @@ def test_plan_bound_provider_synth_midi_executor_and_review_transport(
     assert "grouped_other_control" not in page
 
     review = build_provider_synth_midi_review_seed(report)
-    for case in review["cases"]:
+    report_by_id = {case["case_id"]: case for case in report["cases"]}
+    for index, case in enumerate(review["cases"]):
         case["played_items"] = ["source", "A", "B", "C"]
         case["listened"] = True
+        display_by_arm = {
+            output["arm_id"]: display_id
+            for display_id, output in report_by_id[case["case_id"]][
+                "outputs"
+            ].items()
+        }
+        grouped = display_by_arm["grouped_other_control"]
+        current = display_by_arm["current_separator_estimate"]
+        provider = display_by_arm["provider_synth_estimate"]
+        case["best_display"] = grouped
+        case["ratings"][grouped] = {
+            "recognisable_notes": "useful",
+            "timing_usefulness": "useful",
+            "edit_workload": "low",
+        }
+        current_recognisable = ("not_useful", "partly_useful", "useful", "useful")[
+            index
+        ]
+        provider_recognisable = ("not_useful", "not_useful", "not_useful", "useful")[
+            index
+        ]
+        case["ratings"][current] = {
+            "recognisable_notes": current_recognisable,
+            "timing_usefulness": "useful",
+            "edit_workload": "low",
+        }
+        case["ratings"][provider] = {
+            "recognisable_notes": provider_recognisable,
+            "timing_usefulness": "cannot_tell",
+            "edit_workload": "high",
+        }
     review["status"] = "human_three_arm_listening_complete_no_selection"
     validated_review = validate_provider_synth_midi_review(review, report)
+    outcome = validate_fine_stem_synth_provider_midi_outcome(
+        build_fine_stem_synth_provider_midi_outcome(
+            report=report, review=validated_review
+        )
+    )
+    assert outcome["status"] == OUTCOME_STATUS
+    assert outcome["summary"]["grouped_other_best_case_count"] == 4
+    assert outcome["summary"]["isolated_arm_best_case_count"] == 0
+    assert outcome["summary"]["current_vs_provider_recognisable_counts"] == {
+        "current_separator_better": 2,
+        "tie": 2,
+    }
+    assert not any(outcome["effects"].values())
+    assert outcome["boundaries"]["source_selected"] is False
+    assert outcome["decisions"]["audio_stem_evidence"]["status"].startswith(
+        "retain_private"
+    )
 
     server = build_provider_synth_midi_review_server(
         output, provider_root=provider_root, port=0
