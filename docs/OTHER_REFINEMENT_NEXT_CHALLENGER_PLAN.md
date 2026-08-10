@@ -346,17 +346,27 @@ The remaining gates are deliberately one-way:
    It retains guitar as directional private evidence, records no isolated-stem
    synth advantage and explicitly denies promotion, selection, retry and MIDI
    authority; and
-18. **Complete request, awaiting exact provider inputs:** the source-present
+18. **Complete request:** the source-present
    synth bottleneck request has SHA-256
    `d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
    It binds the four existing confirmed-present source/current/control cases
    but opens no audio. The future experiment has three arms per song—current
    synth, provider synth/keyboard estimate and grouped other—under the same
    transcriber, BPM, key, tuning and window. The source is visible during
-   review and there is no listened checkbox. Three tracks have catalogued
-   provider packs; all four exact provider artifacts still require private
-   path, rights, alignment, size, SHA-256 and target-presence binding before a
-   separately approved 12-attempt execution plan can exist.
+   review and there is no listened checkbox; and
+19. **Objective qualification complete, human presence review open:** the
+   missing `Uni Ava` pack was found and the deterministic first unsuffixed Suno
+   pack policy was frozen before audio analysis for all four songs. The private
+   qualification bound 36 exact input identities, wrote four source/provider
+   PCM24 pairs and reported SHA-256
+   `64b564798a6f338c66039e40981a5d562160c83451f2bc6d2a5411c56eba0eea`.
+   All four pack sums passed the frozen source-clock gate: sample correlation
+   0.913–0.949, envelope correlation 0.946–0.980 and zero best envelope lag.
+   No clipping, model load, separator inference, transcription, MIDI, retry or
+   network attempt occurred. The local review now shows source and provider
+   estimate together, records playback automatically and autosaves. Only four
+   human `present` decisions can emit the separately approved 12-attempt plan;
+   provider labels remain estimates, not truth.
 
 The completed synth report SHA-256 is
 `b985dd021c33564967f445cb30697c50cb03362c7407b8aee21a54449c3caabf`;

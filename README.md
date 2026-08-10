@@ -330,10 +330,31 @@ audio nor authorises the later 12-attempt run:
 
 The request SHA-256 is
 `d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
-Three songs already have catalogued local provider packs; the exact artifacts
-are deliberately not bound yet. `Uni Ava` needs the best available local
-provider synth, keyboard or keys estimate. Provider stems remain comparison
-estimates, not truth.
+The missing `Uni Ava` pack was found locally and the deterministic first-pack
+policy is now frozen across all four songs. A separate qualification step bound
+36 exact private input identities, wrote four source/provider PCM24 pairs and
+verified all four provider pack sums against the existing source windows. The
+sample correlations were 0.913–0.949, envelope correlations 0.946–0.980 and
+every best envelope lag was zero. The qualification report SHA-256 is
+`64b564798a6f338c66039e40981a5d562160c83451f2bc6d2a5411c56eba0eea`.
+It loaded no model, ran no transcription and does not treat the provider
+`Synth` label as truth.
+
+```bash
+.venv/bin/python scripts/qualify-fine-stem-synth-provider-estimates.py \
+  FRESH/fine-stem-synth-bottleneck-request-v1 \
+  SIX-ROLE-INTEGRATION-ROOT \
+  PRIVATE-PROVIDER-INPUTS.json \
+  --out FRESH/fine-stem-synth-provider-qualification-v1
+
+.venv/bin/python scripts/serve-fine-stem-synth-provider-review.py \
+  FRESH/fine-stem-synth-provider-qualification-v1
+```
+
+The source-visible presence review records playback automatically, autosaves
+on the local server and has no listened checkbox. Only a complete four-case
+presence result can produce the separately hash-bound 12-attempt MIDI plan;
+poor musical feedback still cannot disable core four.
 
 Serve that repaired review with:
 

@@ -264,6 +264,9 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /preferred guitar candidate MIDI in/);
   assert.match(html, /synth never beat grouped other/);
   assert.match(html, /source-present three-arm synth test/);
+  assert.match(html, /all four exact Suno Synth estimates are bound/);
+  assert.match(html, /zero best envelope lag/);
+  assert.match(html, /automatic playback recording and no listened checkbox/);
   assert.match(html, /technically valid but musically unsuccessful/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);
