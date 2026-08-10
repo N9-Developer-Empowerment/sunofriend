@@ -81,7 +81,16 @@ grouped-other control through the same transcriber. Its SHA-256 is
 `d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
 This will distinguish a likely separation bottleneck from a likely MIDI
 transcription/representation bottleneck before any training decision. The
-request grants no permission to open provider audio or run transcription.
+request grants no permission to run transcription. The four exact local Suno
+`Synth` estimates are now bound in a distinct private qualification report at
+SHA-256
+`64b564798a6f338c66039e40981a5d562160c83451f2bc6d2a5411c56eba0eea`.
+Their complete pack sums match the four existing source windows with
+0.913–0.949 sample correlation, 0.946–0.980 envelope correlation and zero best
+envelope lag. That proves song/clock alignment only. A source-visible local
+review must still confirm that each provider estimate contains the target
+before the exact 12-attempt plan can be emitted; playback is automatic and
+there is no listened checkbox.
 See
 [Synth-first fine-stem challenger](OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 

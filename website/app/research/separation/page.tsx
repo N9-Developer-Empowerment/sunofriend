@@ -234,7 +234,16 @@ export default function SeparationResearch() {
                 listened checkbox. A no-audio request now freezes a
                 source-present three-arm synth test—current estimate, provider
                 synth/keyboard estimate and grouped other through the same
-                transcriber—before any tuning or training decision.
+                transcriber—before any tuning or training decision. The missing
+                fourth provider pack has now been found and all four exact Suno
+                Synth estimates are bound. Their complete pack sums matched the
+                existing source windows with 0.913–0.949 sample correlation,
+                0.946–0.980 envelope correlation and zero best envelope lag.
+                That is song/clock evidence, not proof of the Synth label. A
+                source-visible local review is now open with automatic playback
+                recording and no listened checkbox; no MIDI transcription can
+                start until all four targets are confirmed present and a separate
+                exact 12-attempt plan is approved.
               </p>
             </div>
             <div className="agent-card">

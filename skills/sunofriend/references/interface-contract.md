@@ -164,7 +164,14 @@ The next no-audio request binds four source-present synth cases for a
 same-transcriber comparison of current synth, provider synth-or-keyboard and
 grouped other. Its SHA-256 is
 `d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
-It opens no provider audio and grants no execution or training authority.
+The four exact provider `Synth` estimates are now bound in private qualification
+report SHA-256
+`64b564798a6f338c66039e40981a5d562160c83451f2bc6d2a5411c56eba0eea`.
+All four pack sums aligned to the existing source windows with zero best
+envelope lag. This is clock evidence, not role truth. The source-visible local
+presence review records playback automatically and has no listened checkbox.
+Only four confirmed-present results may emit the separate exact 12-attempt
+plan; the qualification grants no MIDI execution or training authority.
 No Sunofriend command downloads music.
 
 ## Product outputs

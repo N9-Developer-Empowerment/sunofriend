@@ -174,3 +174,14 @@ qualification step, transcriber runner and source-present review must remain
 separate modules. This boundary prevents model-loading code, private paths and
 musical decisions from accumulating in the already large six-role integration
 test/runner surface.
+
+That provider boundary is now implemented as four focused modules rather than
+another branch in a model worker. `separation_fine_stem_synth_provider_qualification.py`
+owns exact private input identity, deterministic resampling, pack-sum alignment
+and PCM24 persistence. `separation_fine_stem_synth_provider_review.py` owns the
+source-visible, checkbox-free, autosaving localhost page.
+`separation_fine_stem_synth_provider_outcome.py` is a no-audio reducer, while
+`separation_fine_stem_synth_provider_midi_plan.py` can bind—without executing—
+the exact three arms and 12 attempt numbers only after four confirmed-present
+provider targets. This keeps provider file handling, human decisions and the
+future transcriber executor independently testable.
