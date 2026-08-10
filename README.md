@@ -356,6 +356,30 @@ on the local server and has no listened checkbox. Only a complete four-case
 presence result can produce the separately hash-bound 12-attempt MIDI plan;
 poor musical feedback still cannot disable core four.
 
+That source-visible three-arm MIDI comparison is now complete. Grouped other
+was preferred in all four synth cases, so Sunofriend retains grouped other as
+the MIDI control without discarding the separately qualified synth audio. The
+reviewed six-role excerpts can now be copied into an owner-only Studio package:
+
+```bash
+.venv/bin/python scripts/package-fine-stem-private-studio.py \
+  SIX-ROLE-INTEGRATION-ROOT \
+  FRESH/fine-stem-six-role-integration-outcome-v1/INTEGRATION-OUTCOME.json \
+  PRIVATE-MIDI-CANARY-ROOT \
+  FRESH/fine-stem-downstream-midi-outcome-v1/MIDI-OUTCOME.json \
+  FRESH/fine-stem-synth-provider-midi-outcome-v1/PROVIDER-SYNTH-MIDI-OUTCOME.json \
+  --out FRESH/fine-stem-private-studio-package-v1
+```
+
+The exact local build copied and re-hashed 72 PCM24 files across eight
+reviewed 15-second cases and wrote 16 explicit Studio catalogs. Each case has
+one six-role audio catalog and a separate grouped-other MIDI-control catalog;
+loading both as one source set would double-count synth and guitar. The package
+contains no MIDI, makes no source choice, loads no model and activates nothing.
+Its manifest SHA-256 is
+`4b5bce6daa00607a93257d33db3e1055ab651287458c21ccd637b304438053bd`.
+This is a private evaluation slice, not a full-song or public six-stem claim.
+
 Serve that repaired review with:
 
 ```bash

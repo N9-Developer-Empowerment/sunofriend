@@ -1117,6 +1117,15 @@ guided forms.
   provider estimate and grouped-other control available, transcribe only the
   three candidate arms with identical settings, use no listened checkbox and
   make no automatic retry or winner choice.
+  That exact comparison later completed and grouped other was preferred in all
+  four synth cases. Keep the qualified six-role audio evidence while retaining
+  grouped other as the MIDI control. Package the eight reviewed excerpts only
+  with `scripts/package-fine-stem-private-studio.py`; the exact manifest
+  SHA-256 is
+  `4b5bce6daa00607a93257d33db3e1055ab651287458c21ccd637b304438053bd`.
+  Every case has mutually exclusive six-role-audio and grouped-other-control
+  Studio catalogs. The package is private, excerpt-only, contains no MIDI and
+  grants no source selection, activation or full-song execution authority.
 - Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
   44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
   checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source
