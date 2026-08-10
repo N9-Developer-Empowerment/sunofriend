@@ -50,10 +50,10 @@ zero PCM24 LSB.
 The combined review rated synth `useful` in 2/4 confirmed-present cases and
 `partly_useful` in 2/4; guitar was `useful` in 4/4. All eight outputs had no
 catastrophic defect. The pure outcome is
-`private_six_role_integration_qualified`. Neither model is registered,
-publicly executable or selected for MIDI. Downstream MIDI musical usefulness
-remains unreviewed, three synth cases retained some missing content, and
-absent-role ratings were excluded from qualification. The no-effects
+`private_six_role_integration_qualified`. Neither model is registered or
+publicly executable and neither is selected for MIDI. Three synth cases
+retained some missing content and absent-role ratings were excluded from
+qualification. The no-effects
 downstream-MIDI plan is bound
 to the eight exact role-present artifacts with SHA-256
 `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
@@ -68,7 +68,20 @@ Guitar candidate MIDI beat the grouped-other control in 3/4 cases; synth was
 the same once and `cannot_tell` three times. The page used for that review
 omitted source audio, so the usefulness result is methodology-limited. The
 repaired local page includes exact source references and no checkbox. Poor
-results cannot disable the private six-role evidence.
+results cannot disable the private six-role evidence. A pure outcome records
+that limitation at SHA-256
+`d69863fb8ea59087ad6cfcd5669fee88db6afef6a7bd20809d42d88415c29a0c`:
+guitar has directional private evidence in 3/4 cases, while synth showed no
+isolated-stem advantage over grouped other.
+
+The next step is not another separator tuning loop. A no-audio request binds
+the exact four already-confirmed synth windows and freezes a source-present
+three-arm test: current synth estimate, provider synth/keyboard estimate and
+grouped-other control through the same transcriber. Its SHA-256 is
+`d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
+This will distinguish a likely separation bottleneck from a likely MIDI
+transcription/representation bottleneck before any training decision. The
+request grants no permission to open provider audio or run transcription.
 See
 [Synth-first fine-stem challenger](OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 

@@ -243,9 +243,9 @@ six-role review, synth was `useful` in 2/4 confirmed-present cases and
 `partly_useful` in 2/4; guitar was `useful` in 4/4. All eight outputs had no
 catastrophic defect. The exact no-effects outcome is
 `private_six_role_integration_qualified`. This is positive private Studio
-evidence, not a public six-stem product claim: downstream MIDI musical
-usefulness still awaits review, three synth cases retained some content outside
-the synth estimate, and model terms/resources still constrain release tier.
+evidence, not a public six-stem product claim: three synth cases retained some
+content outside the synth estimate, the first downstream-MIDI review is
+methodology-limited, and model terms/resources still constrain release tier.
 
 A no-effects integration plan bound the exact reports and reviews, reused the
 eight persisted primary estimates, and fixed a grouped-other-constrained
@@ -300,6 +300,40 @@ omitted the source reference, so these are methodology-limited findings rather
 than promotion evidence. The repaired local review now shows the exact source
 window beside A/B without changing the saved answers or requiring another
 checkbox. Poor results cannot disable the qualified six-role evidence.
+
+The completed review is now reduced into a pure, hashed outcome. It records
+guitar as directional private evidence, records no isolated-stem synth
+advantage, and grants no model, audio, MIDI, source-selection or activation
+authority:
+
+```bash
+.venv/bin/python scripts/record-fine-stem-downstream-midi-outcome.py \
+  PRIVATE-MIDI-CANARY-ROOT \
+  --out FRESH/fine-stem-downstream-midi-outcome-v1
+```
+
+The outcome SHA-256 is
+`d69863fb8ea59087ad6cfcd5669fee88db6afef6a7bd20809d42d88415c29a0c`.
+The next no-audio request binds the exact four source-present synth cases and
+freezes a three-arm attribution test: current synth estimate, provider
+synth/keyboard estimate and grouped-other control, all through the same
+transcriber with the source visible during review. It neither opens provider
+audio nor authorises the later 12-attempt run:
+
+```bash
+.venv/bin/python scripts/plan-fine-stem-synth-bottleneck.py \
+  PRIVATE-MIDI-CANARY-ROOT \
+  SIX-ROLE-INTEGRATION-ROOT \
+  FRESH/fine-stem-downstream-midi-outcome-v1/MIDI-OUTCOME.json \
+  --out FRESH/fine-stem-synth-bottleneck-request-v1
+```
+
+The request SHA-256 is
+`d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
+Three songs already have catalogued local provider packs; the exact artifacts
+are deliberately not bound yet. `Uni Ava` needs the best available local
+provider synth, keyboard or keys estimate. Provider stems remain comparison
+estimates, not truth.
 
 Serve that repaired review with:
 

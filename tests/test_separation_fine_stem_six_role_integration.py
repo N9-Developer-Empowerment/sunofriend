@@ -42,6 +42,16 @@ from sunofriend.separation_fine_stem_midi_review import (
     render_midi_canary_review,
     validate_midi_review,
 )
+from sunofriend.separation_fine_stem_midi_outcome import (
+    build_fine_stem_midi_outcome,
+    midi_outcome_document_sha256,
+    validate_fine_stem_midi_outcome,
+)
+from sunofriend.separation_fine_stem_synth_bottleneck_plan import (
+    SYNTH_BOTTLENECK_PLAN_STATUS,
+    build_fine_stem_synth_bottleneck_plan,
+    validate_fine_stem_synth_bottleneck_plan,
+)
 from sunofriend.separation_fine_stem_integration_review import (
     build_integration_review_seed,
     build_integration_review_server,
@@ -280,7 +290,9 @@ def test_downstream_midi_plan_rejects_wrong_outcome_binding() -> None:
         raise AssertionError("wrong integration outcome binding was accepted")
 
 
-def _execute_test_midi_canary(tmp_path: Path) -> tuple[Path, dict, list[tuple[str, str]]]:
+def _execute_test_midi_canary(
+    tmp_path: Path,
+) -> tuple[Path, dict, list[tuple[str, str]]]:
     import soundfile as sf
 
     root = tmp_path / "integration"
@@ -388,12 +400,16 @@ def test_downstream_midi_canary_runs_exact_budget_and_reconstructs_control(
     assert validated["effects"]["separator_inference_attempts"] == 0
     assert validated["effects"]["source_selected"] is False
     for case in validated["cases"]:
-        control = destination / case["grouped_other_control"]["artifact"][
-            "relative_path"
-        ]
+        control = (
+            destination / case["grouped_other_control"]["artifact"]["relative_path"]
+        )
         persisted = sf.read(control, dtype="float64", always_2d=True)[0]
         source_sum = sum(
-            sf.read(destination.parent / "integration" / "INPUTS" / f"{role}.wav", dtype="float64", always_2d=True)[0]
+            sf.read(
+                destination.parent / "integration" / "INPUTS" / f"{role}.wav",
+                dtype="float64",
+                always_2d=True,
+            )[0]
             for role in ("synth", "guitar", "other")
         )
         assert np.array_equal(
@@ -439,9 +455,9 @@ def test_downstream_midi_review_is_checkbox_free_bound_and_saved(
     thread.start()
     try:
         connection = http.client.HTTPConnection(*server.server_address, timeout=5)
-        route = "/" + report["cases"][0]["outputs"]["candidate"]["preview"][
-            "relative_path"
-        ]
+        route = (
+            "/" + report["cases"][0]["outputs"]["candidate"]["preview"]["relative_path"]
+        )
         connection.request("GET", route, headers={"Range": "bytes=1-4"})
         response = connection.getresponse()
         assert response.status == 206
@@ -459,24 +475,131 @@ def test_downstream_midi_review_is_checkbox_free_bound_and_saved(
         )
         saved = connection.getresponse()
         assert saved.status == 200
-        assert json.loads(saved.read())["document_sha256"] == validated[
-            "document_sha256"
-        ]
+        assert (
+            json.loads(saved.read())["document_sha256"] == validated["document_sha256"]
+        )
     finally:
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
 
 
+def _completed_midi_review(report: dict) -> dict:
+    review = build_midi_review_seed(report)
+    for index, case in enumerate(review["cases"]):
+        role = report["cases"][index]["confirmed_present_target_role"]
+        case["played_items"] = ["A", "B"]
+        case["listened"] = True
+        case["recognisable_notes"] = (
+            "partly_useful" if role == "synth" else "not_useful"
+        )
+        case["timing_usefulness"] = "partly_useful"
+        case["edit_workload"] = "moderate"
+        case["candidate_vs_control"] = "same" if role == "synth" else "candidate_better"
+    review["status"] = "human_listening_complete_no_selection"
+    return review
+
+
+def test_downstream_midi_outcome_records_source_omission_without_authority(
+    tmp_path: Path,
+) -> None:
+    _destination, report, _calls = _execute_test_midi_canary(tmp_path)
+    outcome = validate_fine_stem_midi_outcome(
+        build_fine_stem_midi_outcome(
+            report=report,
+            review=_completed_midi_review(report),
+            source_reference_present_during_completed_review=False,
+            repaired_page_source_reference_present=True,
+        )
+    )
+
+    assert outcome["status"] == (
+        "private_midi_evidence_recorded_source_reference_limited"
+    )
+    assert outcome["decisions"]["synth"]["status"] == (
+        "bottleneck_attribution_required"
+    )
+    assert outcome["targets"][0]["candidate_better_case_count"] == 0
+    assert outcome["targets"][1]["candidate_better_case_count"] == 4
+    assert not any(outcome["effects"].values())
+    assert outcome["boundaries"]["source_selected"] is False
+
+    outcome["boundaries"]["source_selected"] = True
+    outcome["document_sha256"] = midi_outcome_document_sha256(outcome)
+    try:
+        validate_fine_stem_midi_outcome(outcome)
+    except ValueError as error:
+        assert "grants permission" in str(error)
+    else:
+        raise AssertionError("permission-granting MIDI outcome was accepted")
+
+
+def test_synth_bottleneck_request_binds_source_present_three_arm_cohort(
+    tmp_path: Path,
+) -> None:
+    destination, report, _calls = _execute_test_midi_canary(tmp_path)
+    review = _completed_midi_review(report)
+    outcome = build_fine_stem_midi_outcome(
+        report=report,
+        review=review,
+        source_reference_present_during_completed_review=False,
+        repaired_page_source_reference_present=True,
+    )
+    integration_report = json.loads(
+        (
+            destination.parent / "integration/TECHNICAL/INTEGRATION-REPORT.json"
+        ).read_text()
+    )
+    provider_corpus = {
+        "schema": "sunofriend.authorised-separation-corpus.v1",
+        "status": "local_audio_not_committed",
+        "checked_on": "2026-07-31",
+        "tracks": [
+            {
+                "id": track_id,
+                "directory": track_id,
+                "suno": {"packs": 1},
+                "moises": {"files": 17},
+            }
+            for track_id in list(TRACK_METADATA)[:3]
+        ],
+    }
+    plan = validate_fine_stem_synth_bottleneck_plan(
+        build_fine_stem_synth_bottleneck_plan(
+            midi_report=report,
+            midi_outcome=outcome,
+            integration_report=integration_report,
+            provider_corpus=provider_corpus,
+        )
+    )
+
+    assert plan["status"] == SYNTH_BOTTLENECK_PLAN_STATUS
+    assert len(plan["cases"]) == 4
+    assert plan["provider_corpus"]["catalogued_track_count"] == 3
+    assert (
+        plan["required_inputs_before_execution_plan"]["missing_exact_artifact_count"]
+        == 4
+    )
+    assert plan["future_execution_contract"]["midi_transcription_attempt_budget"] == 12
+    assert all(
+        case["target_presence"]["status"]
+        == "human_reviewed_present_before_separator_canary"
+        for case in plan["cases"]
+    )
+    assert plan["boundaries"]["ready_for_execution"] is False
+    assert not any(plan["effects"].values())
+
+
 def test_downstream_midi_runner_requires_sandbox_and_one_worker_call() -> None:
     source = (
-        Path(__file__).parents[1]
-        / "scripts/run-fine-stem-downstream-midi-canary.py"
+        Path(__file__).parents[1] / "scripts/run-fine-stem-downstream-midi-canary.py"
     ).read_text()
     assert source.count("subprocess.run(") == 1
     assert '"(version 1)(deny network*)(allow default)"' in source
     assert '"--network-denial-enforced"' in source
-    assert "the single downstream-MIDI canary attempt failed; no retry was run" in source
+    assert (
+        "the single downstream-MIDI canary attempt failed; no retry was run" in source
+    )
 
 
 def test_six_role_review_server_ranges_and_saves(tmp_path: Path) -> None:

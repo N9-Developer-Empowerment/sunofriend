@@ -1101,7 +1101,22 @@ guided forms.
   `cannot_tell` three times. Because the first page omitted its source player,
   usefulness ratings are methodology-limited. The repaired localhost page
   serves the exact source window, retains saved answers and adds no listened
-  checkbox. Poor results cannot disable the six-role evidence.
+  checkbox. Poor results cannot disable the six-role evidence. Record the
+  completed review using
+  `scripts/record-fine-stem-downstream-midi-outcome.py`; its pure outcome
+  SHA-256 is
+  `d69863fb8ea59087ad6cfcd5669fee88db6afef6a7bd20809d42d88415c29a0c`.
+  It grants no activation, selection or new MIDI authority. Use
+  `scripts/plan-fine-stem-synth-bottleneck.py` only to reproduce the no-audio
+  provider-input request at SHA-256
+  `d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
+  Before any execution plan, bind four exact source-aligned provider synth,
+  keyboard or keys estimates with rights, hashes and human-confirmed target
+  presence. A provider label is not presence evidence and a provider stem is
+  not truth. The future three-arm test must keep source, current synth,
+  provider estimate and grouped-other control available, transcribe only the
+  three candidate arms with identical settings, use no listened checkbox and
+  make no automatic retry or winner choice.
 - Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
   44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
   checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source

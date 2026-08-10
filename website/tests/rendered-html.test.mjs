@@ -261,7 +261,9 @@ test("publishes honest separation research and existing feedback routes", async 
   assert.match(html, /frozen MIDI-usefulness plan was later/);
   assert.match(html, /verified all 24 inputs/);
   assert.match(html, /completed 16 same-settings/);
-  assert.match(html, /Human A\/B review is pending/);
+  assert.match(html, /preferred guitar candidate MIDI in/);
+  assert.match(html, /synth never beat grouped other/);
+  assert.match(html, /source-present three-arm synth test/);
   assert.match(html, /technically valid but musically unsuccessful/);
   assert.match(html, /local noncommercial research/);
   assert.match(html, /30 days or 10 valid submissions/);

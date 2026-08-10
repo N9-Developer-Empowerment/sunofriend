@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-09.18"
+INTERFACE_CONTRACT_VERSION = "2026-08-10.1"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -271,8 +271,8 @@ def render_skill_interface_reference() -> str:
         "`useful` in 2/4 confirmed-present cases and `partly_useful` in 2/4; guitar was",
         "`useful` in 4/4. All eight outputs had no catastrophic defect, so the pure",
         "outcome is `private_six_role_integration_qualified`. The profiles remain",
-        "unregistered and non-public. Downstream MIDI musical usefulness is unreviewed,",
-        "three synth cases reported some missing content, and absent-role ratings are excluded.",
+        "unregistered and non-public. Three synth cases reported some missing content,",
+        "and absent-role ratings are excluded.",
         "The",
         "outcome grants no retry, activation, selection, MIDI, hosting, redistribution",
         "or upload. A no-effects candidate-versus-grouped-other MIDI plan now binds",
@@ -290,7 +290,15 @@ def render_skill_interface_reference() -> str:
         "player, so usefulness ratings remain methodology-limited. The repaired local",
         "page serves exact source windows without changing saved answers or adding a",
         "listened checkbox. Musical feedback cannot disable the core-four route or",
-        "erase the private six-role evidence.",
+        "erase the private six-role evidence. A pure no-effects outcome records",
+        "guitar as directional private evidence and no isolated-stem synth advantage;",
+        "its SHA-256 is",
+        "`d69863fb8ea59087ad6cfcd5669fee88db6afef6a7bd20809d42d88415c29a0c`.",
+        "The next no-audio request binds four source-present synth cases for a",
+        "same-transcriber comparison of current synth, provider synth-or-keyboard and",
+        "grouped other. Its SHA-256 is",
+        "`d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.",
+        "It opens no provider audio and grants no execution or training authority.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",

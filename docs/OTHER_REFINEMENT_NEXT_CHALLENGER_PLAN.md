@@ -340,7 +340,23 @@ The remaining gates are deliberately one-way:
    reference, so these findings cannot promote either route. The repaired
    localhost page serves each exact source window without changing saved
    answers or adding a checkbox. Retain poor results without disabling private
-   six-role evidence or choosing a source.
+   six-role evidence or choosing a source; and
+17. **Complete, no effects:** the pure downstream-MIDI outcome has SHA-256
+   `d69863fb8ea59087ad6cfcd5669fee88db6afef6a7bd20809d42d88415c29a0c`.
+   It retains guitar as directional private evidence, records no isolated-stem
+   synth advantage and explicitly denies promotion, selection, retry and MIDI
+   authority; and
+18. **Complete request, awaiting exact provider inputs:** the source-present
+   synth bottleneck request has SHA-256
+   `d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
+   It binds the four existing confirmed-present source/current/control cases
+   but opens no audio. The future experiment has three arms per song—current
+   synth, provider synth/keyboard estimate and grouped other—under the same
+   transcriber, BPM, key, tuning and window. The source is visible during
+   review and there is no listened checkbox. Three tracks have catalogued
+   provider packs; all four exact provider artifacts still require private
+   path, rights, alignment, size, SHA-256 and target-presence binding before a
+   separately approved 12-attempt execution plan can exist.
 
 The completed synth report SHA-256 is
 `b985dd021c33564967f445cb30697c50cb03362c7407b8aee21a54449c3caabf`;
@@ -428,6 +444,33 @@ Its SHA-256 is
 The plan records exact BPM/key/tuning metadata rather than guessing, uses the
 existing synth transcriber and the disclosed conservative polyphonic-keys
 transcriber for guitar, and grants no execution or source-selection authority.
+
+Record the completed source-omitted review as an immutable limitation without
+opening audio:
+
+```bash
+.venv/bin/python scripts/record-fine-stem-downstream-midi-outcome.py \
+  PRIVATE-MIDI-CANARY-ROOT \
+  --out FRESH/fine-stem-downstream-midi-outcome-v1
+```
+
+Then reproduce the provider-input request, also without opening audio:
+
+```bash
+.venv/bin/python scripts/plan-fine-stem-synth-bottleneck.py \
+  PRIVATE-MIDI-CANARY-ROOT \
+  SIX-ROLE-INTEGRATION-ROOT \
+  FRESH/fine-stem-downstream-midi-outcome-v1/MIDI-OUTCOME.json \
+  --out FRESH/fine-stem-synth-bottleneck-request-v1
+```
+
+Do not substitute a provider label for target-presence evidence and do not
+treat a provider estimate as truth. Prefer a discrete synth estimate; use a
+broader keyboard or keys estimate only with its overlap disclosed. If provider
+MIDI succeeds while the current estimate fails, separation is the likely
+bottleneck. If both fail, the transcriber or editable representation is the
+likely bottleneck. `cannot_tell` stays inconclusive and never triggers an
+automatic retry.
 
 The single approved forward completed in 18.19 seconds at 15,424,362,972-byte
 peak MLX allocation. Its exact `[1, 53, 2, 881664]` float32 output was finite,

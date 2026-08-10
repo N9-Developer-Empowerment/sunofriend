@@ -226,7 +226,15 @@ export default function SeparationResearch() {
                 exact grouped-other controls and completed 16 same-settings
                 transcriptions, publishing private MIDI and loudness-matched
                 neutral previews without rerunning separation or making a
-                source choice. Human A/B review is pending.
+                source choice. The completed review preferred guitar candidate MIDI in
+                three of four cases; synth never beat grouped other. Because
+                that first page omitted the source mix, the pure outcome keeps
+                both findings methodology-limited and grants no promotion or
+                source choice. The repaired page includes the source without a
+                listened checkbox. A no-audio request now freezes a
+                source-present three-arm synth test—current estimate, provider
+                synth/keyboard estimate and grouped other through the same
+                transcriber—before any tuning or training decision.
               </p>
             </div>
             <div className="agent-card">

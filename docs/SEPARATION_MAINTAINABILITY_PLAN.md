@@ -163,3 +163,14 @@ playback through `play`, `playing` and positive `timeupdate`, and waits for a
 successful atomic save before downloading. Rendered-script syntax and the
 server save/download contract are regression-tested. Future review pages should
 reuse these primitives instead of embedding new one-line scripts.
+
+The downstream decision increment now has two additional pure modules instead
+of extending the model runner. `separation_fine_stem_midi_outcome.py` owns only
+review aggregation, methodology disclosure and no-authority outcome validation.
+`separation_fine_stem_synth_bottleneck_plan.py` joins report identities and
+provider-manifest metadata without opening audio, then emits an explicitly
+non-executable request for four exact provider estimates. A later provider
+qualification step, transcriber runner and source-present review must remain
+separate modules. This boundary prevents model-loading code, private paths and
+musical decisions from accumulating in the already large six-role integration
+test/runner surface.
