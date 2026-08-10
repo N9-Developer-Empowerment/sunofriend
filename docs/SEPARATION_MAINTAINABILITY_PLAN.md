@@ -224,3 +224,17 @@ provider estimate twice and tied it twice. This is a MIDI-method result, not a
 rejection of the earlier human-reviewed synth audio evidence. The reducer
 opens no audio, grants no source selection or activation, and explicitly keeps
 private Studio audio admission separate from the choice of MIDI input.
+
+The private Studio packaging increment is deliberately split again. The pure
+`separation_fine_stem_studio_package_contract.py` module owns evidence
+cross-binding, catalog definitions, immutable policy and document validation.
+The filesystem-facing `separation_fine_stem_studio_package.py` module owns only
+verified copying, owner-only permissions, pre-publication re-hashing, atomic
+rename and completed-package verification. It publishes mutually exclusive
+six-role-audio and grouped-other-control catalogs, so Studio cannot silently
+double-count synth and guitar. The exact eight-case package was verified at
+manifest SHA-256
+`4b5bce6daa00607a93257d33db3e1055ab651287458c21ccd637b304438053bd`;
+it contains no MIDI and grants no model, source-selection or activation
+authority. Keep future full-song execution, profile admission and product
+routing out of both packaging modules.

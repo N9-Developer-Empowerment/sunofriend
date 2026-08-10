@@ -199,6 +199,14 @@ on.
   `scripts/record-fine-stem-synth-provider-midi-outcome.py`; do not turn it into
   an automatic MIDI choice or another tuning loop. Provider stems remain
   comparison estimates, not truth.
+  The qualified eight-case audio evidence is now available in one owner-only
+  package produced by `scripts/package-fine-stem-private-studio.py`. Its exact
+  manifest SHA-256 is
+  `4b5bce6daa00607a93257d33db3e1055ab651287458c21ccd637b304438053bd`.
+  Each case exposes either a six-role audio catalog or a separate grouped-other
+  MIDI-control catalog; never load both as one source set because grouped other
+  equals synth plus guitar plus residual other. The package contains no MIDI,
+  chooses nothing and is neither full-song nor public evidence.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
