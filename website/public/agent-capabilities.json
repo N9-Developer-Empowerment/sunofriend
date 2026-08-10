@@ -807,6 +807,32 @@
               "synth_candidate_better_cases": 0,
               "methodology_limitation": "The completed review page omitted the exact source reference; the repaired localhost page includes it without changing saved answers."
             },
+            "downstream_midi_outcome": {
+              "status": "private_midi_evidence_recorded_source_reference_limited",
+              "document_sha256": "d69863fb8ea59087ad6cfcd5669fee88db6afef6a7bd20809d42d88415c29a0c",
+              "guitar_decision": "retain_private_studio_challenger_directional_only",
+              "synth_decision": "bottleneck_attribution_required",
+              "source_reference_present_during_completed_review": false,
+              "repaired_page_source_reference_present": true,
+              "audio_reads": 0,
+              "midi_transcription_attempts": 0,
+              "public_activation_authorized": false,
+              "source_selection_authorized": false
+            },
+            "synth_bottleneck_request": {
+              "status": "awaiting_four_provider_synth_or_keyboard_estimates",
+              "document_sha256": "d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a",
+              "confirmed_present_case_count": 4,
+              "catalogued_provider_pack_count": 3,
+              "exact_provider_artifacts_bound": 0,
+              "future_arms_per_case": 3,
+              "future_midi_transcription_attempt_budget": 12,
+              "source_reference_required_during_review": true,
+              "provider_estimates_are_ground_truth": false,
+              "audio_opened": false,
+              "ready_for_execution": false,
+              "training_authorized": false
+            },
             "downstream_midi_tested": "human_review_complete_source_reference_limited",
             "registered": false,
             "public_activation_authorized": false,
@@ -826,7 +852,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "after separate explicit private MIDI authority, execute the frozen 16-attempt candidate-versus-grouped-other transcription canary; no separator rerun, activation or automatic source choice is implied"
+        "next_gate": "bind exact local provider synth, keyboard or keys estimates for the four source-present synth windows, including rights, alignment, hashes and human target-presence confirmation; only then create a separately approved 12-attempt same-transcriber bottleneck plan"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,
