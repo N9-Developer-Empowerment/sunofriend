@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import hashlib
 import html
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
 import json
 from pathlib import Path
-import re
 from typing import Any, Mapping
 
 from .separation_fine_stem_canary_audio import file_sha256
 from .separation_fine_stem_integration_report import (
     ARTIFACT_ROLES,
     validate_fine_stem_integration_report,
+)
+from .separation_review_transport import (
+    LocalReviewRequestHandler,
+    atomic_write_private_json,
 )
 
 
@@ -392,38 +395,31 @@ def build_integration_review_server(root: str | Path, *, host: str = "127.0.0.1"
                 raise ValueError("fine-stem integration review audio identity differs")
             routes["/" + artifact["relative_path"]] = path
 
-    class Handler(BaseHTTPRequestHandler):
+    class Handler(LocalReviewRequestHandler):
         server_version = "SunofriendSixRoleReview/1"
 
         def do_GET(self) -> None:  # noqa: N802
             route = self.path.partition("?")[0]
             if route in {"/", "/REVIEW/six_role_review.html"}:
-                self._send(200, "text/html; charset=utf-8", page)
+                self.send_no_store(200, "text/html; charset=utf-8", page)
             elif route == "/healthz":
-                self._send(200, "application/json", b'{"status":"ok"}\n')
+                self.send_no_store(200, "application/json", b'{"status":"ok"}\n')
             elif route == "/saved-result" and result_path.is_file():
-                self._send(200, "application/json", result_path.read_bytes())
+                self.send_no_store(200, "application/json", result_path.read_bytes())
             elif route == "/download-review" and result_path.is_file():
-                body = result_path.read_bytes()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header(
-                    "Content-Disposition",
-                    'attachment; filename="sunofriend-six-role-listening.json"',
+                self.send_attachment(
+                    result_path.read_bytes(),
+                    filename="sunofriend-six-role-listening.json",
                 )
-                self.send_header("Content-Length", str(len(body)))
-                self.send_header("Cache-Control", "no-store")
-                self.end_headers()
-                self.wfile.write(body)
             elif route in routes:
-                self._audio(routes[route])
+                self.send_ranged_file(routes[route], "audio/wav")
             else:
                 self.send_error(404)
 
         def do_HEAD(self) -> None:  # noqa: N802
             route = self.path.partition("?")[0]
             if route in routes:
-                self._audio(routes[route], body=False)
+                self.send_ranged_file(routes[route], "audio/wav", body=False)
             else:
                 self.send_error(404)
 
@@ -431,73 +427,15 @@ def build_integration_review_server(root: str | Path, *, host: str = "127.0.0.1"
             if self.path != "/save-review":
                 self.send_error(404)
                 return
-            length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > 1_000_000:
-                self.send_error(413)
-                return
             try:
                 value = validate_integration_review(
-                    json.loads(self.rfile.read(length)), report
+                    self.read_review_json(), report
                 )
-                payload = (
-                    json.dumps(value, indent=2, sort_keys=True, allow_nan=False)
-                    + "\n"
-                ).encode()
-                temporary = result_path.with_suffix(".json.tmp")
-                temporary.write_bytes(payload)
-                temporary.chmod(0o600)
-                temporary.replace(result_path)
-            except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
-                self._send(
-                    400,
-                    "application/json",
-                    json.dumps({"error": str(error)}).encode(),
-                )
+                payload = atomic_write_private_json(result_path, value)
+            except (OSError, UnicodeError, ValueError) as error:
+                self.send_review_error(error)
                 return
-            self._send(200, "application/json", payload)
-
-        def _send(self, status: int, content_type: str, body: bytes) -> None:
-            self.send_response(status)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(body)
-
-        def _audio(self, path: Path, *, body: bool = True) -> None:
-            size = path.stat().st_size
-            start, end, status = 0, size - 1, 200
-            header = self.headers.get("Range")
-            if header:
-                match = re.fullmatch(r"bytes=(\d*)-(\d*)", header.strip())
-                if match is None or (not match.group(1) and not match.group(2)):
-                    self.send_error(416)
-                    return
-                if match.group(1):
-                    start = int(match.group(1))
-                    end = int(match.group(2)) if match.group(2) else end
-                else:
-                    start = max(0, size - int(match.group(2)))
-                if start >= size or end < start:
-                    self.send_error(416)
-                    return
-                end, status = min(end, size - 1), 206
-            length = end - start + 1
-            self.send_response(status)
-            self.send_header("Content-Type", "audio/wav")
-            self.send_header("Accept-Ranges", "bytes")
-            self.send_header("Content-Length", str(length))
-            if status == 206:
-                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            if body:
-                with path.open("rb") as handle:
-                    handle.seek(start)
-                    self.wfile.write(handle.read(length))
-
-        def log_message(self, _format: str, *_args: Any) -> None:
-            return
+            self.send_no_store(200, "application/json", payload)
 
     return ThreadingHTTPServer((host, port), Handler)
 

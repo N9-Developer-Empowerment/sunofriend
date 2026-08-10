@@ -185,3 +185,15 @@ source-visible, checkbox-free, autosaving localhost page.
 the exact three arms and 12 attempt numbers only after four confirmed-present
 provider targets. This keeps provider file handling, human decisions and the
 future transcriber executor independently testable.
+
+The localhost transport shared by the active fine-stem reviews is now isolated
+in `separation_review_transport.py`. Review-specific modules continue to own
+their schemas, report bindings and page content; the shared layer owns only
+bounded JSON request parsing, owner-only atomic persistence, downloads and
+single-range file responses. It uses unique same-directory temporary files so
+autosaves cannot collide, streams large responses in bounded blocks and emits
+an explicit `Content-Range: bytes */SIZE` for unsatisfiable browser requests.
+The provider-synth, MIDI, six-role, fine-stem canary and target-presence servers
+all use this transport. Compatibility tests retain their existing JSON schemas
+and hashes, while transport tests cover open-ended and suffix ranges, malformed
+or multiple ranges, non-finite JSON and refusal to create a new evidence tree.

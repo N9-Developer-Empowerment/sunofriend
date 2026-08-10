@@ -344,7 +344,34 @@ def test_provider_review_is_source_visible_checkbox_free_and_saved(
         )
         audio = connection.getresponse()
         assert audio.status == 206
+        assert audio.getheader("Content-Range").startswith("bytes 2-5/")
         assert len(audio.read()) == 4
+        connection.request(
+            "GET",
+            f"/audio/{case_id}/provider_synth.wav",
+            headers={"Range": "bytes=-4"},
+        )
+        suffix = connection.getresponse()
+        assert suffix.status == 206
+        assert len(suffix.read()) == 4
+        connection.request(
+            "GET",
+            f"/audio/{case_id}/provider_synth.wav",
+            headers={"Range": "bytes=999999999-"},
+        )
+        invalid_range = connection.getresponse()
+        assert invalid_range.status == 416
+        assert invalid_range.getheader("Content-Range").startswith("bytes */")
+        assert invalid_range.read() == b""
+        connection.request(
+            "POST",
+            "/save-review",
+            body=b"{",
+            headers={"Content-Type": "application/json"},
+        )
+        invalid_json = connection.getresponse()
+        assert invalid_json.status == 400
+        assert "invalid review JSON" in json.loads(invalid_json.read())["error"]
         connection.request(
             "POST",
             "/save-review",
