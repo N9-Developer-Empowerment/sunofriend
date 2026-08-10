@@ -1126,6 +1126,24 @@ guided forms.
   Every case has mutually exclusive six-role-audio and grouped-other-control
   Studio catalogs. The package is private, excerpt-only, contains no MIDI and
   grants no source selection, activation or full-song execution authority.
+  The next bounded artifact is the no-effects full-song plan produced by
+  `scripts/plan-fine-stem-full-song-six-role.py`. It binds one three-song corpus
+  in fixed coverage slots: one track with separately confirmed synth and guitar
+  windows, one synth track and one guitar track. Require distinct track IDs,
+  exact qualified presence case IDs, the exact integration outcome, explicit
+  rights, stable source identities and regular-file byte-count observations
+  without opening audio content. Score only confirmed-present specialist roles;
+  an unconfirmed complementary role is not a failure. The frozen execution is
+  three sequential model loads and nine full-song profile attempts with one
+  writer, network denial, no automatic retry and zero remediation cycles.
+  The review records playback automatically, has no listened checkbox, replays
+  the confirmed-present windows and does not require exhaustive internal
+  boundary ratings or any minimum usefulness. Poor listening evidence adds a
+  limitation and cannot disable core four or trigger configuration search.
+  The current document SHA-256 is
+  `869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`.
+  It is a plan, not execution authority; full-song processing, activation,
+  source selection, MIDI, hosting, redistribution and upload remain false.
 - Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
   44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
   checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source

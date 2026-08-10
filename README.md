@@ -380,6 +380,31 @@ Its manifest SHA-256 is
 `4b5bce6daa00607a93257d33db3e1055ab651287458c21ccd637b304438053bd`.
 This is a private evaluation slice, not a full-song or public six-stem claim.
 
+The next full-song step is now frozen without running a model. It binds exactly
+three song-disjoint sources whose requested instruments were confirmed present
+before inference: `I am a Alien mashup` for both synth and guitar, `Be Alone`
+for synth and `In the way` for guitar. Only those confirmed-present specialist
+roles are scored; an unconfirmed complementary role is not a model failure.
+The plan fixes three sequential profile loads, nine full-song profile attempts,
+no automatic retry, no remediation cycle and no minimum usefulness rating.
+Its document SHA-256 is
+`869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`.
+
+```bash
+.venv/bin/python scripts/plan-fine-stem-full-song-six-role.py \
+  PRIVATE-PRESENCE-ROOT \
+  PRIVATE-INTEGRATION-OUTCOME.json \
+  --source-root /absolute/path/to/stem_examples \
+  --both-targets-track i-am-a-alien-mashup \
+  --synth-track be-alone \
+  --guitar-track in-the-way \
+  --out PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1
+```
+
+Planning checks source metadata only; it opens no audio content and grants no
+execution, activation, source-selection or MIDI authority. See
+[Private full-song six-role canary plan](docs/FINE_STEM_FULL_SONG_PLAN.md).
+
 Serve that repaired review with:
 
 ```bash

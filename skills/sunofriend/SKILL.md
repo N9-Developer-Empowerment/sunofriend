@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-10.1 -->
+<!-- sunofriend-interface-contract: 2026-08-11.1 -->
 
 # Sunofriend
 
@@ -207,6 +207,19 @@ on.
   MIDI-control catalog; never load both as one source set because grouped other
   equals synth plus guitar plus residual other. The package contains no MIDI,
   chooses nothing and is neither full-song nor public evidence.
+  The next immutable no-effects full-song plan is produced by
+  `scripts/plan-fine-stem-full-song-six-role.py`. Its exact document SHA-256 is
+  `869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`.
+  It binds three song-disjoint owner-authorised sources: one with separately
+  confirmed synth and guitar windows, one synth case and one guitar case. Only
+  confirmed-present specialist roles are scored; the other specialist may be
+  absent without becoming a model failure. The plan fixes three sequential
+  model loads, nine full-song profile attempts, no automatic retry, no
+  remediation cycle, automatic playback recording and no usefulness minimum.
+  Planning observes regular-file paths and byte counts only; it opens no audio
+  content. The plan remains non-executable until its exact hash is separately
+  approved and grants no activation, source selection, MIDI, hosting,
+  redistribution or upload.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

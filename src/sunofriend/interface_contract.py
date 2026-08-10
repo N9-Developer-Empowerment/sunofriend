@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-10.1"
+INTERFACE_CONTRACT_VERSION = "2026-08-11.1"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -306,6 +306,15 @@ def render_skill_interface_reference() -> str:
         "presence review records playback automatically and has no listened checkbox.",
         "Only four confirmed-present results may emit the separate exact 12-attempt",
         "plan; the qualification grants no MIDI execution or training authority.",
+        "The qualified excerpt evidence is also copied into one owner-only private",
+        "Studio package with mutually exclusive six-role-audio and grouped-other",
+        "control catalogs. It contains no MIDI and is neither full-song nor public",
+        "evidence. The next no-effects full-song plan is fixed at SHA-256",
+        "`869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`.",
+        "It binds three song-disjoint sources with pre-inference synth/guitar",
+        "presence evidence, scores only confirmed-present roles and permits no",
+        "automatic retry, remediation cycle or minimum usefulness veto. It opens no",
+        "audio content and remains non-executable until separately approved.",
         "No Sunofriend command downloads music.",
         "",
         "## Product outputs",
