@@ -5,45 +5,42 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-import math
 import os
 from pathlib import Path
 import shutil
-import stat
 import tempfile
 import time
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping
 
 import numpy as np
 
 from .midi import MidiTrack, write_midi_file
-from .models import NoteEvent
-from .separation_fine_stem_canary_audio import (
-    PCM24_MAX,
-    PCM24_MIN,
-    PCM24_SCALE,
-    file_sha256,
-)
+from .separation_fine_stem_canary_audio import PCM24_MAX, PCM24_MIN, file_sha256
 from .separation_fine_stem_integration_report import (
     validate_fine_stem_integration_report,
 )
 from .separation_fine_stem_midi_plan import (
     validate_fine_stem_midi_plan,
 )
+from .separation_midi_comparison import (
+    TRANSCRIPTION_PARAMETERS,
+    Renderer,
+    Transcriber,
+    artifact as _artifact,
+    make_private as _make_private,
+    match_preview_loudness,
+    read_pcm24_integer as _read_pcm24_integer,
+    regular_inside as _regular_inside,
+    render_to_fixed_float as _render_to_fixed_float,
+    validated_notes as _validated_notes,
+    verify_audio_identity as _verify_audio_identity,
+    write_notes as _write_notes,
+    write_pcm24 as _write_pcm24,
+)
 
 
 CANARY_SCHEMA = "sunofriend.fine-stem-downstream-midi-canary.v1"
 CANARY_STATUS = "complete_private_review_required_no_selection"
-SAMPLE_RATE_HZ = 44_100
-FRAMES = 661_500
-TRANSCRIPTION_PARAMETERS = {
-    "onset_threshold": 0.5,
-    "frame_threshold": 0.3,
-    "min_note_ms": 60.0,
-}
-
-Transcriber = Callable[..., Sequence[NoteEvent]]
-Renderer = Callable[[Path, Path], Any]
 
 
 def canary_document_sha256(value: Mapping[str, Any]) -> str:
@@ -61,218 +58,22 @@ def canary_document_sha256(value: Mapping[str, Any]) -> str:
     ).hexdigest()
 
 
-def _regular_inside(root: Path, relative: str, label: str) -> Path:
-    if not relative or Path(relative).is_absolute():
-        raise ValueError(f"{label} must use a relative path")
-    root = root.resolve(strict=True)
-    path = (root / relative).resolve(strict=True)
-    try:
-        path.relative_to(root)
-    except ValueError as error:
-        raise ValueError(f"{label} escapes its evidence root") from error
-    details = path.lstat()
-    if stat.S_ISLNK(details.st_mode) or not stat.S_ISREG(details.st_mode):
-        raise ValueError(f"{label} is not a regular non-link file")
-    return path
-
-
-def _verify_audio_identity(
-    root: Path, identity: Mapping[str, Any], label: str
-) -> Path:
-    import soundfile as sf
-
-    path = _regular_inside(root, str(identity.get("relative_path", "")), label)
-    if path.stat().st_size != identity.get("bytes"):
-        raise ValueError(f"{label} byte count changed")
-    if file_sha256(path) != identity.get("sha256"):
-        raise ValueError(f"{label} SHA-256 changed")
-    info = sf.info(path)
-    if (
-        info.samplerate != identity.get("sample_rate_hz")
-        or info.channels != identity.get("channels")
-        or info.frames != identity.get("frames")
-        or info.subtype != identity.get("subtype")
-        or info.samplerate != SAMPLE_RATE_HZ
-        or info.channels != 2
-        or info.frames != FRAMES
-        or info.subtype != "PCM_24"
-    ):
-        raise ValueError(f"{label} PCM24 geometry changed")
-    return path
-
-
-def _read_pcm24_integer(path: Path) -> np.ndarray:
-    import soundfile as sf
-
-    value = sf.read(path, dtype="float64", always_2d=True)[0]
-    if value.shape != (FRAMES, 2) or not np.isfinite(value).all():
-        raise ValueError("fine-stem MIDI input samples differ")
-    integer = np.rint(value * PCM24_SCALE).astype(np.int64)
-    if integer.min(initial=0) < PCM24_MIN or integer.max(initial=0) > PCM24_MAX:
-        raise ValueError("fine-stem MIDI input exceeds PCM24")
-    return integer
-
-
-def _write_pcm24(path: Path, integer: np.ndarray) -> dict[str, Any]:
-    import soundfile as sf
-
-    value = np.asarray(integer, dtype=np.int64)
-    if (
-        value.shape != (FRAMES, 2)
-        or value.min(initial=0) < PCM24_MIN
-        or value.max(initial=0) > PCM24_MAX
-    ):
-        raise ValueError("fine-stem MIDI PCM24 output differs")
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if os.path.lexists(path):
-        raise FileExistsError(f"fine-stem MIDI artifact already exists: {path}")
-    sf.write(
-        path,
-        value.astype(np.float64) / PCM24_SCALE,
-        SAMPLE_RATE_HZ,
-        format="WAV",
-        subtype="PCM_24",
-    )
-    path.chmod(0o600)
-    persisted = sf.read(path, dtype="float64", always_2d=True)[0]
-    persisted_integer = np.rint(persisted * PCM24_SCALE).astype(np.int64)
-    if not np.array_equal(persisted_integer, value):
-        raise RuntimeError("fine-stem MIDI PCM24 persistence changed samples")
-    return _audio_artifact(path)
-
-
-def _artifact(path: Path, root: Path) -> dict[str, Any]:
-    return {
-        "relative_path": path.relative_to(root).as_posix(),
-        "bytes": path.stat().st_size,
-        "sha256": file_sha256(path),
-    }
-
-
-def _audio_artifact(path: Path) -> dict[str, Any]:
-    return {
-        "bytes": path.stat().st_size,
-        "sha256": file_sha256(path),
-        "sample_rate_hz": SAMPLE_RATE_HZ,
-        "channels": 2,
-        "frames": FRAMES,
-        "subtype": "PCM_24",
-    }
-
-
-def _validated_notes(values: Sequence[NoteEvent]) -> list[NoteEvent]:
-    result: list[NoteEvent] = []
-    for value in values:
-        note = NoteEvent(
-            start=float(value.start),
-            end=float(value.end),
-            pitch=int(value.pitch),
-            velocity=int(value.velocity),
-        )
-        if (
-            not math.isfinite(note.start)
-            or not math.isfinite(note.end)
-            or note.start < 0
-            or note.end <= note.start
-            or note.end > 15.25
-            or not 0 <= note.pitch <= 127
-            or not 1 <= note.velocity <= 127
-        ):
-            raise ValueError("fine-stem MIDI transcriber returned an invalid note")
-        result.append(note)
-    result.sort(key=lambda item: (item.start, item.pitch, item.end, item.velocity))
-    return result
-
-
-def _write_notes(path: Path, notes: Sequence[NoteEvent]) -> dict[str, Any]:
-    payload = {
-        "schema": "sunofriend.fine-stem-downstream-midi-notes.v1",
-        "notes": [
-            {
-                "start": note.start,
-                "end": note.end,
-                "pitch": note.pitch,
-                "velocity": note.velocity,
-            }
-            for note in notes
-        ],
-    }
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )
-    path.chmod(0o600)
-    return payload
-
-
-def _render_to_fixed_float(
-    midi_path: Path,
-    raw_path: Path,
-    *,
-    notes: Sequence[NoteEvent],
-    render: Renderer,
-) -> tuple[np.ndarray, str]:
-    import soundfile as sf
-
-    if not notes:
-        return np.zeros((FRAMES, 2), dtype=np.float64), "silence_no_notes"
-    render(midi_path, raw_path)
-    value, sample_rate = sf.read(raw_path, dtype="float64", always_2d=True)
-    if sample_rate != SAMPLE_RATE_HZ or not np.isfinite(value).all():
-        raise RuntimeError("neutral MIDI renderer clock or samples differ")
-    if value.shape[1] == 1:
-        value = np.repeat(value, 2, axis=1)
-    if value.shape[1] != 2:
-        raise RuntimeError("neutral MIDI renderer channel count differs")
-    fixed = np.zeros((FRAMES, 2), dtype=np.float64)
-    copied = min(FRAMES, len(value))
-    fixed[:copied] = value[:copied]
-    return fixed, "fluidsynth_dry_general_midi"
-
-
 def _matched_preview_pair(
     candidate: np.ndarray, control: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
-    values = [
-        np.asarray(candidate, dtype=np.float64),
-        np.asarray(control, dtype=np.float64),
-    ]
-    rms = [float(np.sqrt(np.mean(np.square(value)))) for value in values]
-    peaks = [float(np.max(np.abs(value), initial=0.0)) for value in values]
-    target = 10 ** (-24.0 / 20.0)
-    nonzero = [index for index, value in enumerate(rms) if value > 1e-12]
-    if len(nonzero) == 2:
-        achievable = [
-            rms[index] * (0.7 / peaks[index]) if peaks[index] > 0 else target
-            for index in nonzero
-        ]
-        matched = min(target, *achievable)
-        gains = [matched / value for value in rms]
-        status = "matched"
-    else:
-        gains = [
-            min(target / value, 0.7 / peaks[index])
-            if value > 1e-12 and peaks[index] > 0
-            else 1.0
-            for index, value in enumerate(rms)
-        ]
+    integers, matching = match_preview_loudness(
+        {"candidate": candidate, "control": control}
+    )
+    status = matching["status"]
+    if status == "not_applicable_one_or_more_silent":
         status = "not_applicable_one_or_both_silent"
-    scaled = [values[index] * gains[index] for index in range(2)]
-    integers = [
-        np.rint(np.clip(value, -0.7, 0.7) * PCM24_SCALE).astype(np.int64)
-        for value in scaled
-    ]
-    post_rms = [
-        float(np.sqrt(np.mean(np.square(value.astype(np.float64) / PCM24_SCALE))))
-        for value in integers
-    ]
-    return integers[0], integers[1], {
+    return integers["candidate"], integers["control"], {
         "policy": "pair RMS matched at or below -24 dBFS with -3.10 dBFS peak cap",
         "status": status,
-        "pre_rms": rms,
-        "pre_peak": peaks,
-        "gains": gains,
-        "post_rms": post_rms,
+        "pre_rms": [matching["pre_rms"][key] for key in ("candidate", "control")],
+        "pre_peak": [matching["pre_peak"][key] for key in ("candidate", "control")],
+        "gains": [matching["gains"][key] for key in ("candidate", "control")],
+        "post_rms": [matching["post_rms"][key] for key in ("candidate", "control")],
     }
 
 
@@ -565,15 +366,6 @@ def execute_fine_stem_midi_canary(
     except BaseException:
         shutil.rmtree(staging, ignore_errors=True)
         raise
-
-
-def _make_private(root: Path) -> None:
-    for directory, child_directories, files in os.walk(root):
-        Path(directory).chmod(0o700)
-        for name in child_directories:
-            (Path(directory) / name).chmod(0o700)
-        for name in files:
-            (Path(directory) / name).chmod(0o600)
 
 
 def validate_fine_stem_midi_canary(value: Mapping[str, Any]) -> dict[str, Any]:

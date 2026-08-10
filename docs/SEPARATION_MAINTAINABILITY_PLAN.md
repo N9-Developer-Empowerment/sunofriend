@@ -197,3 +197,19 @@ The provider-synth, MIDI, six-role, fine-stem canary and target-presence servers
 all use this transport. Compatibility tests retain their existing JSON schemas
 and hashes, while transport tests cover open-ended and suffix ranges, malformed
 or multiple ranges, non-finite JSON and refusal to create a new evidence tree.
+
+The provider-synth MIDI comparison follows the same boundary. Common PCM24,
+note-validation, neutral-render and multi-arm loudness-matching primitives now
+live in `separation_midi_comparison.py`; the existing two-arm runner retains
+its earlier report contract through a small compatibility wrapper. The new
+`separation_fine_stem_synth_provider_midi_canary.py` executor accepts only the
+exact approved plan hash, verifies four source references plus all 12 bound
+transcription inputs, runs one fixed transcriber contract and atomically
+publishes private MIDI and neutral previews. Its separate review module shows
+the source and blind A/B/C previews, records playback automatically, allows
+`not_tested` and `cannot_tell`, and never writes a source choice. Deterministic
+tests cover wrong-hash refusal before effects, the exact 12-attempt budget,
+zero separator effects, all three blind arms, byte-range audio and atomic
+review save/download. Implementing and testing this boundary does not execute
+the private comparison; that remains blocked only on explicit approval of the
+already frozen plan hash.
