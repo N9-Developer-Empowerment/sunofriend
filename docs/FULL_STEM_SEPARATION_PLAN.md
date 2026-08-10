@@ -97,6 +97,14 @@ Completed refinement feedback is sealed separately with
 That validator rechecks the immutable PCM24 result, preserves negative and
 legacy-page evidence honestly, and grants no activation or promotion.
 
+The later synth-first and guitar specialist work now has qualified private
+six-role excerpt evidence. Its next step is not another model search: an
+immutable three-song full-song plan binds exact source hashes and separately
+confirmed synth/guitar windows, fixes nine sequential profile attempts and
+permits no automatic retry or usefulness veto. It is still private and
+non-executable until its exact plan hash is separately approved. See
+[Private full-song six-role canary plan](FINE_STEM_FULL_SONG_PLAN.md).
+
 ## Immutable baseline
 
 | Identity | Pinned value |
