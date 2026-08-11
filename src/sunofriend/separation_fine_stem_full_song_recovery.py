@@ -12,8 +12,6 @@ receipt.
 from __future__ import annotations
 
 import copy
-import ctypes
-import errno
 import hashlib
 import json
 import math
@@ -21,13 +19,21 @@ import os
 from pathlib import Path, PurePosixPath
 import resource
 import stat
-import sys
 import tempfile
 import time
 from typing import Any, Mapping, Sequence
 
 import numpy as np
 
+from ._private_atomic_directory import (
+    AtomicDirectoryUnavailable,
+    UnsafeDirectoryEntryName,
+    UnsafeDirectoryPath,
+    exclusive_directory_rename_implementation,
+    open_absolute_directory_nofollow,
+    rename_directory_no_replace_at,
+    require_safe_directory_entry_name,
+)
 from ._private_verified_audio_inputs import (
     load_verified_private_float32_npy,
     load_verified_private_pcm24,
@@ -53,17 +59,13 @@ from .separation_fine_stem_integration_audio import (
 )
 
 
-RECOVERY_REQUEST_SCHEMA = (
-    "sunofriend.fine-stem-full-song-six-role-recovery-request.v1"
-)
+RECOVERY_REQUEST_SCHEMA = "sunofriend.fine-stem-full-song-six-role-recovery-request.v1"
 RECOVERY_REQUEST_STATUS = "explicit_exact_hash_no_model_recovery_approval_required"
 RECOVERY_REPORT_SCHEMA = "sunofriend.fine-stem-full-song-six-role-recovery-report.v1"
 RECOVERY_REPORT_STATUS = (
     "private_review_package_recovered_model_free_resource_gate_incomplete"
 )
-RECOVERY_FAILURE_SCHEMA = (
-    "sunofriend.fine-stem-full-song-six-role-recovery-failure.v1"
-)
+RECOVERY_FAILURE_SCHEMA = "sunofriend.fine-stem-full-song-six-role-recovery-failure.v1"
 NETWORK_SANDBOX_ENV = "SUNOFRIEND_FULL_SONG_RECOVERY_NETWORK_SANDBOX"
 EXPECTED_FAILURE_FRAGMENT = "fine-stem canary crossed its effects boundary"
 JSON_EVIDENCE = {
@@ -294,29 +296,14 @@ def _directory_identity(details: os.stat_result) -> dict[str, int]:
 
 
 def _open_absolute_directory_nofollow(path: Path) -> int:
-    no_follow = getattr(os, "O_NOFOLLOW", None)
-    if no_follow is None:
-        raise RuntimeError("full-song recovery requires no-follow directory opens")
-    if not path.is_absolute() or any(part in {".", ".."} for part in path.parts):
-        raise ValueError("full-song recovery output parent path differs")
-    flags = (
-        os.O_RDONLY
-        | getattr(os, "O_DIRECTORY", 0)
-        | no_follow
-        | getattr(os, "O_CLOEXEC", 0)
-    )
-    descriptor = os.open("/", flags)
     try:
-        os.set_inheritable(descriptor, False)
-        for component in path.parts[1:]:
-            next_descriptor = os.open(component, flags, dir_fd=descriptor)
-            os.set_inheritable(next_descriptor, False)
-            os.close(descriptor)
-            descriptor = next_descriptor
-        return descriptor
-    except BaseException:
-        os.close(descriptor)
-        raise
+        return open_absolute_directory_nofollow(path)
+    except AtomicDirectoryUnavailable as error:
+        raise RuntimeError(
+            "full-song recovery requires no-follow directory opens"
+        ) from error
+    except UnsafeDirectoryPath as error:
+        raise ValueError("full-song recovery output parent path differs") from error
 
 
 def _output_parent_binding(path: Path) -> dict[str, Any]:
@@ -391,9 +378,8 @@ def _result_case_map(
     result: Mapping[str, Any], *, expected_case_ids: Sequence[str]
 ) -> dict[str, Mapping[str, Any]]:
     cases = result.get("cases")
-    if (
-        not isinstance(cases, list)
-        or [case.get("track_id") for case in cases] != list(expected_case_ids)
+    if not isinstance(cases, list) or [case.get("track_id") for case in cases] != list(
+        expected_case_ids
     ):
         raise ValueError("full-song recovery worker cases differ")
     return {case["track_id"]: case for case in cases}
@@ -428,8 +414,7 @@ def _validate_completed_result(
     }
     if (
         result.get("schema") != WORKER_RESULT_SCHEMA
-        or result.get("status")
-        != "complete_unpublished_private_temporary_estimates"
+        or result.get("status") != "complete_unpublished_private_temporary_estimates"
         or result.get("mode") != mode
         or result.get("runtime", {}).get("network_denied") is not True
         or result.get("effects") != expected_effects
@@ -449,9 +434,7 @@ def _validate_completed_result(
             else len(mega53_chunk_starts(frames))
         )
         expected_roles = (
-            {"vocals", "drums", "bass", "other"}
-            if mode == "scnet"
-            else {"synth"}
+            {"vocals", "drums", "bass", "other"} if mode == "scnet" else {"synth"}
         )
         if (
             case.get("forward_calls") != expected_calls
@@ -523,10 +506,17 @@ def _validate_worker_request_binding(
 
 
 def _worker_source_bindings(request: Mapping[str, Any]) -> list[dict[str, Any]]:
-    fields = ("path", "bytes", "sha256", "sample_rate_hz", "channels", "frames", "subtype")
+    fields = (
+        "path",
+        "bytes",
+        "sha256",
+        "sample_rate_hz",
+        "channels",
+        "frames",
+        "subtype",
+    )
     return [
-        {field: case["source"][field] for field in fields}
-        for case in request["cases"]
+        {field: case["source"][field] for field in fields} for case in request["cases"]
     ]
 
 
@@ -554,12 +544,8 @@ def _validate_failure_and_requests(
     ):
         raise ValueError("full-song recovery failure binding differs")
     _validate_worker_request_binding(scnet_request, mode="scnet", plan=plan)
-    _validate_worker_request_binding(
-        synth_request, mode="mega53-synth", plan=plan
-    )
-    _validate_worker_request_binding(
-        guitar_request, mode="sw-guitar", plan=plan
-    )
+    _validate_worker_request_binding(synth_request, mode="mega53-synth", plan=plan)
+    _validate_worker_request_binding(guitar_request, mode="sw-guitar", plan=plan)
     source_bindings = _worker_source_bindings(scnet_request)
     if (
         _worker_source_bindings(synth_request) != source_bindings
@@ -581,9 +567,7 @@ def _payload_inventory(
 ) -> list[dict[str, Any]]:
     scnet_cases = _result_case_map(scnet, expected_case_ids=_case_ids(plan))
     synth_cases = _result_case_map(synth, expected_case_ids=_case_ids(plan))
-    guitar_cases = {
-        case["track_id"]: case for case in guitar_request["cases"]
-    }
+    guitar_cases = {case["track_id"]: case for case in guitar_request["cases"]}
     inventory = []
 
     def metadata(relative_path: str) -> dict[str, Any]:
@@ -618,10 +602,9 @@ def _payload_inventory(
             relative = f"TEMP/scnet/{track}/{role}.npy"
             recorded = scnet_cases[track]["outputs"][role]
             role_metadata = metadata(relative)
-            if (
-                _recorded_relative_path(recorded["path"]) != relative
-                or role_metadata["bytes"] != recorded.get("bytes")
-            ):
+            if _recorded_relative_path(recorded["path"]) != relative or role_metadata[
+                "bytes"
+            ] != recorded.get("bytes"):
                 raise ValueError("full-song recovery SCNet array binding differs")
             inventory.append(
                 {
@@ -636,10 +619,9 @@ def _payload_inventory(
         synth_relative = f"TEMP/synth/{track}/synth.npy"
         synth_recorded = synth_cases[track]["outputs"]["synth"]
         synth_metadata = metadata(synth_relative)
-        if (
-            _recorded_relative_path(synth_recorded["path"]) != synth_relative
-            or synth_metadata["bytes"] != synth_recorded.get("bytes")
-        ):
+        if _recorded_relative_path(
+            synth_recorded["path"]
+        ) != synth_relative or synth_metadata["bytes"] != synth_recorded.get("bytes"):
             raise ValueError("full-song recovery synth array binding differs")
         inventory.append(
             {
@@ -680,6 +662,7 @@ def _implementation_identities() -> list[dict[str, Any]]:
         package / "separation_fine_stem_full_song_plan_contract.py",
         package / "separation_fine_stem_full_song_execution_review.py",
         package / "separation_fine_stem_integration_audio.py",
+        package / "_private_atomic_directory.py",
         package / "_private_verified_audio_inputs.py",
         repository / "scripts/recover-fine-stem-full-song-six-role.py",
     )
@@ -731,9 +714,7 @@ def _build_recovery_request_with_documents(
     retained_tree = _tree_snapshot(failed_root, expected_files=expected_files)
     retained_directories = _tree_directory_map(retained_tree)
     retained_files = _tree_file_map(retained_tree)
-    documents, retained_json = _read_bound_json_documents(
-        failed_root, retained_tree
-    )
+    documents, retained_json = _read_bound_json_documents(failed_root, retained_tree)
     failure, scnet, synth, guitar_request = _validate_failure_and_requests(
         plan, documents
     )
@@ -785,8 +766,7 @@ def _build_recovery_request_with_documents(
     if _tree_snapshot(prior_root) != prior_tree_snapshot:
         raise RuntimeError("full-song recovery prior tree changed during preflight")
     prior_audio_payloads_hashed = sum(
-        PurePosixPath(item["relative_path"]).suffix.lower()
-        in _AUDIO_PAYLOAD_SUFFIXES
+        PurePosixPath(item["relative_path"]).suffix.lower() in _AUDIO_PAYLOAD_SUFFIXES
         for item in prior_tree["files"]
     )
     prior_failure = {
@@ -837,8 +817,7 @@ def _build_recovery_request_with_documents(
                 prior_audio_payloads_hashed * RECOVERY_RETAINED_VERIFICATION_PASSES
             ),
             "prior_failed_file_hash_opens": (
-                len(prior_tree["files"])
-                * RECOVERY_RETAINED_VERIFICATION_PASSES
+                len(prior_tree["files"]) * RECOVERY_RETAINED_VERIFICATION_PASSES
             ),
             "retained_evidence_verification_passes": (
                 RECOVERY_RETAINED_VERIFICATION_PASSES
@@ -863,9 +842,7 @@ def _build_recovery_request_with_documents(
             "retained_json_files_content_read": len(JSON_EVIDENCE),
             "guitar_arrays_content_hashed": 3,
             "prior_failed_files_content_hashed": len(prior_tree["files"]),
-            "prior_failed_audio_payloads_content_hashed": (
-                prior_audio_payloads_hashed
-            ),
+            "prior_failed_audio_payloads_content_hashed": (prior_audio_payloads_hashed),
             "audio_writes": 0,
             "checkpoint_loads": 0,
             "model_constructions": 0,
@@ -926,8 +903,7 @@ def validate_recovery_request(
         or request.get("original_plan_sha256") != plan["document_sha256"]
         or len(request.get("retained_payloads", [])) != RECOVERY_AUDIO_READS
         or len(request.get("retained_json", {})) != len(JSON_EVIDENCE)
-        or len(request.get("retained_tree", {}).get("files", []))
-        != RETAINED_TREE_FILES
+        or len(request.get("retained_tree", {}).get("files", [])) != RETAINED_TREE_FILES
     ):
         raise ValueError("full-song recovery request identity differs")
     failed_path = Path(str(request.get("failed_root", "")))
@@ -970,8 +946,7 @@ def validate_recovery_request(
             for item in retained_directories
         )
         or any(
-            item.get("mode") not in {0o700, 0o755}
-            for item in retained_directories[1:]
+            item.get("mode") not in {0o700, 0o755} for item in retained_directories[1:]
         )
         or retained_tree.get("legacy_inner_directory_modes_0755")
         != sum(item.get("mode") == 0o755 for item in retained_directories[1:])
@@ -992,24 +967,25 @@ def validate_recovery_request(
         for name, identity in retained_json.items()
     ):
         raise ValueError("full-song recovery retained JSON binding differs")
-    retained_files_by_path = {
-        item["relative_path"]: item for item in retained_files
-    }
+    retained_files_by_path = {item["relative_path"]: item for item in retained_files}
     for identity in retained_json.values():
         approved_file = retained_files_by_path[identity["relative_path"]]
         observed_file = identity.get("observed_file_identity", {})
-        if any(
-            observed_file.get(field) != approved_file[field]
-            for field in (
-                "device",
-                "inode",
-                "bytes",
-                "mtime_ns",
-                "ctime_ns",
-                "mode",
-                "uid",
+        if (
+            any(
+                observed_file.get(field) != approved_file[field]
+                for field in (
+                    "device",
+                    "inode",
+                    "bytes",
+                    "mtime_ns",
+                    "ctime_ns",
+                    "mode",
+                    "uid",
+                )
             )
-        ) or observed_file.get("links") != approved_file["links"]:
+            or observed_file.get("links") != approved_file["links"]
+        ):
             raise ValueError("full-song recovery JSON descriptor binding differs")
     payloads = request["retained_payloads"]
     expected_payload_roles = {
@@ -1100,10 +1076,7 @@ def validate_recovery_request(
             )
             for item in prior_directories
         )
-        or any(
-            item.get("mode") not in {0o700, 0o755}
-            for item in prior_directories[1:]
-        )
+        or any(item.get("mode") not in {0o700, 0o755} for item in prior_directories[1:])
         or any(item.get("mode") != 0o600 for item in prior_files)
         or any(
             item.get("uid") != os.geteuid() or item.get("links") != 1
@@ -1137,9 +1110,7 @@ def validate_recovery_request(
         "retained_json_file_opens": (
             len(JSON_EVIDENCE) * RECOVERY_RETAINED_VERIFICATION_PASSES
         ),
-        "retained_guitar_array_hash_opens": (
-            3 * RECOVERY_RETAINED_VERIFICATION_PASSES
-        ),
+        "retained_guitar_array_hash_opens": (3 * RECOVERY_RETAINED_VERIFICATION_PASSES),
         "prior_failed_audio_payload_hash_opens": (
             prior_audio_count * RECOVERY_RETAINED_VERIFICATION_PASSES
         ),
@@ -1230,10 +1201,11 @@ def _load_estimate(
     }
 
 
-def _inventory_map(request: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, Any]]:
+def _inventory_map(
+    request: Mapping[str, Any],
+) -> dict[tuple[str, str], Mapping[str, Any]]:
     mapped = {
-        (item["track_id"], item["role"]): item
-        for item in request["retained_payloads"]
+        (item["track_id"], item["role"]): item for item in request["retained_payloads"]
     }
     if len(mapped) != RECOVERY_AUDIO_READS:
         raise RuntimeError("full-song recovery retained role inventory differs")
@@ -1274,35 +1246,17 @@ def _exclusive_publish(
 
     if staging.parent != destination.parent:
         raise ValueError("full-song recovery publication must stay on one parent")
-    if (
-        Path(staging.name).name != staging.name
-        or Path(destination.name).name != destination.name
-        or staging.name in {"", ".", ".."}
-        or destination.name in {"", ".", ".."}
-    ):
-        raise ValueError("full-song recovery publication name differs")
-    library = ctypes.CDLL(None, use_errno=True)
-    if sys.platform == "darwin":
-        function = getattr(library, "renameatx_np", None)
-        flag = 0x00000004  # RENAME_EXCL
-    elif sys.platform.startswith("linux"):
-        function = getattr(library, "renameat2", None)
-        flag = 0x00000001  # RENAME_NOREPLACE
-    else:
-        function = None
-        flag = 0
-    if function is None:
+    try:
+        require_safe_directory_entry_name(staging.name)
+        require_safe_directory_entry_name(destination.name)
+    except UnsafeDirectoryEntryName as error:
+        raise ValueError("full-song recovery publication name differs") from error
+    try:
+        implementation = exclusive_directory_rename_implementation()
+    except AtomicDirectoryUnavailable as error:
         raise RuntimeError(
             "full-song recovery requires atomic exclusive directory publication"
-        )
-    function.argtypes = (
-        ctypes.c_int,
-        ctypes.c_char_p,
-        ctypes.c_int,
-        ctypes.c_char_p,
-        ctypes.c_uint,
-    )
-    function.restype = ctypes.c_int
+        ) from error
     owns_descriptor = parent_descriptor is None
     parent_fd = (
         _open_absolute_directory_nofollow(staging.parent)
@@ -1312,51 +1266,46 @@ def _exclusive_publish(
     try:
         held_parent = os.fstat(parent_fd)
         visible_parent = staging.parent.lstat()
-        if (
-            _directory_identity(held_parent) != _directory_identity(visible_parent)
-            or (
-                expected_parent_binding is not None
-                and {
-                    "absolute_path": str(staging.parent),
-                    **_directory_identity(held_parent),
-                }
-                != expected_parent_binding
-            )
+        if _directory_identity(held_parent) != _directory_identity(visible_parent) or (
+            expected_parent_binding is not None
+            and {
+                "absolute_path": str(staging.parent),
+                **_directory_identity(held_parent),
+            }
+            != expected_parent_binding
         ):
             raise RuntimeError("full-song recovery publication parent changed")
-        held_staging = os.stat(
-            staging.name, dir_fd=parent_fd, follow_symlinks=False
-        )
+        held_staging = os.stat(staging.name, dir_fd=parent_fd, follow_symlinks=False)
         visible_staging = staging.lstat()
         if (
             not stat.S_ISDIR(held_staging.st_mode)
-            or _directory_identity(held_staging)
-            != _directory_identity(visible_staging)
+            or _directory_identity(held_staging) != _directory_identity(visible_staging)
             or (
                 expected_staging_identity is not None
-                and _directory_identity(held_staging)
-                != dict(expected_staging_identity)
+                and _directory_identity(held_staging) != dict(expected_staging_identity)
             )
             or held_staging.st_uid != os.geteuid()
             or stat.S_IMODE(held_staging.st_mode) != 0o700
         ):
             raise RuntimeError("full-song recovery staging binding changed")
-        result = function(
-            parent_fd,
-            os.fsencode(staging.name),
-            parent_fd,
-            os.fsencode(destination.name),
-            flag,
-        )
+        try:
+            rename_directory_no_replace_at(
+                parent_fd,
+                staging.name,
+                destination.name,
+                implementation=implementation,
+            )
+        except FileExistsError:
+            raise FileExistsError(destination) from None
+        except OSError as error:
+            raise OSError(
+                error.errno,
+                os.strerror(error.errno),
+                destination,
+            ) from None
     finally:
         if owns_descriptor:
             os.close(parent_fd)
-    if result == 0:
-        return
-    error_number = ctypes.get_errno()
-    if error_number in {errno.EEXIST, errno.ENOTEMPTY}:
-        raise FileExistsError(destination)
-    raise OSError(error_number, os.strerror(error_number), destination)
 
 
 def _validate_staging(
@@ -1480,8 +1429,7 @@ def validate_recovery_report(
             case.get("title") != planned["title"]
             or case.get("rights_category") != planned["rights_category"]
             or case.get("scored_target_roles") != planned["scored_target_roles"]
-            or case.get("unscored_target_roles")
-            != planned["unscored_target_roles"]
+            or case.get("unscored_target_roles") != planned["unscored_target_roles"]
             or case.get("confirmed_present_targets")
             != planned["confirmed_present_targets"]
             or set(case.get("artifacts", {})) != set(ARTIFACT_ROLES)
@@ -1529,8 +1477,7 @@ def validate_recovery_report(
                 or not isinstance(artifact.get("sha256"), str)
                 or len(artifact["sha256"]) != 64
                 or not isinstance(artifact.get("relative_path"), str)
-                or artifact["relative_path"]
-                != f"CASES/{case['track_id']}/{role}.wav"
+                or artifact["relative_path"] != f"CASES/{case['track_id']}/{role}.wav"
                 or artifact["relative_path"].startswith("/")
                 or ".." in PurePosixPath(artifact["relative_path"]).parts
             ):
@@ -1603,7 +1550,9 @@ def validate_recovery_report(
         }:
             raise ValueError("full-song recovery input roles differ")
         for role, identity in inputs.items():
-            expected_dtype = "pcm24_float64_decode" if role == "reference" else "float32"
+            expected_dtype = (
+                "pcm24_float64_decode" if role == "reference" else "float32"
+            )
             if (
                 identity.get("shape") != [frames, 2]
                 or identity.get("dtype") != expected_dtype
@@ -1626,8 +1575,7 @@ def validate_recovery_report(
                     identity.get("relative_path") != approved["relative_path"]
                     or identity.get("bytes") != approved["bytes"]
                     or identity.get("sha256") != approved["expected_sha256"]
-                    or identity.get("shape")
-                    != [approved["expected_frames"], 2]
+                    or identity.get("shape") != [approved["expected_frames"], 2]
                     or any(
                         observed_file.get(field) != approved[field]
                         for field in (
@@ -1642,9 +1590,7 @@ def validate_recovery_report(
                     )
                     or observed_file.get("links") != approved["links"]
                 ):
-                    raise ValueError(
-                        "full-song recovery input request binding differs"
-                    )
+                    raise ValueError("full-song recovery input request binding differs")
     accounting = report.get("accounting", {})
     if (
         accounting.get("projection") != plan["output_contract"]["projection"]
@@ -1664,9 +1610,7 @@ def validate_recovery_report(
     }:
         raise ValueError("full-song recovery historical effects differ")
     recovery = effects.get("recovery", {})
-    prior_audio_hash_opens = recovery.get(
-        "prior_failed_audio_payload_hash_opens"
-    )
+    prior_audio_hash_opens = recovery.get("prior_failed_audio_payload_hash_opens")
     prior_file_hash_opens = recovery.get("prior_failed_file_hash_opens")
     if (
         not isinstance(prior_audio_hash_opens, int)
@@ -1692,9 +1636,7 @@ def validate_recovery_report(
         "retained_json_file_opens": (
             len(JSON_EVIDENCE) * RECOVERY_RETAINED_VERIFICATION_PASSES
         ),
-        "retained_guitar_array_hash_opens": (
-            3 * RECOVERY_RETAINED_VERIFICATION_PASSES
-        ),
+        "retained_guitar_array_hash_opens": (3 * RECOVERY_RETAINED_VERIFICATION_PASSES),
         "prior_failed_audio_payload_hash_opens": prior_audio_hash_opens,
         "prior_failed_file_hash_opens": prior_file_hash_opens,
         "retained_evidence_verification_passes": (
@@ -1793,9 +1735,7 @@ def execute_recovery(
     staging: Path | None = None
     staging_identity: dict[str, Any] | None = None
     try:
-        staging = Path(
-            tempfile.mkdtemp(prefix=f".{output.name}-", dir=output.parent)
-        )
+        staging = Path(tempfile.mkdtemp(prefix=f".{output.name}-", dir=output.parent))
         staging.chmod(0o700)
         staging_identity = _directory_identity(staging.lstat())
         if staging_identity != _directory_identity(
@@ -1855,9 +1795,7 @@ def execute_recovery(
                 synth=projected["synth"],
                 guitar=projected["guitar"],
             )
-            persisted = persist_six_roles(
-                staging, case_id=track, quantized=quantized
-            )
+            persisted = persist_six_roles(staging, case_id=track, quantized=quantized)
             native_other_delta = grouped_other - core["other"]
             recovered_inputs[track] = input_identities
             cases.append(
@@ -1867,17 +1805,11 @@ def execute_recovery(
                     "rights_category": planned["rights_category"],
                     "scored_target_roles": planned["scored_target_roles"],
                     "unscored_target_roles": planned["unscored_target_roles"],
-                    "confirmed_present_targets": planned[
-                        "confirmed_present_targets"
-                    ],
+                    "confirmed_present_targets": planned["confirmed_present_targets"],
                     "recovery_elapsed_seconds": time.monotonic() - case_started,
                     "scnet_native_other_correction": {
-                        "rms": float(
-                            np.sqrt(np.mean(np.square(native_other_delta)))
-                        ),
-                        "peak": float(
-                            np.max(np.abs(native_other_delta), initial=0.0)
-                        ),
+                        "rms": float(np.sqrt(np.mean(np.square(native_other_delta)))),
+                        "peak": float(np.max(np.abs(native_other_delta), initial=0.0)),
                         "used_for_separation_accuracy_claim": False,
                     },
                     "projection": projected["accounting"],
@@ -1975,16 +1907,13 @@ def execute_recovery(
                     "private_audio_reads": RECOVERY_AUDIO_READS,
                     "current_audio_payload_file_opens": RECOVERY_AUDIO_READS,
                     "retained_json_file_opens": (
-                        len(JSON_EVIDENCE)
-                        * RECOVERY_RETAINED_VERIFICATION_PASSES
+                        len(JSON_EVIDENCE) * RECOVERY_RETAINED_VERIFICATION_PASSES
                     ),
                     "retained_guitar_array_hash_opens": (
                         3 * RECOVERY_RETAINED_VERIFICATION_PASSES
                     ),
                     "prior_failed_audio_payload_hash_opens": (
-                        request["prior_failed_package"][
-                            "audio_payloads_content_hashed"
-                        ]
+                        request["prior_failed_package"]["audio_payloads_content_hashed"]
                         * RECOVERY_RETAINED_VERIFICATION_PASSES
                     ),
                     "prior_failed_file_hash_opens": (
@@ -2006,18 +1935,16 @@ def execute_recovery(
                 },
             },
             "failed_package_preservation": {
-                "failed_report_sha256": request["retained_json"][
-                    "failure_report"
-                ]["sha256"],
+                "failed_report_sha256": request["retained_json"]["failure_report"][
+                    "sha256"
+                ],
                 "prior_failed_report_sha256": request["prior_failed_package"][
                     "failure_report"
                 ]["sha256"],
-                "failed_tree_binding_sha256": _value_sha256(
-                    request["retained_tree"]
-                ),
-                "prior_failed_tree_binding_sha256": request[
-                    "prior_failed_package"
-                ]["tree_binding_sha256"],
+                "failed_tree_binding_sha256": _value_sha256(request["retained_tree"]),
+                "prior_failed_tree_binding_sha256": request["prior_failed_package"][
+                    "tree_binding_sha256"
+                ],
                 "unchanged": True,
                 "original_failed_root_retained": True,
                 "prior_failed_root_retained": True,
@@ -2093,8 +2020,7 @@ def execute_recovery(
             }
             path = staging / "RECOVERY-FAILED-REPORT.json"
             path.write_text(
-                json.dumps(failure, indent=2, sort_keys=True, allow_nan=False)
-                + "\n",
+                json.dumps(failure, indent=2, sort_keys=True, allow_nan=False) + "\n",
                 encoding="utf-8",
             )
             path.chmod(0o600)

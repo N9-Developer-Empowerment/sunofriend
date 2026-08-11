@@ -1,4 +1,4 @@
-<!-- sunofriend-interface-contract: 2026-08-01.1 -->
+<!-- sunofriend-interface-contract: 2026-08-11.2 -->
 
 # Sunofriend advanced operations
 
@@ -1085,8 +1085,8 @@ guided forms.
   `scripts/record-fine-stem-six-role-integration-outcome.py`; it must score only
   the confirmed-present cohort for each role. The resulting
   `private_six_role_integration_qualified` status is private evidence, not
-  public activation, source selection or MIDI authority. The next bounded step
-  has now been frozen as a no-effects downstream MIDI usefulness plan over
+  public activation, source selection or MIDI authority. A later bounded step
+  was frozen as a no-effects downstream MIDI usefulness plan over
   existing role-present artifacts, with no separator rerun. Run
   `scripts/plan-fine-stem-downstream-midi.py` only to reproduce plan SHA-256
   `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`.
@@ -1110,23 +1110,24 @@ guided forms.
   `scripts/plan-fine-stem-synth-bottleneck.py` only to reproduce the no-audio
   provider-input request at SHA-256
   `d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
-  Before any execution plan, bind four exact source-aligned provider synth,
-  keyboard or keys estimates with rights, hashes and human-confirmed target
-  presence. A provider label is not presence evidence and a provider stem is
-  not truth. The future three-arm test must keep source, current synth,
-  provider estimate and grouped-other control available, transcribe only the
-  three candidate arms with identical settings, use no listened checkbox and
-  make no automatic retry or winner choice.
-  That exact comparison later completed and grouped other was preferred in all
-  four synth cases. Keep the qualified six-role audio evidence while retaining
-  grouped other as the MIDI control. Package the eight reviewed excerpts only
+  That request later bound four exact source-aligned provider synth, keyboard
+  or keys estimates with rights, hashes and human-confirmed target presence. A
+  provider label is not presence evidence and a provider stem is not truth.
+  The separately approved source-visible three-arm test kept source, current
+  synth, provider estimate and grouped-other control available, transcribed
+  all candidate arms with identical settings, used no listened checkbox and
+  made no automatic retry or winner choice. The comparison completed with
+  grouped other preferred in all four synth cases; the current separator beat
+  the provider estimate twice and tied it twice. Keep the qualified six-role
+  audio evidence while retaining grouped other as the MIDI control. Package
+  the eight reviewed excerpts only
   with `scripts/package-fine-stem-private-studio.py`; the exact manifest
   SHA-256 is
   `4b5bce6daa00607a93257d33db3e1055ab651287458c21ccd637b304438053bd`.
   Every case has mutually exclusive six-role-audio and grouped-other-control
   Studio catalogs. The package is private, excerpt-only, contains no MIDI and
   grants no source selection, activation or full-song execution authority.
-  The next bounded artifact is the no-effects full-song plan produced by
+  A later bounded artifact was the no-effects full-song plan produced by
   `scripts/plan-fine-stem-full-song-six-role.py`. It binds one three-song corpus
   in fixed coverage slots: one track with separately confirmed synth and guitar
   windows, one synth track and one guitar track. Require distinct track IDs,
@@ -1136,27 +1137,24 @@ guided forms.
   an unconfirmed complementary role is not a failure. The frozen execution is
   three sequential model loads and nine full-song profile attempts with one
   writer, network denial, no automatic retry and zero remediation cycles.
-  The review records playback automatically, has no listened checkbox, replays
-  the confirmed-present windows and does not require exhaustive internal
-  boundary ratings or any minimum usefulness. Poor listening evidence adds a
-  limitation and cannot disable core four or trigger configuration search.
-  The current document SHA-256 is
+  Its document SHA-256 is
   `869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`.
-  `scripts/run-fine-stem-full-song-six-role.py` implements the guarded
-  coordinator. With no `--execute` it returns a path-light request with zero
-  source-content reads, model loads, inference attempts and audio writes. Its
-  exact precomputed internal-forward budgets are 94 SCNet, 75 Mega-53 and 122
-  BS-RoFormer-SW calls. After a separate exact-hash approval, require
-  `--approved-plan-sha256`, `--confirm-rights`, a fresh private output and
-  parent `sandbox-exec` network denial. Each profile worker loads once and runs
-  three songs sequentially; the coordinator is the sole PCM24 writer and
-  retains objective failure without retry. Serve a successful package with
-  `scripts/serve-fine-stem-full-song-six-role-review.py`. The report-bound page
-  records playback and confirmed windows automatically, has no listened
-  checkbox and saves no audio, paths, filenames or telemetry in feedback.
-  This implementation is not execution authority; full-song processing,
-  activation, source selection, MIDI, hosting, redistribution and upload remain
-  false until their applicable explicit approvals.
+  That plan was approved and consumed once. Its guarded run retained objective
+  failure without retry; the replacement retained complete SCNet, Mega-53 and
+  guitar arrays but no guitar worker result, guard counters or peak-memory
+  receipt. A separately exact-hash-approved recovery reverified those retained
+  inputs under network denial and wrote 24 PCM24 review artifacts using only
+  the fixed grouped-other projection. It performed zero checkpoint loads,
+  model construction or loading, inference, canonicalisation and model-worker
+  subprocesses. Its status is
+  `private_review_package_recovered_model_free_resource_gate_incomplete`:
+  full objective qualification is false, the guitar/full resource gates are
+  incomplete and supported-ceiling compliance is unknown. Serve that private
+  package with `scripts/serve-fine-stem-full-song-six-role-review.py`; playback
+  is recorded automatically and there is no listened checkbox. Do not solicit
+  or replay the consumed approval. Any later model run needs a new bounded plan
+  and explicit authority; recovery and review grant no activation, source
+  selection, MIDI, hosting, redistribution or upload.
 - Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
   44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
   checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source

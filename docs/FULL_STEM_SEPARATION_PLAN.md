@@ -81,10 +81,10 @@ cannot disable the functioning public core-four profile. See
 
 The completed five-song, ten-report round demonstrated neither useful guitar
 extraction nor successful piano extraction. That bounded result ends tuning of
-the six-source candidate. The next proposed Studio experiment is the
+the six-source candidate. The subsequent Studio experiment was the
 unregistered, non-executable Banquet query challenger for guitar and broad
 `keyboard_synth`. Its exact runtime, network-denied strict checkpoint load and
-single generated-tensor synthetic forward pass. A later explicitly approved
+single generated-tensor synthetic forward all passed. A later explicitly approved
 nine-case, song-disjoint reference canary also passed its offline runtime,
 hash, resource and zero-LSB reconstruction gates. Its completed bound review
 rated eight targets not useful and one quiet keyboard target partly useful, so
@@ -97,12 +97,24 @@ Completed refinement feedback is sealed separately with
 That validator rechecks the immutable PCM24 result, preserves negative and
 legacy-page evidence honestly, and grants no activation or promotion.
 
-The later synth-first and guitar specialist work now has qualified private
-six-role excerpt evidence. Its next step is not another model search: an
-immutable three-song full-song plan binds exact source hashes and separately
-confirmed synth/guitar windows, fixes nine sequential profile attempts and
-permits no automatic retry or usefulness veto. It is still private and
-non-executable until its exact plan hash is separately approved. See
+The later synth-first and guitar specialist work has qualified private
+six-role excerpt evidence. Its immutable three-song full-song plan bound exact
+source hashes and separately confirmed synth/guitar windows, fixed nine
+sequential profile attempts and permitted no automatic retry or usefulness
+veto. That plan was approved and consumed once. The guarded run retained an
+objective failure, and its replacement retained complete model arrays without
+a guitar worker result, guard counters or peak-memory receipt.
+
+A separately exact-hash-approved recovery reused those retained arrays under
+network denial without loading a checkpoint or model, running inference or
+canonicalising audio. It wrote the fixed private listening package with status
+`private_review_package_recovered_model_free_resource_gate_incomplete`.
+The guitar and aggregate resource gates remain incomplete, so this is private
+review evidence rather than full objective qualification or a public six-role
+profile. The reproduced urllib3 IPv6 loopback `socket.bind` import path is
+consistent with the failed guard, but missing historical receipt evidence
+prevents claiming that cause as proven. No old approval may be replayed; a
+future model run needs a new bounded plan. See
 [Private full-song six-role canary plan](FINE_STEM_FULL_SONG_PLAN.md).
 
 ## Immutable baseline
@@ -220,7 +232,7 @@ compare command may run only explicitly named, already-installed profiles into
 separate candidate roots and must never record a winner automatically.
 Spleeter is a later independent control and cannot delay the fallback.
 
-## Next bounded action
+## Current admitted baseline and retained failures
 
 The historical MLX setup plan now reports the objective failure and refuses
 new installs:

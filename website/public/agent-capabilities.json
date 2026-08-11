@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-09.12",
+  "interface_contract_version": "2026-08-11.2",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -218,6 +218,7 @@
     "finished_mix_separation": {
       "status": "public_experimental_local_alpha",
       "public_product_route_available": true,
+      "public_six_role_available": false,
       "website_upload_available": false,
       "public_model_download_available": true,
       "model_download_requires_explicit_approval": true,
@@ -233,6 +234,44 @@
         "bind explicit human listening to the exact result",
         "preserve useful, poor and inconclusive evidence"
       ],
+      "lanes": {
+        "public_default_two_stem": {
+          "visibility": "public",
+          "release_tier": "public_default",
+          "status": "public_default",
+          "roles": ["vocals", "instrumental"],
+          "public_execution_available": true,
+          "automatic_source_selection": false,
+          "automatic_midi": false
+        },
+        "public_scnet_core_four": {
+          "visibility": "public",
+          "release_tier": "public_opt_in",
+          "status": "public_opt_in",
+          "scope_id": "core-four-stems-v1",
+          "profile_id": "scnet-large-musdb-release-v1",
+          "roles": ["vocals", "drums", "bass", "grouped_other"],
+          "public_execution_available": true,
+          "automatic_source_selection": false,
+          "automatic_midi": false
+        },
+        "private_unregistered_six_role_research": {
+          "visibility": "private",
+          "release_tier": "private_studio_research",
+          "status": "private_unregistered_research",
+          "registered": false,
+          "roles": ["vocals", "drums", "bass", "synth", "guitar", "residual_other"],
+          "public_execution_available": false,
+          "public_six_role_support_established": false
+        },
+        "private_model_free_recovered_review": {
+          "visibility": "private",
+          "release_tier": "private_studio_research",
+          "status": "private_review_package_recovered_model_free_resource_gate_incomplete",
+          "detail_node": "private_fine_stem_full_song",
+          "public_execution_available": false
+        }
+      },
       "developer_preview_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
       "profiles_command": ".venv/bin/sunofriend-separate profiles --json",
       "core_four_stem_target": {
@@ -811,7 +850,8 @@
               "status": "private_midi_evidence_recorded_source_reference_limited",
               "document_sha256": "d69863fb8ea59087ad6cfcd5669fee88db6afef6a7bd20809d42d88415c29a0c",
               "guitar_decision": "retain_private_studio_challenger_directional_only",
-              "synth_decision": "bottleneck_attribution_required",
+              "synth_decision": "no_isolated_synth_midi_advantage_over_grouped_other",
+              "historical_synth_decision": "bottleneck_attribution_required",
               "source_reference_present_during_completed_review": false,
               "repaired_page_source_reference_present": true,
               "audio_reads": 0,
@@ -820,7 +860,8 @@
               "source_selection_authorized": false
             },
             "synth_bottleneck_request": {
-              "status": "awaiting_four_provider_synth_or_keyboard_estimates",
+              "status": "private_synth_midi_bottleneck_recorded_no_selection",
+              "historical_document_status": "awaiting_four_provider_synth_or_keyboard_estimates",
               "document_sha256": "d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a",
               "confirmed_present_case_count": 4,
               "catalogued_provider_pack_count": 4,
@@ -831,10 +872,18 @@
               "provider_estimates_are_ground_truth": false,
               "audio_opened": false,
               "ready_for_execution": false,
-              "training_authorized": false
+              "training_authorized": false,
+              "completed_three_arm_outcome": {
+                "status": "private_synth_midi_bottleneck_recorded_no_selection",
+                "result": "no_isolated_synth_midi_advantage_over_grouped_other",
+                "grouped_other_preferred_cases": 4,
+                "automatic_source_choice": false,
+                "public_activation_authorized": false
+              }
             },
             "synth_provider_qualification": {
-              "status": "provider_estimates_aligned_private_review_required",
+              "status": "historical_presence_review_completed_private_evidence",
+              "historical_document_status": "provider_estimates_aligned_private_review_required",
               "document_sha256": "64b564798a6f338c66039e40981a5d562160c83451f2bc6d2a5411c56eba0eea",
               "provider": "Suno",
               "provider_role_label": "Synth",
@@ -848,7 +897,7 @@
               "clipping_required": false,
               "automatic_playback_recording": true,
               "manual_listened_checkbox": false,
-              "human_target_presence_review_complete": false,
+              "human_target_presence_review_complete": true,
               "midi_transcription_attempts": 0,
               "separator_inference_attempts": 0,
               "network_attempts": 0,
@@ -873,7 +922,68 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "complete the source-visible human target-presence review for the four exact aligned provider Synth estimates; only four confirmed-present results may emit the separately approved 12-attempt same-transcriber bottleneck plan"
+        "next_gate": "listen to the recovered private package, or create and separately approve a new bounded plan for any further model execution"
+      },
+      "private_fine_stem_full_song": {
+        "visibility": "private",
+        "release_tier": "private_studio_research",
+        "status": "private_review_package_recovered_model_free_resource_gate_incomplete",
+        "registered": false,
+        "public_execution_available": false,
+        "roles": ["vocals", "drums", "bass", "synth", "guitar", "residual_other"],
+        "original_plan_sha256": "869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d",
+        "original_plan_authority_consumed": true,
+        "automatic_retry_authorized": false,
+        "replacement_historical_effects": {
+          "model_loads": 3,
+          "completed_inference_attempts": 9,
+          "guitar_worker_result_receipt_persisted": false,
+          "guitar_guard_counters_persisted": false,
+          "guitar_peak_memory_bytes": null
+        },
+        "recovery": {
+          "request_sha256": "686a47f09b2f2e95a670e621aa75582e27bb14cebc64035f5c56af3c77f3e60c",
+          "report_sha256": "42500c2e9542aee5fc0e238697733923586ad1e37c54b1359a496cf832f330a0",
+          "original_plan_sha256": "869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d",
+          "status": "private_review_package_recovered_model_free_resource_gate_incomplete",
+          "network_denied": true,
+          "retained_audio_payloads_read": 21,
+          "pcm24_audio_writes": 24,
+          "maximum_reconstruction_error_lsb": 0,
+          "effects": {
+            "checkpoint_loads": 0,
+            "model_constructions": 0,
+            "model_loads": 0,
+            "inference_attempts": 0,
+            "canonicalisations": 0,
+            "model_worker_subprocesses": 0,
+            "network_attempts": 0,
+            "parent_sandbox_reexecs": 1
+          },
+          "missing_evidence": {
+            "guitar_worker_result_receipt_persisted": false,
+            "guitar_guard_counters_persisted": false,
+            "guitar_peak_memory_bytes": null
+          },
+          "resource_qualification": {
+            "guitar_resource_gate_complete": false,
+            "full_resource_gate_complete": false,
+            "within_known_ceilings": null
+          },
+          "full_objective_qualification": false,
+          "human_listening_pending": true,
+          "product_effects": {
+            "automatic_retry": false,
+            "public_activation": false,
+            "source_selection": false,
+            "midi": false,
+            "hosting": false,
+            "redistribution": false,
+            "audio_upload": false,
+            "model_download": false
+          }
+        },
+        "next_gate": "listen to the recovered private package, or create and separately approve a new bounded plan for any further model execution"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,
@@ -897,7 +1007,8 @@
     "human_approved_release_master": false,
     "source_audio_mixed_into_balanced_wav": false,
     "rights_required": true,
-    "optional_downloads_require_approval": true
+    "optional_downloads_require_approval": true,
+    "public_six_role_separation": false
   },
   "advanced_capabilities": [
     "vocal melody transcription, consensus, phrase review and bounded correction",

@@ -8,6 +8,16 @@ inspection command, public goals and feedback routes, start with the
 [stem-separation developer preview](SEPARATION_DEVELOPER_PREVIEW.md). This file
 remains the detailed chronological research record.
 
+This record primarily covers the earlier broad-separation/S3 research stream.
+It is not the current status source for public core four or later synth/guitar
+work. The current four-lane boundary and private full-song outcome are in the
+[developer preview](SEPARATION_DEVELOPER_PREVIEW.md) and
+[full-song lifecycle record](FINE_STEM_FULL_SONG_PLAN.md). The latter records
+the consumed guarded execution and the model-free recovery status
+`private_review_package_recovered_model_free_resource_gate_incomplete`; its
+resource-incomplete listening package is not a public six-role profile or full
+objective qualification.
+
 ## Current result
 
 The first real run completed on 31 July 2026 with the already-installed

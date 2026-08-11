@@ -7,6 +7,18 @@ as an explicit **vocals/drums/bass/grouped-other public opt-in preview**. The
 earlier MLX baseline and first PyTorch fallback remain fail-closed after their
 bounded objective remediations failed.
 
+Keep the four current lanes distinct:
+
+| Lane | Roles | Status |
+| --- | --- | --- |
+| Public default | broad vocals plus complementary instrumental | available through `broad-vocals-v1` |
+| Public explicit opt-in | vocals, drums, bass and grouped other | SCNet `core-four-stems-v1` is `public_opt_in` |
+| Private research | vocals, drums, bass, synth, guitar and residual other | excerpt-qualified, specialist profiles unregistered |
+| Private recovery | full-song source, six roles and reconstruction review | `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
+
+The public command does not expose synth or guitar profiles. Exact
+reconstruction proves additive accounting only, not accurate source assignment.
+
 The first alpha produces:
 
 - `vocals.wav`, an estimate of the broad vocal content;
@@ -74,23 +86,30 @@ that limitation at SHA-256
 guitar has directional private evidence in 3/4 cases, while synth showed no
 isolated-stem advantage over grouped other.
 
-The next step is not another separator tuning loop. A no-audio request binds
-the exact four already-confirmed synth windows and freezes a source-present
-three-arm test: current synth estimate, provider synth/keyboard estimate and
-grouped-other control through the same transcriber. Its SHA-256 is
-`d03f5ff549c5d778a6c07451c9f953be3fe29bc107e743ce5ae691e342e4419a`.
-This will distinguish a likely separation bottleneck from a likely MIDI
-transcription/representation bottleneck before any training decision. The
-request grants no permission to run transcription. The four exact local Suno
-`Synth` estimates are now bound in a distinct private qualification report at
-SHA-256
-`64b564798a6f338c66039e40981a5d562160c83451f2bc6d2a5411c56eba0eea`.
-Their complete pack sums match the four existing source windows with
-0.913–0.949 sample correlation, 0.946–0.980 envelope correlation and zero best
-envelope lag. That proves song/clock alignment only. A source-visible local
-review must still confirm that each provider estimate contains the target
-before the exact 12-attempt plan can be emitted; playback is automatic and
-there is no listened checkbox.
+The source-visible three-arm synth comparison is also complete. Grouped other
+was preferred in all four cases; the current separator beat the provider
+estimate twice and tied it twice under the same transcriber. This found no
+isolated-synth MIDI advantage without erasing the separately qualified synth
+audio evidence. Provider estimates remain comparison evidence, not truth.
+
+The exact three-song full-song plan at SHA-256
+`869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`
+was then approved and consumed once. Its guarded execution retained objective
+failure with no automatic retry. The replacement failure retained complete
+SCNet, Mega-53 and guitar arrays but no guitar worker result, guard counters or
+peak-memory receipt. A separately approved model-free recovery reverified the
+retained identities under network denial and wrote 24 private PCM24 review
+artifacts with zero checkpoint loads, model construction or loading,
+inference, canonicalisation and model-worker subprocesses. Its status is
+`private_review_package_recovered_model_free_resource_gate_incomplete`.
+
+The recovered package is musical review material, not full objective/resource
+qualification: the guitar and aggregate resource gates remain incomplete and
+supported-ceiling compliance is unknown. The reproduced urllib3 IPv6 loopback
+`socket.bind` path is consistent with the failed effects boundary, but missing
+historical receipt evidence prevents claiming it as proven. Both failed roots
+remain immutable. The consumed plan must not be rerun; future model execution
+needs a new bounded plan and explicit authority.
 See
 [Synth-first fine-stem challenger](OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 
@@ -250,8 +269,9 @@ normal WAV inputs are accepted through Sunofriend's bounded FFmpeg import.
 
 ## Listen, then decide
 
-Open `REVIEW/separation_review.html` in a normal browser and compare all four
-tracks. Listen for:
+Open `REVIEW/separation_review.html` in a normal browser and compare the source,
+every role declared by the selected scope and its reconstruction check. Listen
+for:
 
 - missing vocal phrases or vocal bleed;
 - accompaniment leaking into the vocal stem;
@@ -267,10 +287,12 @@ and `not_tested` are valid. It also links to the existing
 Share text observations only. Do not attach private audio, stems, vocals,
 review JSON, filenames or private metadata to a public issue.
 
-If the outputs are useful, copy `vocals.wav` and `instrumental.wav` into a new
-folder. That folder can then enter the normal Sunofriend `create`, TUI or Studio
-workflow. The alpha deliberately does not activate those stems or choose MIDI
-automatically, because listening remains the musical decision boundary.
+If the outputs are useful, copy the complete declared role set into a new
+folder: `vocals.wav` plus `instrumental.wav` for the default lane, or vocals,
+drums, bass and grouped other for core four. That folder can then enter the
+normal Sunofriend `create`, TUI or Studio workflow. The alpha deliberately does
+not activate those stems or choose MIDI automatically, because listening
+remains the musical decision boundary.
 
 ## What feedback changes
 

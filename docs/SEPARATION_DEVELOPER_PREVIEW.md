@@ -1,12 +1,13 @@
 # Stem-separation developer preview
 
-Sunofriend has two distinct finished-mix lanes on Apple-silicon macOS:
+Sunofriend has four deliberately distinct finished-mix lanes:
 
-- the existing public default, `broad-vocals-v1`, which estimates broad vocals
-  and complementary instrumental; and
-- the explicit `core-four-stems-v1` public opt-in preview, served by the
-  separately pinned SCNet-large profile for vocals, drums, bass and grouped
-  other.
+| Lane | Roles | Release boundary |
+| --- | --- | --- |
+| Public default | broad vocals and complementary instrumental | `broad-vocals-v1` |
+| Public explicit opt-in | vocals, drums, bass and grouped other | SCNet `core-four-stems-v1` |
+| Private specialist research | vocals, drums, bass, synth, guitar and residual other | unregistered Mega-53/BS-RoFormer evidence |
+| Private model-free recovery | full-song source, six roles and reconstruction | `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
 
 The MLX baseline and first PyTorch fallback remain blocked after their bounded
 objective remediations failed. Further retries and installs of those immutable
@@ -40,6 +41,19 @@ process no audio; the two-stem route remains the default.
 - [`separation_rollout.py`](../src/sunofriend/separation_rollout.py) encodes the
   one-configuration, one-remediation objective admission rule and non-blocking
   feedback policy.
+- [`separation_fine_stem_full_song_plan_contract.py`](../src/sunofriend/separation_fine_stem_full_song_plan_contract.py)
+  validates the immutable three-song private plan without model or audio
+  imports.
+- [`separation_fine_stem_full_song_execution_worker.py`](../src/sunofriend/separation_fine_stem_full_song_execution_worker.py)
+  contains the three bounded, single-profile private worker modes. Future
+  BS-RoFormer runs install the verified source-package stub before importing
+  `MLXBackend`.
+- [`separation_fine_stem_full_song_recovery.py`](../src/sunofriend/separation_fine_stem_full_song_recovery.py)
+  binds retained failure evidence and performs the fixed no-model projection,
+  private publication and incomplete-resource report.
+- [`_private_verified_audio_inputs.py`](../src/sunofriend/_private_verified_audio_inputs.py)
+  supplies descriptor-bound PCM24, NPY and exact-byte reads for immutable
+  private evidence.
 - [`setup-separation-core-four-macos.sh`](../scripts/setup-separation-core-four-macos.sh)
   preserves the exact no-write historical plan and now refuses new installs of
   the objectively failed baseline.
@@ -64,7 +78,7 @@ denial availability without importing MLX or loading weights. An 8 GiB or
 otherwise unverified Apple-silicon class receives an advisory warning; it is
 not silently described as benchmarked.
 
-## Fixed worker behavior
+## Historical blocked MLX worker behavior
 
 The coordinator canonicalizes one authorised source to stereo 44.1 kHz PCM24.
 The worker loads only `model/htdemucs.safetensors` and
@@ -82,6 +96,56 @@ residual to grouped other, applies one shared attenuation and constructs the
 PCM24 other complement. Reports distinguish residual-correction RMS/peak from
 separation quality. Every role and diagnostic is re-hashed before atomic
 publication.
+
+## Private six-role full-song outcome
+
+The private excerpt evidence qualified synth and guitar for Studio research,
+not for public registration. The exact full-song plan at SHA-256
+`869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`
+was approved and consumed once. Its guarded execution retained objective
+failure and no automatic retry. The replacement retained complete SCNet,
+Mega-53 and guitar arrays, but no guitar worker result, guard counters or
+peak-memory receipt.
+
+An exact-hash-approved recovery reverified retained JSON, PCM24 and NPY under
+network denial, performed the fixed grouped-other-constrained projection and
+wrote 24 PCM24 review files. It loaded no checkpoint, constructed or loaded no
+model, ran no inference or canonicalisation and started no model worker. The
+report status is
+`private_review_package_recovered_model_free_resource_gate_incomplete`.
+`full_objective_qualification` is false; guitar and aggregate resource gates
+are incomplete and supported-ceiling compliance is unknown.
+
+The upstream package-barrel path that imports requests/urllib3 and performs a
+caught IPv6 loopback `socket.bind` probe has been reproduced without a model.
+Future workers avoid it through verified import order without weakening bind
+denial. The absent historical guitar receipt means that mechanism is
+consistent with the failure, not proven as its historical cause. A later model
+run requires a new bounded plan and explicit authority; the consumed plan and
+recovery are not retry permission.
+
+## Private evidence IO and publication invariants
+
+- New evidence roots, staging directories and published directories are
+  owner-only mode `0700`. Retained legacy failed-package inner directories may
+  be mode `0755`; their exact modes are bound and they remain immutable. Files
+  are mode `0600`, owned by the current user, single-link, regular and
+  size-bounded.
+- Private execution processes set `umask 077` before staging. Coordinators and
+  workers keep it for their process lifetime; recovery restores the prior mask
+  in `finally`.
+- Every directory component is opened using no-follow, directory and
+  close-on-exec flags. Recovery binds approved directory and leaf
+  device/inode/mode/owner/time/size facts rather than trusting a later path.
+- Hashing plus PCM24 decode or `np.load(allow_pickle=False)` uses the same held
+  leaf descriptor. The descriptor, visible leaf and every directory attachment
+  are rechecked after consumption. The neutral WAV parser supports classic
+  packed PCM24 and integer `WAVE_FORMAT_EXTENSIBLE` PCM24.
+- Publication requires an exact fresh sibling, pins the parent identity, uses
+  owner-only staging and performs an exclusive atomic no-replace rename. A
+  raced destination becomes a retained recovery failure, never an overwrite.
+- Both failed packages are cryptographically bound and left byte-preserved.
+  Recovery remains inside OS network denial even though it imports no model.
 
 ## Admission and feedback policy
 
@@ -111,21 +175,31 @@ unverified and resource-supervised.
   tests/test_separation_profiles.py \
   tests/test_separation_rollout.py \
   tests/test_separation_scopes.py \
-  tests/test_separation_alpha.py
+  tests/test_separation_alpha.py \
+  tests/test_private_atomic_directory.py \
+  tests/test_private_verified_audio_inputs.py \
+  tests/test_separation_fine_stem_full_song_plan.py \
+  tests/test_separation_fine_stem_full_song_execution.py \
+  tests/test_separation_fine_stem_full_song_recovery.py
 ```
 
 These tests cover registry immutability, package/hash locks, read-only setup,
 explicit terms approval, offline launch, exact role mapping, residual
-accounting, report binding, review validation, objective rollout and atomic
+accounting, report binding, review validation, objective rollout,
+`WAVE_FORMAT_EXTENSIBLE` PCM24, descriptor and symlink races, owner-only
+creation, guarded import order, model-free recovery and exclusive atomic
 handoff. They use generated arrays and fake workers; they do not install or
-load the model.
+load a model.
 
-No live MLX activation artifact exists: both attempts failed in private staging
-before publication, so no human listen or song canary was reached. The exact
+For the historical blocked MLX core-four baseline, no live activation artifact
+exists: both attempts failed in private staging before publication, so no
+human listen or song canary was reached. The exact
 PyTorch fallback plan and offline CPU worker were then installed with the
 revised 20-wheel closure and passed doctor. Its synthetic worker failed before
 inference or publication because the loaded native segment is
 `Fraction(39, 5)`, which the pinned contract rejects. Retries are disabled; see
-[the fallback audit](CORE_FOUR_FALLBACK_AUDIT.md). Approval is followed by the same finite
-synthetic, song and resource sequence—not an unlimited search for unanimously
-positive listening feedback.
+[the fallback audit](CORE_FOUR_FALLBACK_AUDIT.md). Any future backend would
+need a new reviewed plan and authority for the same finite synthetic, song and
+resource sequence—not an unlimited search for unanimously positive listening
+feedback. SCNet's public admission is already complete and is not waiting on
+that future authority.

@@ -5,7 +5,7 @@ import { links, separationResearch } from "../../content";
 export const metadata: Metadata = {
   title: "Experimental local stem separation — Sunofriend",
   description:
-    "Try Sunofriend's public two-stem separator or explicit local SCNet core-four preview, and inspect the Studio-only grouped-other refinement contract.",
+    "Public local two-stem and explicit SCNet core-four previews, with private six-role research and model-free recovery evidence kept clearly separate.",
   alternates: { canonical: "/research/separation/" },
 };
 
@@ -33,7 +33,7 @@ export default function SeparationResearch() {
           <span>SUNOFRIEND</span>
         </Link>
         <nav aria-label="Separation alpha navigation">
-          <a href="#working">What works</a>
+          <a href="#working">Current lanes</a>
           <a href="#try">How to try it</a>
           <a href="#development">How it was built</a>
           <a href="#limits">Limits</a>
@@ -53,199 +53,111 @@ export default function SeparationResearch() {
           </div>
           <h1>Try two stems—or opt in to four.</h1>
           <p className="lede">
-            Sunofriend defaults to broad vocals and complementary instrumental
-            from one authorised finished song on an Apple-silicon Mac. The
-            installed SCNet-large profile adds an explicit local vocals, drums,
-            bass and grouped-other public opt-in preview.
+            The public default estimates broad vocals and complementary
+            instrumental. An explicitly installed SCNet profile adds a public
+            opt-in vocals, drums, bass and grouped-other preview. Six-role
+            synth-and-guitar work remains private, unregistered research.
           </p>
         </header>
 
         <section id="working">
-          <h2>What works now</h2>
+          <h2>Four lanes, two public</h2>
           <div className="agent-grid">
             <div className="agent-card">
-              <span className="card-number">PUBLIC WORKING SCOPE</span>
-              <h3>Finished mix to two broad stems</h3>
-              <p>{separationResearch.workingPrivateScope}.</p>
+              <span className="card-number">PUBLIC DEFAULT</span>
+              <h3>Broad vocals and instrumental</h3>
               <p>
-                The instrumental is the complement of the estimated vocals. It
-                is not individual bass, keys, drums or guitar.
+                One authorised finished mix becomes broad vocals, broad
+                instrumental and a diagnostic reconstruction.
+              </p>
+              <p>
+                The instrumental is the complement of the vocal estimate. It
+                does not claim separate drums, bass, synth or guitar.
               </p>
             </div>
+
             <div className="agent-card">
-              <span className="card-number">CORE-FOUR PUBLIC OPT-IN</span>
-              <h3>Four roles, one immutable profile, no hidden tuning loop</h3>
+              <span className="card-number">PUBLIC EXPLICIT OPT-IN</span>
+              <h3>SCNet core four</h3>
               <p>
-                The pinned Demucs MLX worker targets vocals, drums, bass and
-                grouped other with network denial and exact PCM24 reconstruction
-                accounting. Both permitted activation attempts failed before
-                publication. The revised PyTorch CPU fallback passed install and
-                doctor but rejected its native Fraction segment before inference,
-                so its retries are also disabled. The separately pinned SCNet
-                release profile now supplies the public opt-in execution path.
+                Profile <code>scnet-large-musdb-release-v1</code> in scope{" "}
+                <code>core-four-stems-v1</code> estimates vocals, drums, bass
+                and grouped other. The pinned 168,848,417-byte checkpoint,
+                offline synthetic check, three authorised full-song canaries
+                and repeat resource runs passed their objective gates. Complete
+                listens reported no catastrophic defect.
               </p>
               <p>
-                Official SCNet-large is the installed public opt-in profile. Its
-                four-role architecture and minimal
-                Apple-arm64 runtime are pinned. An approved evidence-only
-                download established the mutable Google Drive checkpoint&apos;s
-                exact 168,848,417-byte identity and SHA-256 under accepted
-                provisional terms evidence. Weights-only compatibility passed
-                after one transparent official-wrapper remediation. A
-                network-denied 60-second synthetic run then produced every role
-                in 69.97 seconds at 6.58 GB peak RSS with zero-LSB
-                reconstruction error. Very weak synthetic vocal output is a
-                recorded limitation, not a reason to restart tuning. Three
-                authorised full-song canaries passed, and complete listening
-                checks reported no catastrophic defect. A 36 GB M3 Max is the
-                first verified class; other Apple-silicon machines remain
-                accessible but unverified.
+                This is a public opt-in preview, not recovered studio
+                multitracks. A 36 GB M3 Max is the first verified machine class;
+                other Apple-silicon classes remain accessible but unverified.
               </p>
             </div>
+
             <div className="agent-card">
-              <span className="card-number">DOWNSTREAM PATH</span>
-              <h3>Useful stems can continue to MIDI</h3>
-              <p>{separationResearch.downstreamProof}.</p>
+              <span className="card-number">PRIVATE UNREGISTERED RESEARCH</span>
+              <h3>Six roles with synth and guitar</h3>
               <p>
-                The alpha never silently activates a stem or starts MIDI
-                conversion. The musician makes that later decision.
+                Private Studio experiments combine SCNet core four with
+                Mega-53 synth and BS-RoFormer-SW guitar specialists, constrained
+                inside grouped other. The review roles are vocals, drums, bass,
+                synth, guitar and residual other.
+              </p>
+              <p>
+                These specialists are unregistered. There is no public
+                six-role command, automatic source choice or activation. Exact
+                reconstruction records accounting only, not separation quality.
               </p>
             </div>
+
             <div className="agent-card">
-              <span className="card-number">OPT-IN STUDIO CHALLENGER</span>
-              <h3>Negative results retained; private six-role now qualifies</h3>
+              <span className="card-number">PRIVATE MODEL-FREE RECOVERED REVIEW</span>
+              <h3>
+                <code>
+                  private_review_package_recovered_model_free_resource_gate_incomplete
+                </code>
+              </h3>
               <p>
-                <code>other-refinement-v1</code> now binds one exact grouped-other
-                parent to one requested guitar or keys target plus a transparent
-                PCM24 residual. The parent and children cannot both enter MIDI.
+                The original plan was consumed once. Its replacement run
+                historically completed 3 model loads and 9 completed inference
+                attempts, but did not persist the guitar worker receipt. A
+                separately approved network-denied recovery then reused 21
+                retained private audio payloads and wrote a private review
+                package without loading or running a separator: 0 checkpoint
+                loads, 0 model constructions, 0 model loads, 0 inference
+                attempts, 0 canonicalisations, 0 model-worker subprocesses and
+                0 network attempts. One parent sandbox re-exec provided
+                security supervision.
               </p>
               <p>
-                The first exact candidate is now pinned as{" "}
-                <code>Apple-native htdemucs_6s MLX</code>, with guitar direct and
-                keys honestly labelled as a piano proxy. Its one in-memory
-                <code> 39/5</code> normalization passed under network denial, as did
-                a synthetic canary and both full-song target mappings. The first
-                completed five-song, ten-report review demonstrated neither
-                useful guitar extraction nor successful piano extraction. The
-                technically valid result stays reproducible without promotion,
-                source selection or MIDI.
+                All 24 new PCM24 review artifacts reconstruct within 0 LSB, but the
+                guitar worker result receipt and guard counters were not
+                persisted and guitar peak-memory evidence is absent. Therefore
+                the guitar resource gate and full resource gate are incomplete,
+                <code> within_known_ceilings</code> is unknown, and full
+                objective qualification is false.
               </p>
               <p>
-                The next bounded audit tracks the music-specific Banquet
-                query separator for guitar plus broad <code>keyboard_synth</code>:
-                electric piano, organ, synth pad and synth lead. Its approved
-                evidence-only checkpoint download matched the published MD5,
-                established an exact SHA-256 and passed network-denied static
-                opcode inspection without deserialization. The source audit
-                then found a second required 341,546,630-byte OpenMIC PaSST
-                checkpoint plus unsafe automatic upstream loaders. Sunofriend
-                will bypass those loaders. A separately approved evidence-only
-                download established its exact SHA-256 under network-denied,
-                non-loading inspection. A separately approved evidence-only
-                dependency step then resolved and hashed 28 exact
-                CPython-3.12/macOS-arm64 wheels (99,354,620 bytes) under a
-                1 GiB cap. Licence metadata inspection ran with network denied
-                and imported or installed nothing during that evidence step. A
-                later separately approved gate installed the exact closure from
-                the local cache into a fresh CPython 3.12.10 environment with
-                <code> --no-index --require-hashes</code>. Eight relevant modules
-                imported under network denial with zero network attempts,
-                checkpoint opens, <code>torch.load</code> calls or audio opens.
-                A further explicitly approved gate constructed the real
-                64-band adapter and both download-disabled PaSST variants. It
-                verified all 1,228 combined keys, shapes and dtypes before
-                strict weights-only loading, with no missing or unexpected
-                keys, network attempt or audio open. The separately approved
-                single-use generated-tensor forward then passed all objective
-                gates in 2.85 seconds at about 2.05 GB peak RSS, with finite
-                stereo float32 output and zero network or audio access. The
-                target was very quiet, so this is adapter evidence rather than
-                musical-quality evidence. The one-attempt authority is consumed.
-                A later, separately approved rights-bound reference-query canary completed
-                exactly nine song-disjoint CPU calls under network denial in
-                64.01 seconds at about 3.26 GB peak RSS. All 36 private PCM24
-                artifacts matched their hashes and target plus residual
-                reconstructed each reference with zero-LSB error. The completed
-                bound review rated eight targets not useful and one quiet
-                keyboard target partly useful, with several guitar/synth targets
-                heard as blank or paired with unrelated query hints. The
-                challenger is technically valid but musically unsuccessful,
-                and remains unregistered, unselected and unavailable to MIDI.
-                The pure result validator accepts either an objective pass or a
-                retained objective failure and rejects subjective ratings,
-                automatic retry and product activation. Its
-                CC BY-NC-SA checkpoint limits this route to local noncommercial
-                research.
-              </p>
-              <p>
-                The later bounded plan targeted <code>synth</code> first,
-                followed by guitar and wind. Acoustic piano is only an optional
-                control—not a proxy for modern keys. The public MVSep Mega-53
-                release exposes those roles through a different Band-Split
-                RoFormer architecture. Its approved evidence-only gate locally
-                verified the 1,368,919,887-byte checkpoint and 4,184-byte
-                configuration, then inspected the checkpoint under network
-                denial without loading it. A later evidence-only gate resolved
-                29 exact CPython 3.12/macOS 14+ arm64 wheels totalling
-                127,527,173 bytes and inspected their metadata and licence files
-                without installing or importing them. An explicit follow-up
-                installed that closure into a fresh isolated CPython 3.12.10
-                runtime. Thirteen direct modules imported under OS network denial
-                with zero connect/DNS calls, checkpoint/audio opens or
-                <code>torch.load</code> calls; <code>requests</code> made one
-                contained <code>::1</code> capability-bind probe. The exact
-                144,791-byte source archive was then sealed, and the separately
-                approved construction gate strictly loaded all 13,571 converted
-                MLX parameters after their keys, shapes and dtypes matched. It
-                recorded one checkpoint load and zero forward, audio or network
-                calls. A bounded adapter records the checkpoint-required
-                transformer/mask-head expansion split of 4/2 at float16 without
-                mutating the verified source. Terms remain unreviewed under the
-                acknowledged provisional local-noncommercial boundary. The
-                profile is still unregistered and non-executable. The pure
-                no-effects contract resolves the published 882,000-sample chunk
-                and 441,000-sample overlap step to 881,664 and 440,832, keeping
-                both on the 512-sample STFT clock without padding or cropping.
-                The separately approved one-call forward passed in 18.19 seconds
-                at 15.42 GB peak MLX allocation with exact finite 53-role output
-                and zero network or audio attempts. Four target-present synth
-                and four target-present guitar canaries then passed their frozen
-                private-Studio gate. The fixed integration constrained both
-                specialists inside SCNet grouped other and published eight
-                mutually exclusive vocals, drums, bass, synth, guitar and
-                residual-other review sets with zero-LSB reconstruction. In the
-                combined review, synth was useful in two cases and partly useful
-                in two; guitar was useful in all four target-present cases. No
-                output had a catastrophic defect. This qualifies a private
-                six-role integration, not a public product: the models remain
-                unregistered, MIDI musical usefulness is unreviewed, Mega-53
-                exceeded the original 12 GiB target and checkpoint terms
-                constrain release. The frozen MIDI-usefulness plan was later
-                executed once under network denial over the eight existing
-                role-present artifacts. It verified all 24 inputs, wrote eight
-                exact grouped-other controls and completed 16 same-settings
-                transcriptions, publishing private MIDI and loudness-matched
-                neutral previews without rerunning separation or making a
-                source choice. The completed review preferred guitar candidate MIDI in
-                three of four cases; synth never beat grouped other. Because
-                that first page omitted the source mix, the pure outcome keeps
-                both findings methodology-limited and grants no promotion or
-                source choice. The repaired page includes the source without a
-                listened checkbox. A no-audio request now freezes a
-                source-present three-arm synth test—current estimate, provider
-                synth/keyboard estimate and grouped other through the same
-                transcriber—before any tuning or training decision. The missing
-                fourth provider pack has now been found and all four exact Suno
-                Synth estimates are bound. Their complete pack sums matched the
-                existing source windows with 0.913–0.949 sample correlation,
-                0.946–0.980 envelope correlation and zero best envelope lag.
-                That is song/clock evidence, not proof of the Synth label. A
-                source-visible local review is now open with automatic playback
-                recording and no listened checkbox; no MIDI transcription can
-                start until all four targets are confirmed present and a separate
-                exact 12-attempt plan is approved.
+                Evidence binds plan{" "}
+                <code>
+                  869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d
+                </code>
+                , recovery request{" "}
+                <code>
+                  686a47f09b2f2e95a670e621aa75582e27bb14cebc64035f5c56af3c77f3e60c
+                </code>{" "}
+                and recovery report{" "}
+                <code>
+                  42500c2e9542aee5fc0e238697733923586ad1e37c54b1359a496cf832f330a0
+                </code>
+                . Human listening of this recovered package is pending. The
+                next gate is that listen, or a new bounded plan with separate
+                approval for any further model execution. Recovery performed
+                no automatic retry, public activation, source selection, MIDI,
+                hosting, redistribution, audio upload or model download.
               </p>
             </div>
+
             <div className="agent-card">
               <span className="card-number">HUMAN BOUNDARY</span>
               <h3>Software checks evidence; people judge music</h3>
@@ -257,9 +169,9 @@ export default function SeparationResearch() {
         <section id="try">
           <h2>How to try the public alpha</h2>
           <p className="lede">
-            Start with the Sunofriend skill if you want an agent to guide the
-            setup. The separate model/runtime download is never part of the
-            ordinary demo and requires its own approval.
+            Start with the Sunofriend skill if you want guided setup. A
+            model/runtime download is separate from the ordinary demo and needs
+            explicit approval.
           </p>
           <div className="agent-grid">
             <div className="agent-card">
@@ -267,10 +179,10 @@ export default function SeparationResearch() {
               <h3>Plan before downloading</h3>
               <p>
                 Run <code>{separationResearch.setupPlanCommand}</code> for the
-                default, or{" "}
+                default or{" "}
                 <code>scripts/setup-separation-core-four-scnet-macos.sh --plan</code>{" "}
-                for core four. Each explains platform, model terms, size,
-                network use and install location without changing the Mac.
+                for core four. Planning explains terms, size, network use and
+                install location without changing the Mac.
               </p>
             </div>
             <div className="agent-card">
@@ -278,9 +190,9 @@ export default function SeparationResearch() {
               <h3>Check the exact local profile</h3>
               <p>
                 After explicit installation, run{" "}
-                <code>{separationResearch.developerDoctorCommand}</code>. The
-                doctor hashes the pinned files without loading the model or
-                processing audio.
+                <code>{separationResearch.developerDoctorCommand}</code>. Doctor
+                hashes the pinned files without loading the model or processing
+                audio.
               </p>
             </div>
             <div className="agent-card">
@@ -295,9 +207,9 @@ export default function SeparationResearch() {
               <span className="card-number">04 · LISTEN</span>
               <h3>Execute only after confirming authority</h3>
               <p>
-                Add <code>--execute --confirm-rights --open-review</code>. The
-                model runs locally with offline settings. Judge usefulness,
-                bleed, missing content, texture and joins before using a stem.
+                Add <code>--execute --confirm-rights --open-review</code>. Judge
+                usefulness, bleed, missing content, texture and joins before
+                using any stem.
               </p>
             </div>
           </div>
@@ -314,10 +226,10 @@ export default function SeparationResearch() {
         <section id="development">
           <h2>How the feature was developed</h2>
           <p className="lede">
-            Development now has a hard stopping rule: one baseline configuration,
-            one remediation cycle, then publish if objective gates pass or switch
-            backend if they do not. Musical ratings are preserved for limitations
-            and challengers, not used as an endless pre-release veto.
+            One baseline configuration and one remediation cycle prevent an
+            endless listening-feedback veto. Objective integrity, privacy and
+            execution gates admit a preview; musical feedback records
+            limitations and guides bounded challengers.
           </p>
           <div className="agent-grid">
             {separationResearch.developmentLoop.map((step, index) => (
@@ -330,9 +242,9 @@ export default function SeparationResearch() {
             ))}
           </div>
           <p className="guide-note">
-            Reports are reviewed after 30 days or 10 valid submissions, whichever
-            comes first. Poor feedback cannot disable the last objectively
-            functioning profile or silently select a model.
+            Reports are reviewed after 30 days or 10 valid submissions,
+            whichever comes first. Poor feedback cannot disable the last
+            objectively functioning profile or silently select a model.
           </p>
         </section>
 
@@ -340,37 +252,35 @@ export default function SeparationResearch() {
           <h2>What remains experimental</h2>
           <div className="agent-grid">
             <div className="agent-card">
-              <span className="card-number">STATUS</span>
+              <span className="card-number">PUBLIC STATUS</span>
               <h3>{separationResearch.status}</h3>
               <p>
-                It is a separate command rather than a Simple/TUI button. It is
-                verified on Apple-silicon macOS and needs roughly 500 MB for the
-                pinned model plus runtime and working space.
+                Both routes remain separate local commands rather than a
+                Simple/TUI default. The website receives no audio.
+              </p>
+            </div>
+            <div className="agent-card">
+              <span className="card-number">NO PUBLIC SIX-ROLE CLAIM</span>
+              <h3>Synth and guitar remain private research</h3>
+              <p>
+                The recovered six-role review does not register profiles,
+                authorize public activation or establish full objective or
+                resource qualification.
               </p>
             </div>
             <div className="agent-card">
               <span className="card-number">NOT GROUND TRUTH</span>
               <h3>Reconstruction is necessary, not sufficient</h3>
               <p>
-                A close reconstruction proves additive accounting. Vocals can
-                still contain accompaniment and instrumental can still contain
-                vocals, holes or model artefacts.
+                Exact additive accounting cannot prove clean isolation,
+                musical usefulness or similarity to lost studio tracks.
               </p>
-            </div>
-            <div className="agent-card">
-              <span className="card-number">NEXT WORK</span>
-              <h3>Public use should sharpen the roadmap</h3>
-              <ul>
-                {separationResearch.openGates.map((gate) => (
-                  <li key={gate}>{gate};</li>
-                ))}
-              </ul>
             </div>
           </div>
         </section>
 
         <section id="feedback">
-          <h2>Help improve the next public slice</h2>
+          <h2>Help improve the public previews</h2>
           <p className="lede">{separationResearch.feedbackBoundary}</p>
           <div className="agent-grid">
             <div className="agent-card">
@@ -378,8 +288,8 @@ export default function SeparationResearch() {
               <h3>Tell us whether the stems helped</h3>
               <p>
                 Report overall and per-role usefulness, bleed, missing content,
-                artefacts, timing, joins and whether downstream MIDI improved.
-                “Cannot tell” and “Not tested” are valid.
+                artefacts, timing and joins. “Cannot tell” and “Not tested” are
+                valid.
               </p>
               <ExternalLink className="text-link" href={links.firstSong}>
                 Send a first-song report ↗
@@ -390,8 +300,8 @@ export default function SeparationResearch() {
               <h3>Report the first confusing or failing step</h3>
               <p>
                 Include Mac model, macOS, source format, approximate duration,
-                coding agent and exact command. Use Copy text-only feedback. Do
-                not attach private audio, stems, review JSON, filenames or metadata.
+                coding agent and exact command. Do not attach private audio,
+                stems, review JSON, filenames or metadata.
               </p>
               <ExternalLink className="text-link" href={links.compatibility}>
                 Send text-only compatibility feedback ↗
