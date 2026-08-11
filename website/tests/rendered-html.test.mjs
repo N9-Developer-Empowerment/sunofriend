@@ -213,69 +213,58 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /\/research\/separation\//);
 });
 
-test("publishes honest separation research and existing feedback routes", async () => {
+test("publishes four honest public and private separation lanes", async () => {
   const response = await render("/research/separation/");
   assert.equal(response.status, 200);
   const html = await response.text();
 
   assert.match(html, /PUBLIC EXPERIMENTAL PREVIEW · AUDIO STAYS LOCAL/);
   assert.match(html, /Try two stems—or opt in to four/);
-  assert.match(html, /Finished mix to two broad stems/);
-  assert.match(html, /not individual bass, keys, drums or guitar/);
-  assert.match(html, /installed SCNet-large profile adds an explicit local vocals, drums, bass and grouped-other public opt-in preview/);
-  assert.match(html, /complete listening checks reported no catastrophic defect/);
-  assert.match(html, /Software checks evidence; people judge music/);
-  assert.match(html, /How the feature was developed/);
-  assert.match(html, /state one narrow musical or engineering question/);
+  assert.match(html, /Four lanes, two public/);
+  assert.match(html, /PUBLIC DEFAULT/);
+  assert.match(html, /Broad vocals and instrumental/);
+  assert.match(html, /PUBLIC EXPLICIT OPT-IN/);
+  assert.match(html, /SCNet core four/);
+  assert.match(html, /scnet-large-musdb-release-v1/);
+  assert.match(html, /core-four-stems-v1/);
+  assert.match(html, /PRIVATE UNREGISTERED RESEARCH/);
+  assert.match(html, /Six roles with synth and guitar/);
+  assert.match(html, /no public six-role command/i);
+  assert.match(html, /PRIVATE MODEL-FREE RECOVERED REVIEW/);
+  assert.match(
+    html,
+    /private_review_package_recovered_model_free_resource_gate_incomplete/,
+  );
+  assert.match(html, /0 checkpoint loads/);
+  assert.match(html, /0 model constructions/);
+  assert.match(html, /0 model loads/);
+  assert.match(html, /0 inference attempts/);
+  assert.match(html, /0 model-worker subprocesses/);
+  assert.match(html, /0 network attempts/);
+  assert.match(html, /One parent sandbox re-exec/);
+  assert.match(html, /21 retained private audio payloads/);
+  assert.match(html, /24 new PCM24 review artifacts reconstruct within 0 LSB/);
+  assert.match(html, /3 model loads and 9 completed inference attempts/);
+  assert.match(html, /guitar worker result receipt and guard counters were not/);
+  assert.match(html, /guitar peak-memory evidence is absent/);
+  assert.match(html, /full objective qualification is false/);
+  assert.match(html, /Human listening of this recovered package is pending/);
+  assert.match(
+    html,
+    /no automatic retry, public activation, source selection, MIDI/,
+  );
   assert.match(html, /How to try the public alpha/);
   assert.match(html, /INSPECT SETUP/);
   assert.match(html, /sunofriend-separate doctor/);
-  assert.match(html, /Four roles, one immutable profile, no hidden tuning loop/);
-  assert.match(html, /OPT-IN STUDIO CHALLENGER/);
-  assert.match(html, /other-refinement-v1/);
-  assert.match(html, /Negative results retained; private six-role now qualifies/);
-  assert.match(html, /Apple-native htdemucs_6s MLX/);
-  assert.match(html, /normalization passed under network denial/);
-  assert.match(html, /five-song, ten-report review demonstrated neither/);
-  assert.match(html, /keyboard_synth/);
-  assert.match(html, /99,354,620 bytes/);
-  assert.match(html, /Eight relevant modules/);
-  assert.match(html, /zero network attempts/);
-  assert.match(html, /strict weights-only loading/);
-  assert.match(html, /one-attempt authority is consumed/);
-  assert.match(html, /passed all objective gates in 2.85 seconds/);
-  assert.match(html, /rights-bound reference-query canary/);
-  assert.match(html, /exactly nine song-disjoint CPU calls/);
-  assert.match(html, /All 36 private PCM24 artifacts/);
-  assert.match(html, /eight targets not useful/);
-  assert.match(html, /targeted <code>synth<\/code> first/);
-  assert.match(html, /followed by guitar and wind/);
-  assert.match(html, /Acoustic piano is only an optional control/);
-  assert.match(html, /13,571 converted/);
-  assert.match(html, /zero forward, audio or network calls/);
-  assert.match(html, /expansion split of 4\/2/);
-  assert.match(html, /881,664 and 440,832/);
-  assert.match(html, /without padding or cropping/);
-  assert.match(html, /combined review, synth was useful in two cases/);
-  assert.match(html, /guitar was useful in all four target-present cases/);
-  assert.match(html, /frozen MIDI-usefulness plan was later/);
-  assert.match(html, /verified all 24 inputs/);
-  assert.match(html, /completed 16 same-settings/);
-  assert.match(html, /preferred guitar candidate MIDI in/);
-  assert.match(html, /synth never beat grouped other/);
-  assert.match(html, /source-present three-arm synth test/);
-  assert.match(html, /all four exact Suno Synth estimates are bound/);
-  assert.match(html, /zero best envelope lag/);
-  assert.match(html, /automatic playback recording and no listened checkbox/);
-  assert.match(html, /technically valid but musically unsuccessful/);
-  assert.match(html, /local noncommercial research/);
-  assert.match(html, /30 days or 10 valid submissions/);
-  assert.match(html, /Help improve the next public slice/);
-  assert.match(html, /SEPARATION_DEVELOPER_PREVIEW\.md/);
-  assert.match(html, /rather than a Simple\/TUI button/);
+  assert.match(html, /How the feature was developed/);
+  assert.match(html, /Software checks evidence; people judge music/);
   assert.match(html, /Do not attach private audio/);
   assert.match(html, /Send a first-song report/);
   assert.match(html, /Send text-only compatibility feedback/);
+  assert.doesNotMatch(
+    html,
+    /provider Synth|same-transcriber|source-visible local presence/i,
+  );
   assert.doesNotMatch(html, /model\.safetensors|separation-bakeoff|\/Users\//);
 });
 
@@ -381,12 +370,34 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /copyright-safe synthetic stems/);
   assert.match(text, /not exact waveform reconstruction/);
   assert.match(text, /Experimental finished-mix separation/);
-  assert.match(text, /public local alpha defaults to broad vocals/);
+  assert.match(text, /Public default lane/);
+  assert.match(text, /Public explicit opt-in lane/);
+  assert.match(text, /scnet-large-musdb-release-v1/);
+  assert.match(text, /core-four-stems-v1/);
+  assert.match(text, /Private unregistered research lane/);
+  assert.match(text, /Private model-free recovery lane/);
+  assert.match(
+    text,
+    /private_review_package_recovered_model_free_resource_gate_incomplete/,
+  );
+  assert.match(text, /0 checkpoint loads/);
+  assert.match(text, /0 model constructions/);
+  assert.match(text, /0 model loads/);
+  assert.match(text, /0 inference attempts/);
+  assert.match(text, /0 model-worker subprocesses/);
+  assert.match(text, /0 network attempts/);
+  assert.match(text, /one parent sandbox re-exec/i);
+  assert.match(text, /persisted no guitar worker result receipt, guard counters/);
+  assert.match(text, /peak-memory evidence/);
+  assert.match(text, /full objective qualification is false/);
   assert.match(text, /sunofriend-separate doctor/);
   assert.match(text, /sunofriend-separate profiles --json/);
-  assert.match(text, /immutable `demucs-mlx-htdemucs-v1` baseline/);
   assert.match(text, /FULL_STEM_SEPARATION_PLAN\.md/);
   assert.match(text, /Human listening decides usefulness/);
+  assert.doesNotMatch(
+    text,
+    /source-visible local presence review|same-transcriber bottleneck|provider Synth estimates/,
+  );
   assert.match(text, /A stem is a synchronized grouped submix/);
   assert.match(text, /no affiliate relationship/);
   assert.match(text, /sunofriend\.com\/stems/);
@@ -910,6 +921,179 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
+  assert.equal(data.interface_contract_version, "2026-08-11.2");
+  const separation = data.experiments.finished_mix_separation;
+  assert.equal(separation.public_six_role_available, false);
+  assert.equal(data.boundaries.public_six_role_separation, false);
+  assert.equal(separation.core_four_stem_target.status, "public_opt_in");
+  assert.equal(separation.other_refinement.scope_id, "other-refinement-v1");
+
+  assert.deepEqual(separation.lanes.public_default_two_stem.roles, [
+    "vocals",
+    "instrumental",
+  ]);
+  assert.equal(
+    separation.lanes.public_default_two_stem.public_execution_available,
+    true,
+  );
+  assert.equal(
+    separation.lanes.public_default_two_stem.automatic_source_selection,
+    false,
+  );
+  assert.equal(separation.lanes.public_default_two_stem.automatic_midi, false);
+
+  const publicCoreFour = separation.lanes.public_scnet_core_four;
+  assert.equal(publicCoreFour.status, "public_opt_in");
+  assert.equal(publicCoreFour.scope_id, "core-four-stems-v1");
+  assert.equal(publicCoreFour.profile_id, "scnet-large-musdb-release-v1");
+  assert.deepEqual(publicCoreFour.roles, [
+    "vocals",
+    "drums",
+    "bass",
+    "grouped_other",
+  ]);
+  assert.equal(publicCoreFour.public_execution_available, true);
+  assert.equal(publicCoreFour.automatic_source_selection, false);
+  assert.equal(publicCoreFour.automatic_midi, false);
+
+  const privateResearch =
+    separation.lanes.private_unregistered_six_role_research;
+  assert.equal(privateResearch.visibility, "private");
+  assert.equal(privateResearch.registered, false);
+  assert.equal(privateResearch.public_execution_available, false);
+  assert.deepEqual(privateResearch.roles, [
+    "vocals",
+    "drums",
+    "bass",
+    "synth",
+    "guitar",
+    "residual_other",
+  ]);
+  assert.equal(privateResearch.public_six_role_support_established, false);
+
+  const fullSong = separation.private_fine_stem_full_song;
+  assert.equal(
+    fullSong.status,
+    "private_review_package_recovered_model_free_resource_gate_incomplete",
+  );
+  assert.equal(fullSong.registered, false);
+  assert.equal(fullSong.public_execution_available, false);
+  assert.equal(
+    fullSong.original_plan_sha256,
+    "869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d",
+  );
+  assert.equal(fullSong.original_plan_authority_consumed, true);
+  assert.equal(fullSong.automatic_retry_authorized, false);
+  assert.deepEqual(fullSong.replacement_historical_effects, {
+    model_loads: 3,
+    completed_inference_attempts: 9,
+    guitar_worker_result_receipt_persisted: false,
+    guitar_guard_counters_persisted: false,
+    guitar_peak_memory_bytes: null,
+  });
+
+  const recovery = fullSong.recovery;
+  assert.equal(
+    recovery.request_sha256,
+    "686a47f09b2f2e95a670e621aa75582e27bb14cebc64035f5c56af3c77f3e60c",
+  );
+  assert.equal(
+    recovery.report_sha256,
+    "42500c2e9542aee5fc0e238697733923586ad1e37c54b1359a496cf832f330a0",
+  );
+  assert.equal(recovery.network_denied, true);
+  assert.equal(recovery.retained_audio_payloads_read, 21);
+  assert.equal(recovery.pcm24_audio_writes, 24);
+  assert.equal(recovery.maximum_reconstruction_error_lsb, 0);
+  assert.deepEqual(recovery.effects, {
+    checkpoint_loads: 0,
+    model_constructions: 0,
+    model_loads: 0,
+    inference_attempts: 0,
+    canonicalisations: 0,
+    model_worker_subprocesses: 0,
+    network_attempts: 0,
+    parent_sandbox_reexecs: 1,
+  });
+  assert.equal(
+    recovery.missing_evidence.guitar_worker_result_receipt_persisted,
+    false,
+  );
+  assert.equal(recovery.missing_evidence.guitar_guard_counters_persisted, false);
+  assert.equal(recovery.missing_evidence.guitar_peak_memory_bytes, null);
+  assert.equal(
+    recovery.resource_qualification.guitar_resource_gate_complete,
+    false,
+  );
+  assert.equal(
+    recovery.resource_qualification.full_resource_gate_complete,
+    false,
+  );
+  assert.equal(recovery.resource_qualification.within_known_ceilings, null);
+  assert.equal(recovery.full_objective_qualification, false);
+  assert.equal(recovery.human_listening_pending, true);
+  assert.deepEqual(recovery.product_effects, {
+    automatic_retry: false,
+    public_activation: false,
+    source_selection: false,
+    midi: false,
+    hosting: false,
+    redistribution: false,
+    audio_upload: false,
+    model_download: false,
+  });
+  assert.match(
+    fullSong.next_gate,
+    /listen to the recovered private package.*new bounded plan/,
+  );
+  assert.equal(
+    separation.other_refinement.next_gate,
+    fullSong.next_gate,
+  );
+  const historicalIntegration =
+    separation.other_refinement.next_synth_challenger
+      .six_role_integration_result;
+  assert.equal(
+    historicalIntegration.synth_bottleneck_request.status,
+    "private_synth_midi_bottleneck_recorded_no_selection",
+  );
+  assert.notEqual(
+    historicalIntegration.synth_bottleneck_request.status,
+    "awaiting_four_provider_synth_or_keyboard_estimates",
+  );
+  assert.equal(
+    historicalIntegration.synth_bottleneck_request.historical_document_status,
+    "awaiting_four_provider_synth_or_keyboard_estimates",
+  );
+  assert.equal(
+    historicalIntegration.synth_provider_qualification.status,
+    "historical_presence_review_completed_private_evidence",
+  );
+  assert.notEqual(
+    historicalIntegration.synth_provider_qualification.status,
+    "provider_estimates_aligned_private_review_required",
+  );
+  assert.equal(
+    historicalIntegration.synth_provider_qualification
+      .historical_document_status,
+    "provider_estimates_aligned_private_review_required",
+  );
+  assert.equal(
+    historicalIntegration.synth_provider_qualification
+      .human_target_presence_review_complete,
+    true,
+  );
+  assert.equal(
+    historicalIntegration.synth_bottleneck_request.completed_three_arm_outcome
+      .result,
+    "no_isolated_synth_midi_advantage_over_grouped_other",
+  );
+  const capabilityText = JSON.stringify(separation);
+  assert.doesNotMatch(
+    capabilityText,
+    /awaiting[^"]*full.song|full.song[^"]*awaiting/i,
+  );
+
   assert.equal(data.stem_inputs.built_in_full_mix_separation_available, true);
   assert.equal(
     data.stem_inputs.one_asset_multi_format_import_available,

@@ -1,6 +1,6 @@
 # Fine-stem separation delivery forecast
 
-Status date: 9 August 2026.
+Status date: 11 August 2026.
 
 This forecast answers a narrower question than technical feasibility: how
 likely is Sunofriend to produce musically useful synth and guitar stems, and
@@ -64,28 +64,45 @@ be published.
   excluded from qualification.
 - The pure, hash-bound outcome status is
   `private_six_role_integration_qualified`. It grants no public activation,
-  source selection or MIDI permission. Downstream MIDI usefulness remains the
-  main unresolved musical-product question.
+  source selection or MIDI permission.
+- Both same-transcriber MIDI reviews are complete. Guitar candidate MIDI beat
+  grouped other in 3/4 cases, which is directional private evidence. Isolated
+  synth never beat grouped other, including the source-visible provider
+  comparison, so there is no demonstrated isolated-synth MIDI advantage.
+- The exact three-song full-song plan was approved and consumed once. Its
+  guarded run retained objective failure with no automatic retry. The
+  replacement retained complete arrays but no guitar worker result, guard
+  counters or peak-memory receipt.
+- A separately approved model-free recovery reused those exact arrays under
+  network denial and published 24 private PCM24 review artifacts. It made
+  zero checkpoint loads, model constructions/loads, inference attempts,
+  canonicalisations and model-worker subprocesses. Its status is
+  `private_review_package_recovered_model_free_resource_gate_incomplete`.
+  Full objective qualification is false; guitar/full resource gates remain
+  incomplete and supported-ceiling compliance is unknown.
 - The full repository regression after the review/qualification repair passed:
   3,659 tests, 17 skipped, in 758.41 seconds. The only warning was the existing
   `pkg_resources` deprecation emitted by the Python 3.9 test environment.
 
 ## Probability and duration from the current evidence
 
-The model-selection and short-window reconciliation risks have now resolved
-positively. The remaining uncertainty is whether these estimates improve
-editable synth/guitar MIDI, whether the six-role package remains useful beyond
-the eight frozen windows, and whether checkpoint terms and memory requirements
-permit a distributable product. The percentages below are revised engineering
-confidence ranges, not measured frequencies.
+The model-selection and short-window reconciliation risks resolved positively,
+but isolated synth has not improved MIDI and full-song objective/resource
+qualification is incomplete. The immediate uncertainty is musical continuity
+in the recovered full-song package. A clean new objective run would require a
+new bounded plan rather than replaying consumed authority. The percentages
+below are revised engineering confidence ranges, not measured frequencies.
 
 | Remaining milestone | Probability | Decisive evidence | Delivery if successful |
 | --- | ---: | ---: | ---: |
 | Coherent private six-role canary | **Achieved** | Completed objective run and listen | Completed |
-| Synth/guitar estimates improve downstream editable MIDI | 55–75% | One frozen role-present MIDI bake-off | 2–4 working days |
-| Product-integrated private Studio challenger | 85–95% | Import/review plumbing and explicit no-auto-selection boundary | 3–7 working days |
-| Private challenger useful beyond the eight canary windows | 70–85% | 2–3 additional song-disjoint full-song reviews | 2–4 weeks |
-| Public opt-in six-role preview with resolved terms and supported resources | 45–65% | Terms, installer, 16 GiB fallback or a narrower supported class | 4–8 weeks |
+| Directional guitar MIDI benefit | **Achieved privately** | Candidate beat grouped other in 3/4 methodology-limited cases | Completed |
+| Isolated synth improves downstream editable MIDI | **Not demonstrated** | Two completed same-transcriber reviews | Completed negative result |
+| Product-integrated private Studio excerpt challenger | **Achieved** | Owner-only package with mutually exclusive catalogs | Completed |
+| Recovered full-song package is musically useful | 65–80% | One bound complete-song listen over the three recovered cases | 1–3 working days |
+| New full-song run passes every objective/resource gate | 55–70% | New plan, complete guitar receipt and supported-ceiling evidence | 1–2 weeks after new authority |
+| Private challenger useful beyond the original eight windows | 60–75% | Recovered review plus 2–3 additional song-disjoint songs | 2–4 weeks |
+| Public opt-in six-role preview with resolved terms and supported resources | 35–55% | Terms, installer and supported resource class | 4–8 weeks |
 | Training-backed specialist fallback using clean/open stems and curated teacher estimates | 70–85% | 4–6 weeks | 8–12 weeks |
 | Provider-assisted import for an individual musician | 65–85% | 1–3 days | 1–2 weeks |
 
@@ -102,34 +119,37 @@ first musical gates. The next sequence remains intentionally short:
    selection;
 2. **Complete:** implement and review the grouped-other projection, exact PCM24
    accounting and combined listening package;
-3. **Complete:** freeze a no-effects downstream MIDI comparison over the
-   already persisted role-present synth/guitar artifacts—plan SHA-256
-   `7afab38b0bd446e2de75b4c408b1e275e533298765f25d89280c055fbb63e1e4`;
-4. **Complete technically, review pending:** the approved network-denied worker
-   made exactly 16 same-settings attempts over the eight candidate/control
-   pairs and published bound MIDI plus loudness-matched previews. Complete the
-   blind review and record `cannot_tell` or `not_useful` without blocking
-   private Studio access;
-5. expose the reviewed six-role package only as a private Studio challenger
-   with no automatic source choice; and
-6. start LoRA or broader training only if broader validation exposes a real
-   quality ceiling, not merely because more tuning is possible.
+3. **Complete:** run and review both bounded same-transcriber MIDI comparisons;
+   retain directional guitar evidence and the negative isolated-synth result;
+4. **Complete:** package the reviewed excerpts as an owner-only private Studio
+   challenger with no automatic source choice;
+5. **Complete but not qualified:** recover the fixed three-song listening
+   package without rerunning a model, while preserving both failure roots and
+   the missing guitar resource/guard evidence;
+6. **Next:** complete one bound musical listen of the recovered full songs.
+   Poor feedback is a result, not a trigger for automatic tuning; and
+7. only if that listen justifies continued execution work, write a new bounded
+   plan that can produce a complete guitar receipt and resource measurement.
+   Start LoRA or broader training only after broader validation exposes a real
+   quality ceiling.
 
 The revised cumulative forecast is:
 
 | Time from this status date | Cumulative probability |
 | --- | ---: |
 | Now: reviewed objective six-role integration evidence | **Achieved** |
-| Now: objective downstream MIDI package, human review pending | **Achieved** |
-| 1 week: reviewed downstream MIDI evidence and private Studio packaging | 80–95% |
-| 4 weeks: broader private validation | 70–85% |
-| 8 weeks: public opt-in candidate, subject to terms/resources | 45–65% |
+| Now: reviewed MIDI evidence and private Studio excerpt package | **Achieved** |
+| Now: model-free full-song listening package, objective gate incomplete | **Achieved** |
+| 1 week: recovered full-song musical review | 65–80% |
+| 4 weeks: broader private validation | 60–75% |
+| 8 weeks: public opt-in candidate, subject to terms/resources | 35–55% |
 | 12 weeks: training-backed fallback if required | 75–85% |
 
-The credible private six-role result has been achieved in the frozen canary.
-The next useful answer should arrive within one working week: whether those
-separate synth and guitar estimates materially improve editable MIDI. Public
-availability is less certain because Mega-53 retains a provisional
+The credible private six-role excerpt result and its Studio package have been
+achieved. The next useful answer should arrive within three working days: how
+the recovered six-role estimates hold together across three complete songs.
+That listen cannot repair the incomplete objective receipt. Public availability
+is less certain because Mega-53 retains a provisional
 local-noncommercial evidence boundary, BS-RoFormer-SW is noncommercial, and the
 Mega-53 forward exceeded the original 12 GiB/16 GB-class goal. If the bounded
 MIDI and broader-song checks are poor, retain the private evidence and switch

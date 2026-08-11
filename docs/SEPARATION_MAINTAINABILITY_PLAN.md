@@ -13,6 +13,8 @@ approval boundaries.
 - no model install, inference, song processing, activation or MIDI beyond the
   authority recorded for that gate;
 - objective preview admission remains separate from human musical feedback;
+- private evidence uses descriptor-bound reads, owner-only creation and
+  exclusive atomic publication; and
 - negative listening results remain evidence and do not start an unlimited
   tuning loop.
 
@@ -238,3 +240,86 @@ manifest SHA-256
 it contains no MIDI and grants no model, source-selection or activation
 authority. Keep future full-song execution, profile admission and product
 routing out of both packaging modules.
+
+## Completed full-song execution and recovery increment
+
+The immutable full-song plan and execution contract now keep source identity,
+confirmed specialist presence, forward budgets, resource ceilings and effects
+authority separate from model implementations. The coordinator canonicalises
+each source once, launches three single-profile workers sequentially and gives
+one process sole PCM24 publication authority. Objective failure preserves its
+private staging root rather than retrying.
+
+The consumed guarded run and its replacement retained two immutable failed
+packages. The replacement retained complete SCNet, Mega-53 and guitar arrays,
+but no guitar worker result, guard counters or peak-memory receipt. The
+recovery increment therefore does not pretend to finish the missing evidence.
+`separation_fine_stem_full_song_recovery.py` binds both retained trees, performs
+the already-fixed grouped-other projection and publishes a private review
+package with status
+`private_review_package_recovered_model_free_resource_gate_incomplete`. It
+records zero checkpoint loads, model construction/loading, inference,
+canonicalisation and model subprocesses, and leaves full objective/resource
+qualification false.
+
+The recovery exposed three reusable hardening boundaries:
+
+- `_private_execution_files.py` applies process-local `umask 077` before any
+  recursive staging creation;
+- `_private_verified_audio_inputs.py` performs approval-bound no-follow
+  directory walking, same-descriptor hashing and PCM24/NPY loading, attachment
+  rechecks and safe-basename validation; and
+- `separation_quality.py` supplies the neutral classic/extensible integer-PCM
+  WAVE parser so private evidence reading does not depend on a model worker.
+
+This maintainability increment also extracts the common publication mechanics
+into `_private_atomic_directory.py`: safe single-entry names, no-follow
+absolute-directory opening and Darwin/Linux atomic no-replace directory rename.
+Full-song recovery and the existing v2 join-remediation wrapper now call that
+shared helper while retaining their own request, failure and publication
+contracts. Focused tests characterize the helper and both wrappers.
+
+Recovery publication pins the exact output parent, accepts only a fresh sibling
+and uses exclusive atomic no-replace rename. The recovery process restores its
+previous umask in `finally`; short-lived execution coordinators and workers
+keep the private mask for their process lifetime. Existing failure roots are
+never chmodded or rewritten.
+
+The upstream package barrel's urllib3 IPv6 loopback `socket.bind` probe was
+reproduced without loading a model. Future BS-RoFormer workers install the
+verified package stub before importing `MLXBackend`, while socket bind denial
+remains unchanged. Because no failed guitar receipt exists, documentation and
+reports preserve the narrower
+`consistent_with_known_caught_loopback_bind_probe_not_proven` classification.
+
+## Next incremental refactoring sequence
+
+The fine-stem source family is now about 12,850 lines, with a further 3,685
+lines of fine-stem scripts. The immediate issue is responsibility density, not
+insufficient abstraction. Keep the next changes small and schema-compatible:
+
+1. Split the full-song recovery module behind its current import
+   surface into a pure request/report contract, retained-tree and verified-input
+   binding, projection/persistence, and publication orchestration. Preserve
+   historical request/report readability and schema compatibility. New
+   implementation identities legitimately produce new request hashes; old
+   approvals must never become reusable after a refactor.
+2. Split the full-song review renderer from its server/transport glue and reuse
+   `separation_review_transport.py` for persistence, downloads and range audio.
+3. Consolidate descriptor-bound private reads and exclusive atomic publication
+   primitives only after characterization tests cover every existing caller;
+   never loosen the stronger recovery contract to match a legacy path helper.
+4. Introduce shared immutable role, profile, effects and resource-receipt types
+   for full-song plan, execution and recovery without merging their authority
+   states.
+5. Add one pure, path-free public status projection. Generate or verify the
+   README/skill/interface/website discovery text from that projection instead
+   of repeating volatile hashes and “next step” prose across many files.
+6. Move modules incrementally toward `separation/public`,
+   `separation/private/fine_stem/{contracts,guards,adapters,execution,recovery,review}`
+   and `separation/io`, using compatibility re-exports for every move. Do not
+   combine this namespace cleanup with schema, model or product changes.
+
+Every increment must keep public two-stem/core-four behavior unchanged, retain
+the consumed no-retry boundary, run generated/fake-worker tests only, and leave
+private audio and evidence outside the repository.

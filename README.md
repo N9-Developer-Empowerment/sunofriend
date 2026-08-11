@@ -73,6 +73,18 @@ reconstruction check and local listening page. Read [Experimental local stem sep
 before installing a separate pinned model/runtime or treating any estimate as
 useful.
 
+Finished-mix separation currently has four distinct lanes:
+
+| Lane | Roles | Availability |
+| --- | --- | --- |
+| Public default | broad vocals, complementary instrumental | `broad-vocals-v1` |
+| Public explicit opt-in | vocals, drums, bass, grouped other | SCNet `core-four-stems-v1` |
+| Private research | vocals, drums, bass, synth, guitar, residual other | unregistered specialist evidence only |
+| Private recovery | the same six roles plus source and reconstruction review | `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
+
+The private synth and guitar models are not public profiles. Exact
+reconstruction demonstrates PCM accounting, not correct musical assignment.
+
 > **Core-four preview available:** after the separately approved SCNet setup,
 > Sunofriend can estimate `vocals.wav`, `drums.wav`, `bass.wav` and grouped
 > `other.wav`. Inspect the immutable profile first, then select the scope
@@ -113,11 +125,11 @@ never activates the target or starts MIDI automatically. The deterministic
 PCM24 proof, setup plan and bounded qualification evidence are documented in
 [Refining grouped other in Studio](docs/OTHER_STEM_REFINEMENT.md).
 
-The next bounded candidate changes the target from piano to the broader,
-modern `keyboard_synth` family: electric piano, organ, synth pad and synth
-lead. Banquet is being audited as a query-conditioned local research
-challenger alongside guitar, with one configuration and no post-feedback query
-hunt. Inspect the no-effects plan with:
+The completed bounded candidate broadened the target from piano to the modern
+`keyboard_synth` family: electric piano, organ, synth pad and synth lead.
+Banquet was audited as a query-conditioned local research challenger alongside
+guitar, with one configuration and no post-feedback query hunt. Its historical
+no-effects planning commands were:
 
 ```bash
 .venv/bin/python \
@@ -194,12 +206,12 @@ Probability, delivery time and the alternative synth/guitar portfolio are
 tracked separately in the
 [Fine-stem separation delivery forecast](docs/FINE_STEM_SEPARATION_FORECAST.md).
 
-The next bounded challenger is now **synth first**, then guitar and wind;
-acoustic piano is only an optional control and no longer stands in for modern
-keys. The no-effects plan audits the public MVSep Mega 53 Stems release and an
-exact Apple-native BS-RoFormer source revision. It writes only a future native
-`synth` candidate plus a transparent residual, separates audible target
-presence from model usefulness, and permits one configuration with no
+The later bounded challenger prioritised **synth first**, then guitar and wind;
+acoustic piano was only an optional control and no longer stood in for modern
+keys. Its no-effects plan audited the public MVSep Mega 53 Stems release and an
+exact Apple-native BS-RoFormer source revision. The contract allowed only a
+native `synth` candidate plus a transparent residual, separated audible target
+presence from model usefulness, and permitted one configuration with no
 post-feedback tuning loop. The approved evidence-only gate locally verified the
 1,368,919,887-byte checkpoint and 4,184-byte configuration against their exact
 published SHA-256 values, then inspected the checkpoint under network denial
@@ -268,7 +280,7 @@ The completed review document SHA-256 is
 the pure outcome document SHA-256 is
 `85b63909743da20a0b68e9d2fc130d0120f99e88036653586f7507766cf5d6f9`.
 
-The next no-effects plan is also complete. It binds all eight exact
+The downstream-MIDI no-effects plan is complete. It binds all eight exact
 confirmed-present synth/guitar artifacts and compares each target candidate
 with a sample-exact grouped-other control under identical BPM, key, tuning and
 transcription settings. It opens no audio, runs no model or transcriber, writes
@@ -314,8 +326,8 @@ authority:
 
 The outcome SHA-256 is
 `d69863fb8ea59087ad6cfcd5669fee88db6afef6a7bd20809d42d88415c29a0c`.
-The next no-audio request binds the exact four source-present synth cases and
-freezes a three-arm attribution test: current synth estimate, provider
+A historical no-audio request then bound the exact four source-present synth
+cases and froze a three-arm attribution test: current synth estimate, provider
 synth/keyboard estimate and grouped-other control, all through the same
 transcriber with the source visible during review. It neither opens provider
 audio nor authorises the later 12-attempt run:
@@ -351,10 +363,10 @@ It loaded no model, ran no transcription and does not treat the provider
   FRESH/fine-stem-synth-provider-qualification-v1
 ```
 
-The source-visible presence review records playback automatically, autosaves
-on the local server and has no listened checkbox. Only a complete four-case
-presence result can produce the separately hash-bound 12-attempt MIDI plan;
-poor musical feedback still cannot disable core four.
+The source-visible presence review recorded playback automatically, autosaved
+on the local server and had no listened checkbox. It completed all four cases
+before the separately hash-bound 12-attempt MIDI plan ran; poor musical
+feedback still cannot disable core four.
 
 That source-visible three-arm MIDI comparison is now complete. Grouped other
 was preferred in all four synth cases, so Sunofriend retains grouped other as
@@ -380,49 +392,58 @@ Its manifest SHA-256 is
 `4b5bce6daa00607a93257d33db3e1055ab651287458c21ccd637b304438053bd`.
 This is a private evaluation slice, not a full-song or public six-stem claim.
 
-The next full-song step is frozen and its guarded executor is implemented,
-without having run a model. It binds exactly
-three song-disjoint sources whose requested instruments were confirmed present
-before inference: `I am a Alien mashup` for both synth and guitar, `Be Alone`
-for synth and `In the way` for guitar. Only those confirmed-present specialist
-roles are scored; an unconfirmed complementary role is not a model failure.
-The plan fixes three sequential profile loads, nine full-song profile attempts,
-no automatic retry, no remediation cycle and no minimum usefulness rating.
-Its document SHA-256 is
-`869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`.
+The exact three-song full-song plan at SHA-256
+`869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`
+was approved and consumed once. It bound `I am a Alien mashup` for confirmed
+synth and guitar, `Be Alone` for synth and `In the way` for guitar. The guarded
+run ended in retained objective failure with no automatic retry. Its
+replacement failure retained complete SCNet, Mega-53 and guitar arrays but no
+guitar result receipt, guard counters or peak-memory measurement; both failed
+packages remain immutable.
+
+A separately exact-hash-approved recovery reverified the retained PCM24, NPY
+and JSON identities under network denial and wrote the already-fixed 24 private
+PCM24 review artifacts. It loaded no checkpoint, constructed or loaded no
+model, ran no inference or canonicalisation and started no model worker. Its
+status is
+`private_review_package_recovered_model_free_resource_gate_incomplete`.
+This provides private full-song listening material, not full objective or
+resource qualification: the guitar and aggregate resource gates are incomplete
+and supported-ceiling compliance is unknown. The reproducible urllib3 IPv6
+loopback `socket.bind` import path is consistent with the failed effects guard,
+but the missing historical worker receipt means it is not proven as that
+failure's cause. The future worker import order is repaired without weakening
+bind denial.
+
+The original planning command and its approval are historical, consumed and
+non-reusable. Do not recreate or rerun that plan or solicit its old approval.
+Any future model run needs a new bounded plan and explicit authority. Validate
+the exact recovered report without loading a model:
 
 ```bash
-.venv/bin/python scripts/plan-fine-stem-full-song-six-role.py \
-  PRIVATE-PRESENCE-ROOT \
-  PRIVATE-INTEGRATION-OUTCOME.json \
-  --source-root /absolute/path/to/stem_examples \
-  --both-targets-track i-am-a-alien-mashup \
-  --synth-track be-alone \
-  --guitar-track in-the-way \
-  --out PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1
+.venv/bin/python scripts/recover-fine-stem-full-song-six-role.py \
+  --plan PRIVATE-PLAN-ROOT/FULL-SONG-SIX-ROLE-PLAN.json \
+  --validate-report \
+  PRIVATE-RECOVERY-ROOT/TECHNICAL/FULL-SONG-SIX-ROLE-RECOVERY-REPORT.json
 ```
 
-Planning checks source metadata only; it opens no audio content and grants no
-execution, activation, source-selection or MIDI authority. The executor's
-default no-effects mode reports the fixed 94 SCNet, 75 Mega-53 and 122
-BS-RoFormer-SW internal forward limits. Actual execution additionally requires
-the exact plan hash, explicit rights confirmation, a fresh private output and
-macOS network denial. Poor listening feedback remains recordable without
-disabling core four. See
-[Private full-song six-role canary plan](docs/FINE_STEM_FULL_SONG_PLAN.md).
+The recovered package grants no public activation, source choice, MIDI,
+hosting, redistribution or upload. Poor listening feedback remains recordable
+without disabling core four. See [Private full-song six-role canary
+plan](docs/FINE_STEM_FULL_SONG_PLAN.md).
 
-Serve that repaired review with:
+Serve the recovered full-song review with:
 
 ```bash
-.venv/bin/python scripts/serve-fine-stem-downstream-midi-review.py \
-  PRIVATE-MIDI-CANARY-ROOT \
-  --integration-root SIX-ROLE-INTEGRATION-ROOT
+.venv/bin/python scripts/serve-fine-stem-full-song-six-role-review.py \
+  PRIVATE-RECOVERY-ROOT \
+  --plan PRIVATE-PLAN-ROOT/FULL-SONG-SIX-ROLE-PLAN.json
 ```
 
 See [Synth-first fine-stem challenger](docs/OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 
-After the local page exports your listening JSON, bind it to the exact result
-without selecting a source or starting MIDI:
+For the separate grouped-other refinement route, bind an exported listening
+JSON to its exact result without selecting a source or starting MIDI:
 
 ```bash
 .venv/bin/sunofriend-separate review-other \

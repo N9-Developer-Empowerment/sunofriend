@@ -1,19 +1,22 @@
-# Private full-song six-role canary plan
+# Private full-song six-role canary: consumed plan and model-free recovery
 
-Sunofriend has qualified private 15-second evidence for six mutually exclusive
-roles: `vocals`, `drums`, `bass`, `synth`, `guitar` and residual `other`. That
-does not yet establish full-song continuity. The immutable plan and its guarded
-executor are implemented, but the executor has not been authorised or run. Its
-default mode emits a no-effects execution request without loading a checkpoint,
-running a model, reading audio content or granting a product permission.
+Sunofriend has one private full-song listening package for six mutually
+exclusive roles: `vocals`, `drums`, `bass`, `synth`, `guitar` and residual
+`other`. It is not a public six-stem product and it is not full objective or
+resource qualification.
+
+The current report status is
+`private_review_package_recovered_model_free_resource_gate_incomplete`.
+Mega-53 synth and BS-RoFormer-SW guitar remain unregistered private research
+profiles. The public default remains broad vocals/instrumental, while SCNet
+core four remains the explicit public opt-in route.
+
+## Fixed corpus and consumed authority
 
 The immutable plan document is
 `sunofriend.fine-stem-full-song-six-role-plan.v1`, with SHA-256
 `869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`.
-
-## Fixed corpus
-
-The corpus contains exactly three song-disjoint owner-authorised sources:
+It bound exactly three song-disjoint owner-authorised sources:
 
 | Coverage slot | Track | Scored specialist roles | Confirmed-present evidence |
 | --- | --- | --- | --- |
@@ -22,125 +25,112 @@ The corpus contains exactly three song-disjoint owner-authorised sources:
 | Guitar | `In the way` | guitar | guitar at 73–88 seconds |
 
 Every presence decision was made from the source before the relevant model was
-scored. A provider stem label is not treated as truth. A complementary role
-without confirmed presence remains reviewable context but is not counted as a
-model failure.
+scored. Provider labels were comparison evidence, not truth. An unconfirmed
+complementary specialist role was not scored as a model failure.
 
-The plan binds the exact original source hashes, byte counts, clocks and
-rights categories already preserved by the qualified presence package. During
-planning it checks only that each regular source file exists at the expected
-path and byte count. It does not open or hash the audio content again; the
-future executor must re-hash before canonicalisation.
+The plan fixed three sequential model loads, nine profile attempts, 94 SCNet,
+75 Mega-53 and 122 BS-RoFormer-SW internal-forward limits, a single
+configuration, no automatic retry, no remediation cycle and no minimum
+usefulness rating. Its execution authority was approved and consumed once. It
+must not be solicited or replayed as though it were still pending.
 
-## One bounded execution
+## Retained failure
 
-If separately approved, the worker will:
+The guarded execution stopped at an objective effects-boundary failure and
+preserved its private staging tree. A replacement attempt also retained its
+failure tree without an automatic retry. That replacement contained complete
+SCNet, Mega-53 and guitar arrays, but the guitar worker did not persist its
+result receipt, guard counters or peak-memory measurement. The earlier and
+replacement failed packages remain immutable and are both bound into recovery
+evidence.
 
-1. verify each exact source hash and canonicalise it once to stereo 44.1 kHz
-   PCM24 without modifying the original;
-2. load SCNet core four, Mega-53 synth and BS-RoFormer-SW guitar once each;
-3. run the models sequentially for three attempts per profile, nine full-song
-   profile attempts in total;
-4. constrain synth and guitar allocation to SCNet grouped other; and
-5. write source, six roles and reconstruction check atomically for each song.
+The known upstream package import path can run urllib3's caught IPv6 loopback
+capability probe, including `socket.bind(("::1", 0))`. That path was
+reproduced without a model and the future worker now installs the verified
+package stub before importing `MLXBackend`; bind denial remains intact. Because
+the failed guitar worker has no receipt, historical causation is only
+`consistent_with_known_caught_loopback_bind_probe_not_proven`.
 
-Internal model forward calls are duration-dependent and are now derived before
-execution from the exact canonical frame counts and frozen backend contracts:
-94 SCNet forwards after the deterministic seed-0 shift, 75 Mega-53 forwards
-using the approved 512-hop-aligned overlap-2 contract and 122
-BS-RoFormer-SW forwards using its verified reflect-pad overlap loop. These are
-accounting limits, not permission to tune chunking, overlap, weights or
-configuration.
+## Exact model-free recovery
 
-The ceilings are 900 seconds per song, 2,700 seconds total and 30 GiB peak
-unified memory on the first supported 36 GB M3 Max class. Any objective failure
-is preserved and stops the run. There is no automatic retry and no remediation
-cycle in this plan.
+A separately exact-hash-approved recovery ran under macOS network denial. It:
 
-## Feedback without another doom loop
+1. reverified approval-bound directory and file identities for retained JSON,
+   canonical PCM24 and NPY estimates;
+2. reused the exact retained source, core-four, synth and guitar arrays;
+3. performed only the already-fixed grouped-other-constrained projection;
+4. wrote source, six roles and reconstruction check for each of the three songs,
+   24 PCM24 artifacts in total; and
+5. atomically published a private review package while leaving both failed
+   packages byte-preserved.
 
-Objective stop-ship conditions remain licence/hash contradiction, network
-access, source mutation/privacy breach, corrupt or missing roles, non-finite
-audio, clock mismatch, failed reconstruction accounting, crash, OOM or a
-resource-ceiling failure.
+Recovery performed zero checkpoint loads, model constructions, model loads,
+inference attempts, canonicalisations and model-worker subprocesses. It did not
+download anything or create MIDI. Exact reconstruction remains accounting
+evidence, not proof that synth or guitar was assigned accurately.
 
-Musical feedback is separate. The review records playback automatically and
-has no listened checkbox. It presents each complete song plus the exact
-confirmed-present specialist windows, records usefulness and issue dimensions,
-and accepts `cannot_tell` and `not_tested`. It does not require exhaustive
-internal chunk-boundary clicking or a minimum usefulness score. Poor results
-add limitations; they do not disable core four, erase the qualified private
-profile or trigger a configuration search.
+The recovered report deliberately records:
 
-This remains private Studio evidence. It grants no public activation, source
-selection, MIDI, hosting, redistribution or audio upload.
+- `full_objective_qualification: false`;
+- `guitar_resource_gate_complete: false`;
+- `full_resource_gate_complete: false`; and
+- `within_known_ceilings: null`.
 
-## Reproduce the no-effects plan
+The missing guitar receipt cannot be reconstructed from complete arrays. The
+package is suitable for private musical listening, but cannot qualify a public
+or private execution profile objectively.
 
-Use a fresh owner-only output root:
+## Ownership and publication invariants
 
-```bash
-.venv/bin/python scripts/plan-fine-stem-full-song-six-role.py \
-  PRIVATE-PRESENCE-ROOT \
-  PRIVATE-INTEGRATION-OUTCOME.json \
-  --source-root /absolute/path/to/stem_examples \
-  --both-targets-track i-am-a-alien-mashup \
-  --synth-track be-alone \
-  --guitar-track in-the-way \
-  --out PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1
-```
+New private roots, staging directories and published directories are
+owner-only mode `0700`; retained legacy failed-package inner directories may
+be mode `0755`, are exact-mode-bound and remain immutable. Regular files are
+mode `0600`, owned by the current user, single-link and bounded. Recovery opens
+each path component without following symlinks, binds approved directory and
+leaf device/inode/mode/owner/time/size facts, and hashes plus decodes PCM24 or
+loads NPY from the same held descriptor. It then rechecks the descriptor, leaf
+attachment and every directory attachment. Both classic PCM24 WAV and
+`WAVE_FORMAT_EXTENSIBLE` integer PCM are accepted by the neutral parser.
 
-The command reads JSON and source metadata only. It writes one mode-`0600`
-plan inside a mode-`0700` directory and performs no model or audio operation.
+The recovery process uses a temporary `umask 077`, restores the previous mask
+in `finally`, stages inside the verified output parent and publishes with an
+exclusive atomic no-replace rename. A raced destination becomes a retained
+recovery failure rather than an overwrite.
 
-## Preflight the guarded executor
+## Review without another doom loop
 
-This command prints the immutable, path-light execution request and exits. It
-does not require approval because it performs zero source-content reads,
-canonical writes, model loads, inference attempts or audio writes:
+The local page presents each complete source, six roles, reconstruction and
+the exact confirmed-present specialist windows. Playback is recorded
+automatically; there is no listened checkbox. It accepts `cannot_tell` and
+`not_tested`, and it imposes no minimum usefulness score.
 
-```bash
-.venv/bin/python scripts/run-fine-stem-full-song-six-role.py \
-  --plan PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1/FULL-SONG-SIX-ROLE-PLAN.json \
-  --out PRIVATE-EVIDENCE/fine-stem-full-song-six-role-canary-v1
-```
+Poor musical feedback can document limitations and inform a later bounded
+plan. It cannot disable public core four, turn recovered evidence into
+qualification or authorise a retry. The review grants no public activation,
+source selection, MIDI, hosting, redistribution or audio upload.
 
-The execution path is fail-closed. It requires Apple-silicon macOS,
-`sandbox-exec` network denial, a fresh output root, `--confirm-rights` and an
-`--approved-plan-sha256` exactly equal to the immutable plan hash. It verifies
-every source before and after processing, canonicalises each source once, runs
-three single-load workers sequentially and gives one coordinator sole PCM24
-write authority. Objective failure is retained under a fresh `-FAILED` root;
-there is no retry.
-
-Once the exact approval below has been received, the authorised command is:
-
-```bash
-.venv/bin/python scripts/run-fine-stem-full-song-six-role.py \
-  --plan PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1/FULL-SONG-SIX-ROLE-PLAN.json \
-  --out PRIVATE-EVIDENCE/fine-stem-full-song-six-role-canary-v1 \
-  --approved-plan-sha256 869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d \
-  --confirm-rights \
-  --execute
-```
-
-After objective completion, serve the report-bound local page with:
+Serve an already recovered package with:
 
 ```bash
 .venv/bin/python scripts/serve-fine-stem-full-song-six-role-review.py \
-  PRIVATE-EVIDENCE/fine-stem-full-song-six-role-canary-v1 \
-  --plan PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1/FULL-SONG-SIX-ROLE-PLAN.json
+  PRIVATE-RECOVERY-ROOT \
+  --plan PRIVATE-PLAN-ROOT/FULL-SONG-SIX-ROLE-PLAN.json
 ```
 
-The page records playback automatically, including the confirmed-present
-source windows, and has no listened checkbox. Autosave, download and the
-visible fallback all bind feedback to the exact plan and report. The review
-JSON contains no audio, paths, filenames or telemetry and cannot select a
-source, start MIDI or activate a profile.
+Validate its exact request-bound report without running a model:
 
-## Exact later approval
+```bash
+.venv/bin/python scripts/recover-fine-stem-full-song-six-role.py \
+  --plan PRIVATE-PLAN-ROOT/FULL-SONG-SIX-ROLE-PLAN.json \
+  --validate-report \
+  PRIVATE-RECOVERY-ROOT/TECHNICAL/FULL-SONG-SIX-ROLE-RECOVERY-REPORT.json
+```
 
-Execution remains blocked until the user cites the plan hash in this form:
+## Historical approval text — consumed, not reusable
+
+The following text records the authority that was used for the one guarded
+execution. It is retained for provenance only and is not an instruction or
+standing approval:
 
 > I approve one network-denied private full-song six-role canary bound to plan
 > SHA-256
@@ -153,3 +143,7 @@ Execution remains blocked until the user cites the plan hash in this form:
 > drums, bass, synth, guitar, residual-other and reconstruction review
 > artifacts. No automatic retry, public activation, source selection, MIDI,
 > hosting, redistribution or audio upload is approved.
+
+Any future model execution requires a new bounded plan and new explicit
+authority. The completed model-free recovery is not permission to run the
+models again.

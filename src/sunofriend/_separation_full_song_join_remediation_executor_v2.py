@@ -19,6 +19,15 @@ import stat
 import tempfile
 from typing import Any, Callable, Mapping
 
+from ._private_atomic_directory import (
+    AtomicDirectoryUnavailable,
+    UnsafeDirectoryEntryName,
+    UnsafeDirectoryPath,
+    exclusive_directory_rename_implementation,
+    open_absolute_directory_nofollow,
+    rename_directory_no_replace_at,
+    require_safe_directory_entry_name,
+)
 from ._separation_authorised_excerpt import _document_sha256
 from ._separation_full_song_executor import _require_private_directory
 from ._separation_full_song_join_remediation_plan_v2 import (
@@ -999,33 +1008,26 @@ def _rename_directory_exclusive_at(
 ) -> None:
     """Atomically publish one directory without replacing any raced name."""
 
-    import ctypes
     import errno
 
-    if (
-        Path(source_name).name != source_name
-        or Path(destination_name).name != destination_name
-        or source_name in ("", ".", "..")
-        or destination_name in ("", ".", "..")
-    ):
-        raise ValueError("private v2 publication name differs")
+    try:
+        require_safe_directory_entry_name(source_name)
+        require_safe_directory_entry_name(destination_name)
+    except UnsafeDirectoryEntryName as error:
+        raise ValueError("private v2 publication name differs") from error
     function, flag = _exclusive_directory_rename_implementation()
-    source = os.fsencode(source_name)
-    destination = os.fsencode(destination_name)
-    if (
-        function(
+    try:
+        rename_directory_no_replace_at(
             parent_descriptor,
-            source,
-            parent_descriptor,
-            destination,
-            flag,
+            source_name,
+            destination_name,
+            implementation=(function, flag),
         )
-        == 0
-    ):
         return
-    error_number = ctypes.get_errno()
-    if error_number in (errno.EEXIST, errno.ENOTEMPTY):
-        raise FileExistsError(error_number, os.strerror(error_number), destination_name)
+    except FileExistsError:
+        raise
+    except OSError as error:
+        error_number = error.errno
     if error_number in {
         errno.ENOSYS,
         errno.EINVAL,
@@ -1044,32 +1046,12 @@ def _require_exclusive_directory_rename_available() -> None:
 
 
 def _exclusive_directory_rename_implementation() -> tuple[Any, int]:
-    import ctypes
-    import sys
-
-    library = ctypes.CDLL(None, use_errno=True)
-    if sys.platform == "darwin":
-        function = getattr(library, "renameatx_np", None)
-        flag = 0x00000004  # RENAME_EXCL from sys/stdio.h.
-    elif sys.platform.startswith("linux"):
-        function = getattr(library, "renameat2", None)
-        flag = 0x00000001  # RENAME_NOREPLACE from linux/fs.h.
-    else:
-        function = None
-        flag = 0
-    if function is None:
+    try:
+        return exclusive_directory_rename_implementation()
+    except AtomicDirectoryUnavailable as error:
         raise RuntimeError(
             "private v2 output requires an atomic exclusive directory rename"
-        )
-    function.argtypes = (
-        ctypes.c_int,
-        ctypes.c_char_p,
-        ctypes.c_int,
-        ctypes.c_char_p,
-        ctypes.c_uint,
-    )
-    function.restype = ctypes.c_int
-    return function, flag
+        ) from error
 
 
 def _discard_unpublished_candidate(
@@ -1567,31 +1549,14 @@ def _bind_output_parent(
 def _open_absolute_directory_nofollow(path: Path) -> int:
     """Open every absolute path component with no-follow semantics."""
 
-    no_follow = getattr(os, "O_NOFOLLOW", None)
-    if no_follow is None:
+    try:
+        return open_absolute_directory_nofollow(path)
+    except AtomicDirectoryUnavailable as error:
         raise RuntimeError(
             "private v2 output parent cannot be bound without no-follow support"
-        )
-    if not path.is_absolute() or any(part in (".", "..") for part in path.parts):
-        raise ValueError("private v2 output parent path differs")
-    flags = (
-        os.O_RDONLY
-        | getattr(os, "O_DIRECTORY", 0)
-        | no_follow
-        | getattr(os, "O_CLOEXEC", 0)
-    )
-    descriptor = os.open("/", flags)
-    try:
-        os.set_inheritable(descriptor, False)
-        for component in path.parts[1:]:
-            next_descriptor = os.open(component, flags, dir_fd=descriptor)
-            os.set_inheritable(next_descriptor, False)
-            os.close(descriptor)
-            descriptor = next_descriptor
-        return descriptor
-    except BaseException:
-        os.close(descriptor)
-        raise
+        ) from error
+    except UnsafeDirectoryPath as error:
+        raise ValueError("private v2 output parent path differs") from error
 
 
 def _require_visible_output_binding(

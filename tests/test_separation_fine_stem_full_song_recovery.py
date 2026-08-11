@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import copy
 import hashlib
 import json
 import os
@@ -41,7 +42,9 @@ from sunofriend.separation_fine_stem_full_song_recovery import (
     _exclusive_publish,
     build_recovery_request,
     execute_recovery,
+    recovery_request_sha256,
     recovery_report_sha256,
+    validate_recovery_request,
     validate_recovery_report,
 )
 from sunofriend.separation_fine_stem_integration_plan import PERSISTED_ROLES
@@ -60,8 +63,7 @@ def _sha(path: Path) -> str:
 
 def _pack_pcm24(integer: np.ndarray) -> bytes:
     return b"".join(
-        int(value).to_bytes(3, "little", signed=True)
-        for value in integer.reshape(-1)
+        int(value).to_bytes(3, "little", signed=True) for value in integer.reshape(-1)
     )
 
 
@@ -459,6 +461,9 @@ def test_preflight_binds_exact_tree_and_hashes_guitar_without_writes(
 
     assert first == second
     assert first["document_sha256"]
+    assert "src/sunofriend/_private_atomic_directory.py" in {
+        item["relative_path"] for item in first["implementation"]
+    }
     assert len(first["retained_tree"]["files"]) == 27
     assert first["retained_tree"]["legacy_inner_directory_modes_0755"] == 4
     guitar = [row for row in first["retained_payloads"] if row["role"] == "guitar"]
@@ -466,15 +471,42 @@ def test_preflight_binds_exact_tree_and_hashes_guitar_without_writes(
     assert first["effects"]["audio_payloads_opened"] == 4
     assert first["effects"]["retained_json_files_content_read"] == 6
     assert (
-        first["retained_json"]["failure_report"]["observed_file_identity"][
-            "links"
-        ]
-        == 1
+        first["retained_json"]["failure_report"]["observed_file_identity"]["links"] == 1
     )
     assert first["prior_failed_package"]["files_content_hashed"] == 2
     assert first["prior_failed_package"]["audio_payloads_content_hashed"] == 1
     assert not output.exists()
     assert _tree_bytes(failed) == before
+
+
+def test_historical_request_without_atomic_helper_remains_reviewable_only(
+    tmp_path: Path,
+) -> None:
+    plan, failed, prior = _failed_fixture(tmp_path)
+    output = tmp_path / "recovered"
+    current = build_recovery_request(
+        plan,
+        failed,
+        proposed_output=output,
+        prior_failed_root_value=prior,
+    )
+    legacy = copy.deepcopy(current)
+    legacy["implementation"] = [
+        item
+        for item in legacy["implementation"]
+        if item["relative_path"] != "src/sunofriend/_private_atomic_directory.py"
+    ]
+    legacy["document_sha256"] = recovery_request_sha256(legacy)
+
+    assert validate_recovery_request(legacy, plan) == legacy
+    with pytest.raises(RuntimeError, match="retained package changed after approval"):
+        execute_recovery(
+            plan,
+            legacy,
+            approved_recovery_sha256=legacy["document_sha256"],
+            confirm_rights=True,
+            network_sandbox_verified=True,
+        )
 
 
 def test_model_free_recovery_writes_24_pcm24_and_visible_banner(
@@ -528,16 +560,11 @@ def test_model_free_recovery_writes_24_pcm24_and_visible_banner(
     assert report["effects"]["recovery"]["model_constructions"] == 0
     assert report["effects"]["recovery"]["model_worker_subprocesses"] == 0
     assert report["effects"]["recovery"]["current_audio_payload_file_opens"] == 21
+    assert report["effects"]["recovery"]["prior_failed_audio_payload_hash_opens"] == 3
     assert (
-        report["effects"]["recovery"][
-            "prior_failed_audio_payload_hash_opens"
+        report["recovered_inputs"]["both"]["reference"]["observed_file_identity"][
+            "links"
         ]
-        == 3
-    )
-    assert (
-        report["recovered_inputs"]["both"]["reference"][
-            "observed_file_identity"
-        ]["links"]
         == 1
     )
     assert len(list((output / "CASES").rglob("*.wav"))) == RECOVERY_AUDIO_WRITES
@@ -659,9 +686,7 @@ def test_retained_tree_rejects_extra_files_and_symlinks(
     if unexpected == "extra":
         _private_file(failed / "TEMP/unexpected.bin", b"unexpected")
     else:
-        (failed / "TEMP/unexpected-link").symlink_to(
-            failed / "FAILED-REPORT.json"
-        )
+        (failed / "TEMP/unexpected-link").symlink_to(failed / "FAILED-REPORT.json")
 
     with pytest.raises(ValueError, match="inventory|symlink"):
         build_recovery_request(
@@ -882,9 +907,7 @@ def test_cli_report_validation_requires_sibling_recovery_request(
         network_sandbox_verified=True,
     )
     plan_path = _write_json(tmp_path / "plan.json", plan)
-    report_path = (
-        output / "TECHNICAL/FULL-SONG-SIX-ROLE-RECOVERY-REPORT.json"
-    )
+    report_path = output / "TECHNICAL/FULL-SONG-SIX-ROLE-RECOVERY-REPORT.json"
     command = [
         sys.executable,
         str(
@@ -896,7 +919,10 @@ def test_cli_report_validation_requires_sibling_recovery_request(
         "--validate-report",
         str(report_path),
     ]
-    environment = {**dict(os.environ), "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
+    environment = {
+        **dict(os.environ),
+        "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
+    }
     valid = subprocess.run(
         command,
         env=environment,

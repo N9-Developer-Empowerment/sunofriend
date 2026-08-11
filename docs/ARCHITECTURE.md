@@ -42,6 +42,11 @@ starts Workbench; `tui --no-developer-inspector` keeps it absent. See the
 ```text
 authorised local audio
         |
+        +--> one finished mix: `sunofriend-separate`
+        |       --> public default broad vocals + instrumental
+        |       --> explicit public SCNet vocals/drums/bass/grouped-other
+        |       --> local report-bound review; no automatic MIDI/source choice
+        |
         +--> one asset: source-import --plan / source-import
         |
         +--> 2–64 already-separated parts:
@@ -133,6 +138,43 @@ CLI/application services (`cli.py`)
 automatic unreviewed starter result OR reviewed Studio result + provenance
 ```
 
+## Finished-mix separation lanes
+
+Finished-mix separation is not one undifferentiated capability:
+
+| Lane | Roles | Architecture boundary |
+| --- | --- | --- |
+| Public default | broad vocals, complementary instrumental | `broad-vocals-v1`; local experimental estimate |
+| Public explicit opt-in | vocals, drums, bass, grouped other | immutable SCNet `core-four-stems-v1` |
+| Private specialist research | vocals, drums, bass, synth, guitar, residual other | unregistered Mega-53 and BS-RoFormer evidence |
+| Private recovery | source, six roles, reconstruction review | model-free, resource-incomplete evidence only |
+
+The private full-song plan was approved and consumed once. Its guarded run
+retained objective failure; the replacement retained complete model arrays but
+not the guitar worker result, guard counters or peak-memory receipt. Model-free
+recovery reverified the retained inputs and performed the fixed projection and
+PCM24 publication under network denial. Its exact status is
+`private_review_package_recovered_model_free_resource_gate_incomplete`, with
+`full_objective_qualification` false. It grants no retry, registration, public
+activation, source selection or MIDI.
+
+Recovery uses `_private_verified_audio_inputs.py` to walk a canonical absolute
+root through no-follow directory descriptors, bind approved directory and leaf
+metadata, and hash plus decode/load from the same held descriptor. It rechecks
+the descriptor and every visible attachment afterward. New private roots,
+staging directories and published directories are mode `0700`; retained legacy
+failed-package inner directories may be mode `0755`, are exact-mode-bound and
+remain immutable. Files are mode `0600`, execution processes create under
+`umask 077`, and publication is an exclusive atomic no-replace rename inside a
+pinned parent. Classic PCM24 and integer `WAVE_FORMAT_EXTENSIBLE` PCM24 share
+the neutral parser. Both retained failure trees remain immutable.
+
+The known upstream package-barrel import can reach urllib3's caught IPv6
+loopback `socket.bind` capability probe. That path is reproduced and future
+worker import order is repaired without weakening bind denial. Because the
+failed guitar worker has no receipt, it remains a consistent explanation, not
+proven historical causation.
+
 Source Access S1 is intentionally separate from transcription.
 `audio_formats.py` validates supported local container-plus-codec
 combinations and the exact existing FFmpeg/FFprobe toolchain.
@@ -197,8 +239,10 @@ execution identities. Module/runtime identity and monotonic wall time are
 derived by the parent; aggregate files, bytes, checkpoint size and free-space
 reserve are bounded. Arbitrary in-process backends, fake subclasses and
 executable cancellation callbacks are rejected because they cannot prove zero
-network or outside-output writes. There is still no CLI/TUI action, isolated
-real worker/backend, model or install flow, cache, or finished-song operation.
+network or outside-output writes. This legacy/internal
+`FakeSeparationBackend` harness still has no CLI/TUI action, isolated real
+worker/backend, model or install flow, cache, or finished-song operation; that
+statement does not describe the separate public alpha lanes above.
 
 `separation_acceptance.py` is the third internal S3 boundary. It validates the
 strict, path-free `sunofriend.separation-acceptance-thresholds.v1` schema. Its
