@@ -46,6 +46,21 @@ _ISSUE_FIELDS = (
 _CORE_REVIEW_ROLES = ("vocals", "drums", "bass", "other")
 
 
+def _validated_objective(
+    report: Mapping[str, Any], plan: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Accept either the original success report or honest recovery report."""
+
+    from .separation_fine_stem_full_song_recovery import (
+        RECOVERY_REPORT_SCHEMA,
+        validate_recovery_report,
+    )
+
+    if report.get("schema") == RECOVERY_REPORT_SCHEMA:
+        return validate_recovery_report(report, plan)
+    return validate_full_song_report(report, plan)
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -85,7 +100,7 @@ def _review_roles(case: Mapping[str, Any]) -> list[str]:
 def build_full_song_review_seed(
     report: Mapping[str, Any], plan: Mapping[str, Any]
 ) -> dict[str, Any]:
-    objective = validate_full_song_report(report, plan)
+    objective = _validated_objective(report, plan)
     return {
         "schema": REVIEW_SCHEMA,
         "document_sha256": "",
@@ -129,7 +144,7 @@ def validate_full_song_review(
     report: Mapping[str, Any],
     plan: Mapping[str, Any],
 ) -> dict[str, Any]:
-    objective = validate_full_song_report(report, plan)
+    objective = _validated_objective(report, plan)
     seed = build_full_song_review_seed(objective, plan)
     document = json.loads(json.dumps(value, allow_nan=False))
     if set(document) - {
@@ -413,7 +428,7 @@ document.getElementById('copy').onclick = async () => {
 
 
 def render_full_song_review(report: Mapping[str, Any], plan: Mapping[str, Any]) -> str:
-    objective = validate_full_song_report(report, plan)
+    objective = _validated_objective(report, plan)
     seed = build_full_song_review_seed(objective, plan)
     cards = []
     usefulness_options = (
@@ -473,7 +488,15 @@ def render_full_song_review(report: Mapping[str, Any], plan: Mapping[str, Any]) 
             f'''<section class="case" data-index="{index}"><p class="eyebrow">Private full-song six-role evidence</p><h2>{html.escape(case["title"])}</h2><p>Score specialist roles only where source presence was confirmed: {html.escape(", ".join(case["scored_target_roles"]))}. Unconfirmed specialist absence is not model failure.</p><div class="players">{players}</div><h3>Confirmed-present source windows</h3><div class="presence">{presence_players}</div><p class="playback" data-playback></p><p>Exact reconstruction proves accounting only, not separation quality.</p><label>Catastrophic-output check{_select('data-field="catastrophic_result"', (("not_tested", "Not tested"), ("no_catastrophic_defect", "No catastrophic defect"), ("catastrophic_defect", "Catastrophic defect"), ("cannot_tell", "Cannot tell")))}</label><label>Catastrophic details<textarea data-field="catastrophic_details" rows="2"></textarea></label><label>Overall usefulness{_select('data-field="overall_usefulness"', usefulness_options)}</label>{"".join(role_fields)}<label>Notes<textarea data-field="notes" rows="3"></textarea></label></section>'''
         )
     seed_json = json.dumps(seed, sort_keys=True).replace("</", "<\\/")
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sunofriend full-song six-role review</title><style>:root{{color-scheme:dark;background:#06101e;color:#f7f8fb;font:17px system-ui,sans-serif}}body{{max-width:1380px;margin:auto;padding:30px}}.notice,.case,fieldset{{background:#102033;border:1px solid #31516e;border-radius:18px;padding:22px;margin:20px 0}}.players,.issues{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}}.presence{{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}}label{{display:grid;gap:8px;margin:12px 0;font-weight:700}}audio,select,textarea{{width:100%}}audio{{height:54px}}select,textarea{{font:inherit;padding:10px}}button{{font:inherit;font-weight:750;border:0;border-radius:999px;padding:14px 22px;margin:8px;background:#53d7e8;color:#06101e}}button.secondary{{background:#2a5576;color:white}}.eyebrow{{color:#53d7e8;font-weight:800;text-transform:uppercase;letter-spacing:.08em}}.playback,#status{{color:#82e7b3;font-weight:700}}#fallback{{min-height:180px;font:13px ui-monospace,monospace}}</style></head><body><p>Sunofriend Studio challenger · local private review</p><h1>Full-song vocals, drums, bass, synth, guitar and residual other</h1><div class="notice"><b>Poor or mixed feedback is valid and will not disable core-four.</b> There is no usefulness threshold. Playback is recorded automatically; there is no listened checkbox. No source choice or MIDI is made here.</div>{"".join(cards)}<section class="case"><h2>Local feedback</h2><p>No audio, filenames, paths or telemetry enter the review JSON.</p><button id="save">Save review locally</button><button class="secondary" id="download">Download saved JSON</button><button class="secondary" id="copy">Copy text-only feedback</button><p id="status"></p><label>Always-available fallback<textarea id="fallback" readonly></textarea></label></section><script id="seed" type="application/json">{seed_json}</script><script>{_review_script()}</script></body></html>"""
+    recovery_notice = ""
+    if objective.get("full_objective_qualification") is False:
+        recovery_notice = (
+            '<div class="notice recovery"><b>Recovered without rerunning any '
+            "model.</b> The failed guitar worker did not persist its historical "
+            "peak-memory or guard counters, so this package is for private "
+            "musical review only and is not full objective qualification.</div>"
+        )
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sunofriend full-song six-role review</title><style>:root{{color-scheme:dark;background:#06101e;color:#f7f8fb;font:17px system-ui,sans-serif}}body{{max-width:1380px;margin:auto;padding:30px}}.notice,.case,fieldset{{background:#102033;border:1px solid #31516e;border-radius:18px;padding:22px;margin:20px 0}}.notice.recovery{{border-color:#f4b860;background:#302611}}.players,.issues{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}}.presence{{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}}label{{display:grid;gap:8px;margin:12px 0;font-weight:700}}audio,select,textarea{{width:100%}}audio{{height:54px}}select,textarea{{font:inherit;padding:10px}}button{{font:inherit;font-weight:750;border:0;border-radius:999px;padding:14px 22px;margin:8px;background:#53d7e8;color:#06101e}}button.secondary{{background:#2a5576;color:white}}.eyebrow{{color:#53d7e8;font-weight:800;text-transform:uppercase;letter-spacing:.08em}}.playback,#status{{color:#82e7b3;font-weight:700}}#fallback{{min-height:180px;font:13px ui-monospace,monospace}}</style></head><body><p>Sunofriend Studio challenger · local private review</p><h1>Full-song vocals, drums, bass, synth, guitar and residual other</h1>{recovery_notice}<div class="notice"><b>Poor or mixed feedback is valid and will not disable core-four.</b> There is no usefulness threshold. Playback is recorded automatically; there is no listened checkbox. No source choice or MIDI is made here.</div>{"".join(cards)}<section class="case"><h2>Local feedback</h2><p>No audio, filenames, paths or telemetry enter the review JSON.</p><button id="save">Save review locally</button><button class="secondary" id="download">Download saved JSON</button><button class="secondary" id="copy">Copy text-only feedback</button><p id="status"></p><label>Always-available fallback<textarea id="fallback" readonly></textarea></label></section><script id="seed" type="application/json">{seed_json}</script><script>{_review_script()}</script></body></html>"""
 
 
 def build_full_song_review_server(
@@ -489,14 +512,25 @@ def build_full_song_review_server(
     plan = validate_fine_stem_full_song_plan(
         json.loads(Path(plan_path).resolve(strict=True).read_text(encoding="utf-8"))
     )
-    report = validate_full_song_report(
-        json.loads(
-            (package / "TECHNICAL/FULL-SONG-SIX-ROLE-REPORT.json").read_text(
-                encoding="utf-8"
-            )
-        ),
-        plan,
-    )
+    success_path = package / "TECHNICAL/FULL-SONG-SIX-ROLE-REPORT.json"
+    recovery_path = package / "TECHNICAL/FULL-SONG-SIX-ROLE-RECOVERY-REPORT.json"
+    if success_path.is_file() == recovery_path.is_file():
+        raise ValueError("full-song review needs exactly one objective report")
+    report_path = recovery_path if recovery_path.is_file() else success_path
+    report_value = json.loads(report_path.read_text(encoding="utf-8"))
+    if recovery_path.is_file():
+        from .separation_fine_stem_full_song_recovery import (
+            validate_recovery_report,
+        )
+
+        request_path = package / "TECHNICAL/RECOVERY-REQUEST.json"
+        report = validate_recovery_report(
+            report_value,
+            plan,
+            json.loads(request_path.read_text(encoding="utf-8")),
+        )
+    else:
+        report = validate_full_song_report(report_value, plan)
     page = render_full_song_review(report, plan).encode("utf-8")
     result_path = package / "REVIEW/FULL-SONG-SIX-ROLE-LISTENING.json"
     routes: dict[str, Path] = {}

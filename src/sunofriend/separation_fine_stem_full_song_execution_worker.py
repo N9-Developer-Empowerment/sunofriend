@@ -21,6 +21,7 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
+from ._private_execution_files import restrict_private_file_creation
 from .separation_demucs_mlx_worker import read_canonical_source
 from .separation_fine_stem_canary_audio import file_sha256
 from .separation_fine_stem_canary_contract import (
@@ -261,6 +262,32 @@ def _mega53_target(model: Any, guard: Any, source: np.ndarray) -> np.ndarray:
     return target
 
 
+def _load_sw_backend(
+    *,
+    checkpoint: Path,
+    config_document: dict[str, Any],
+    source_root: Path,
+    guard: Any,
+) -> tuple[Any, Any]:
+    """Load SW through the verified package stub before importing its backend."""
+
+    from .separation_bs_roformer_sw_loading import load_sw_model
+
+    loaded = load_sw_model(
+        checkpoint=checkpoint,
+        config_document=config_document,
+        source_root=source_root,
+    )
+    # The strict loader installs a verified package stub before importing any
+    # backend module. Importing the backend first would execute the upstream
+    # package barrel, whose unused download surface imports requests/urllib3
+    # and performs a local IPv6 bind capability probe.
+    from bs_roformer.backends.mlx_backend import MLXBackend
+
+    backend = MLXBackend(_ForwardGuardedModel(loaded.model, guard), loaded.config)
+    return loaded, backend
+
+
 def _run_specialist(
     request: Mapping[str, Any], *, mode: str
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -320,15 +347,12 @@ def _run_specialist(
         )
         backend = None
     else:
-        from bs_roformer.backends.mlx_backend import MLXBackend
-        from .separation_bs_roformer_sw_loading import load_sw_model
-
-        loaded = load_sw_model(
+        loaded, backend = _load_sw_backend(
             checkpoint=checkpoint,
             config_document=document,
             source_root=source_root,
+            guard=guard,
         )
-        backend = MLXBackend(_ForwardGuardedModel(loaded.model, guard), loaded.config)
     load_seconds = time.monotonic() - loaded_at
     cases = []
     for case in request["cases"]:
@@ -393,6 +417,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         raise RuntimeError("full-song six-role worker requires Apple-silicon macOS")
     if not args.network_denial_enforced:
         raise RuntimeError("full-song six-role worker requires network denial")
+    restrict_private_file_creation()
     request = _read_request(args.request, args.mode)
     result_path = args.result.resolve()
     if result_path.exists():

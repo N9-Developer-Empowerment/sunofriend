@@ -20,6 +20,9 @@ from typing import Any, Mapping
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from sunofriend._private_execution_files import (  # noqa: E402
+    restrict_private_file_creation,
+)
 from sunofriend.separation_fine_stem_full_song_execution_contract import (  # noqa: E402
     FAILURE_SCHEMA,
     REPORT_SCHEMA,
@@ -324,6 +327,7 @@ def _execute(args: argparse.Namespace, plan: dict[str, Any]) -> int:
         raise RuntimeError("full-song six-role canary requires Apple-silicon macOS")
     if os.environ.get(SANDBOX_FLAG) != "1":
         return _sandbox_reexec()
+    restrict_private_file_creation()
     if not args.confirm_rights:
         raise RuntimeError(
             "--confirm-rights is required for the three approved sources"
