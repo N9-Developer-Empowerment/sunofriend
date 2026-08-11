@@ -307,7 +307,7 @@ def _recover_completed_guitar_outputs(
         },
         "guard_remediation": {
             "classification": "false_positive_local_ipv6_capability_probe",
-            "audit_event": "socket.__new__",
+            "audit_event": "socket.bind",
             "origin": "urllib3.util.connection._has_ipv6(::1)",
             "network_connection_attempt": False,
             "os_network_denial_remained_active": True,

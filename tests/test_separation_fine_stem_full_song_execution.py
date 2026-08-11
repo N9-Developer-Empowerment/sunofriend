@@ -5,13 +5,21 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 import threading
+from types import SimpleNamespace
 import urllib.request
 
 import pytest
 
+import sunofriend.separation_bs_roformer_sw_loading as sw_loading
+import sunofriend.separation_fine_stem_full_song_execution_worker as full_song_worker
+from sunofriend._private_execution_files import restrict_private_file_creation
+from sunofriend.separation_bs_roformer_mlx_runtime import (
+    install_verified_source_package,
+)
 from sunofriend.separation_fine_stem_full_song_execution_contract import (
     ARTIFACT_ROLES,
     REPORT_SCHEMA,
@@ -319,6 +327,121 @@ def test_forward_budgets_cover_exact_clock_without_unbounded_search() -> None:
     assert budget["profile_attempts"] == 9
     assert budget["mega53_forward_calls"] == 12
     assert budget["sw_forward_calls"] == 28
+
+
+def test_replacement_sw_forward_budget_remains_exact() -> None:
+    calls = tuple(
+        sw_forward_calls(frames) for frames in (12_176_892, 11_578_896, 9_961_340)
+    )
+
+    assert calls == (44, 42, 36)
+    assert sum(calls) == 122
+
+
+def test_sw_backend_import_waits_for_verified_package_stub(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    package = tmp_path / "src/bs_roformer"
+    backends = package / "backends"
+    backends.mkdir(parents=True)
+    (package / "__init__.py").write_text(
+        "raise AssertionError('unverified package barrel executed')\n",
+        encoding="utf-8",
+    )
+    (backends / "__init__.py").write_text("", encoding="utf-8")
+    (backends / "mlx_backend.py").write_text(
+        "class MLXBackend:\n"
+        "    def __init__(self, model, config):\n"
+        "        self.model = model\n"
+        "        self.config = config\n",
+        encoding="utf-8",
+    )
+    model = object()
+    config = object()
+    events: list[str] = []
+
+    def fake_load_sw_model(
+        *,
+        checkpoint: Path,
+        config_document: dict,
+        source_root: Path,
+    ) -> SimpleNamespace:
+        del checkpoint, config_document
+        events.append("verified_loader")
+        install_verified_source_package(source_root)
+        return SimpleNamespace(model=model, config=config)
+
+    monkeypatch.setattr(sw_loading, "load_sw_model", fake_load_sw_model)
+    prior_modules = {
+        name: module
+        for name, module in sys.modules.items()
+        if name == "bs_roformer" or name.startswith("bs_roformer.")
+    }
+    try:
+        loaded, backend = full_song_worker._load_sw_backend(
+            checkpoint=tmp_path / "model.ckpt",
+            config_document={},
+            source_root=tmp_path,
+            guard=SimpleNamespace(record_forward=lambda: None),
+        )
+    finally:
+        for name in tuple(sys.modules):
+            if name == "bs_roformer" or name.startswith("bs_roformer."):
+                del sys.modules[name]
+        sys.modules.update(prior_modules)
+
+    assert events == ["verified_loader"]
+    assert loaded.model is model
+    assert backend.model._model is model
+    assert backend.config is config
+
+
+def test_private_creation_mask_secures_recursive_aggregate_directories(
+    tmp_path: Path,
+) -> None:
+    previous = os.umask(0o022)
+    try:
+        restrict_private_file_creation()
+        leaf = tmp_path / "TEMP/canonical/song"
+        leaf.mkdir(parents=True, mode=0o700)
+        artifact = leaf / "artifact.bin"
+        artifact.write_bytes(b"private")
+    finally:
+        os.umask(previous)
+
+    for directory in (
+        tmp_path / "TEMP",
+        tmp_path / "TEMP/canonical",
+        leaf,
+    ):
+        assert stat.S_IMODE(directory.stat().st_mode) == 0o700
+    assert stat.S_IMODE(artifact.stat().st_mode) == 0o600
+
+
+def test_future_full_song_processes_set_private_mask_before_writes() -> None:
+    worker_source = Path(full_song_worker.__file__).read_text(encoding="utf-8")
+    run_source = worker_source[worker_source.index("def run(") :]
+    assert run_source.index("restrict_private_file_creation()") < run_source.index(
+        "_read_request("
+    )
+
+    coordinator = (
+        Path(__file__).parents[1] / "scripts/run-fine-stem-full-song-six-role.py"
+    ).read_text(encoding="utf-8")
+    execute_source = coordinator[coordinator.index("def _execute(") :]
+    assert execute_source.index(
+        "restrict_private_file_creation()"
+    ) < execute_source.index("out.parent.mkdir(")
+
+
+def test_local_ipv6_recovery_names_the_bind_event() -> None:
+    source = (
+        Path(__file__).parents[1] / "scripts/run-fine-stem-six-role-integration.py"
+    ).read_text(encoding="utf-8")
+
+    assert '"audit_event": "socket.bind"' in source
+    assert '"audit_event": "socket.__new__"' not in source
 
 
 def test_execution_request_is_path_light_and_has_no_effects() -> None:
