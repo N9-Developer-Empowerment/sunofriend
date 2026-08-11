@@ -321,10 +321,19 @@ export default function ForAgents() {
                 execute only with rights confirmation, and never select the parent
                 or children automatically. Its completed five-song review
                 demonstrated neither useful guitar nor successful piano extraction,
-                so do not present it as a working capability. The next read-only
-                plan targets guitar plus broad keyboard/synth sounds and remains
-                blocked and non-executable. Do not upload audio or feedback. Reuse
-                the existing GitHub form for text-only observations.
+                so do not present that profile as a working capability. Later
+                private, unregistered six-role research combined core four with
+                separate synth and guitar specialists. Its completed three-song
+                review found all 3/3 cases useful and non-catastrophic; synth and
+                guitar were each useful in 2/2 confirmed-present cases, with some
+                missing content reported for both. The immutable private outcome is
+                <code>
+                  private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete
+                </code>
+                . It does not register either specialist or establish full objective
+                or resource qualification, and there is no public six-role command,
+                automatic source choice or activation. Do not upload audio or
+                feedback. Reuse the existing GitHub form for text-only observations.
               </p>
               <div className="journey-links">
                 <Link className="text-link" href="/research/separation/">
