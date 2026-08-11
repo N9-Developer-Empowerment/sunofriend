@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-11.2",
+  "interface_contract_version": "2026-08-11.4",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -268,6 +268,9 @@
           "visibility": "private",
           "release_tier": "private_studio_research",
           "status": "private_review_package_recovered_model_free_resource_gate_incomplete",
+          "human_listening_status": "human_listening_complete_no_selection",
+          "outcome_status": "private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete",
+          "outcome_document_sha256": "fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c",
           "detail_node": "private_fine_stem_full_song",
           "public_execution_available": false
         }
@@ -922,7 +925,7 @@
         },
         "synthetic_contract_command": ".venv/bin/python scripts/run-other-refinement-synthetic.py --target guitar --out FRESH",
         "guide_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/OTHER_STEM_REFINEMENT.md",
-        "next_gate": "listen to the recovered private package, or create and separately approve a new bounded plan for any further model execution"
+        "next_gate": "define a fresh objective-only repaired guitar-worker run to capture the missing receipt, guard counters and peak-memory evidence; keep private Studio integration and public admission separate"
       },
       "private_fine_stem_full_song": {
         "visibility": "private",
@@ -971,7 +974,7 @@
             "within_known_ceilings": null
           },
           "full_objective_qualification": false,
-          "human_listening_pending": true,
+          "human_listening_pending": false,
           "product_effects": {
             "automatic_retry": false,
             "public_activation": false,
@@ -983,7 +986,68 @@
             "model_download": false
           }
         },
-        "next_gate": "listen to the recovered private package, or create and separately approve a new bounded plan for any further model execution"
+        "listening_review": {
+          "schema": "sunofriend.fine-stem-full-song-six-role-listening.v1",
+          "status": "human_listening_complete_no_selection",
+          "document_sha256": "093347845c41bb0c456a10564701961c627fea5737486a901627b0c4f5208a86",
+          "reviewed_song_count": 3,
+          "played_item_count": 24,
+          "confirmed_window_replay_count": 4,
+          "no_catastrophic_defect_case_count": 3,
+          "catastrophic_defect_case_count": 0,
+          "overall_useful_case_count": 3,
+          "core_role_useful_case_counts": {
+            "vocals": 3,
+            "drums": 3,
+            "bass": 3,
+            "residual_other": 3
+          },
+          "confirmed_present_specialist_usefulness": {
+            "synth": {
+              "scored_case_count": 2,
+              "useful_case_count": 2
+            },
+            "guitar": {
+              "scored_case_count": 2,
+              "useful_case_count": 2
+            }
+          },
+          "issues": {
+            "bleed_some_or_severe_role_case_count": 0,
+            "artefacts_some_or_severe_role_case_count": 0,
+            "timing_or_join_some_or_severe_role_case_count": 0,
+            "core_missing_content_some_or_severe_role_case_count": 0,
+            "synth_missing_content_some_case_count": 2,
+            "guitar_missing_content_some_case_count": 2,
+            "severe_issue_role_case_count": 0
+          },
+          "cannot_tell_or_not_tested_rating_count": 0,
+          "musical_result": "positive_private_full_song_six_role_evidence_with_specialist_missing_content_reported",
+          "private_metadata_included": false,
+          "source_selected": false,
+          "profile_qualified": false,
+          "public_activation_authorized": false,
+          "midi_authorized": false
+        },
+        "recorded_outcome": {
+          "schema": "sunofriend.fine-stem-full-song-six-role-outcome.v1",
+          "status": "private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete",
+          "document_sha256": "fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c",
+          "review_document_sha256": "093347845c41bb0c456a10564701961c627fea5737486a901627b0c4f5208a86",
+          "musical_result": "positive_private_full_song_six_role_evidence_with_specialist_missing_content_reported",
+          "private_metadata_included": false,
+          "full_objective_qualification": false,
+          "resource_qualification": false,
+          "profile_qualification": false,
+          "public_activation_authorized": false,
+          "source_selection_authorized": false,
+          "midi_authorized": false,
+          "hosting_authorized": false,
+          "redistribution_authorized": false,
+          "audio_upload_authorized": false,
+          "automatic_retry_authorized": false
+        },
+        "next_gate": "define a fresh objective-only repaired guitar-worker run to capture the missing receipt, guard counters and peak-memory evidence; keep private Studio integration and public admission separate"
       },
       "read_only_doctor_command": ".venv/bin/sunofriend-separate doctor",
       "read_only_doctor_loads_model": false,

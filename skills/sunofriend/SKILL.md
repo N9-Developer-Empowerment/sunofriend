@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-11.2 -->
+<!-- sunofriend-interface-contract: 2026-08-11.4 -->
 
 # Sunofriend
 
@@ -236,12 +236,23 @@ on.
   urllib3 IPv6 loopback `socket.bind` import path is reproducible and repaired
   for future workers, but the absent historical receipt means it is consistent
   with—not proven as—the failed worker's cause. Do not solicit the consumed
-  approval or rerun this plan. Use the recovered package only for private
-  listening with `scripts/serve-fine-stem-full-song-six-role-review.py`.
-  Playback and confirmed windows are recorded automatically; there is no
-  listened checkbox. Recovery and review grant no retry, activation, source
-  selection, MIDI, hosting, redistribution or upload. A future model run needs
-  a new bounded plan and explicit authority.
+  approval or rerun this plan. Its bound review is complete with status
+  `human_listening_complete_no_selection`: all 3/3 songs were useful and
+  non-catastrophic; core roles were useful in 3/3, and synth/guitar were each
+  useful in 2/2 confirmed-present cases. No scored role reported bleed,
+  artefacts or timing/join problems. Both specialists reported `some` missing
+  content in 2/2 cases. No rating was `cannot_tell` or `not_tested`. Inspect the
+  private package only when the user asks, using
+  `scripts/serve-fine-stem-full-song-six-role-review.py`; do not solicit another
+  usefulness review as the next gate. Recovery and review grant no retry,
+  activation, source selection, MIDI, hosting, redistribution or upload. A
+  future model run needs a new bounded plan and explicit authority.
+  The completed review is now immutably recorded in private outcome status
+  `private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`,
+  canonical document SHA-256
+  `fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+  Treat it as evidence only: it preserves every incomplete objective, resource
+  and product boundary and creates no standing authority.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

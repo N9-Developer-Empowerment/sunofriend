@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-11.2"
+INTERFACE_CONTRACT_VERSION = "2026-08-11.4"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -349,6 +349,23 @@ def render_skill_interface_reference() -> str:
         "means that cause is consistent with the failure rather than proven for it.",
         "The recovered package is private listening evidence only. It grants no retry,",
         "public activation, source selection, MIDI, hosting, redistribution or upload.",
+        "Its bound review is complete with status",
+        "`human_listening_complete_no_selection`, document SHA-256",
+        "`093347845c41bb0c456a10564701961c627fea5737486a901627b0c4f5208a86`.",
+        "Playback was recorded for all 24 full-song items and all four confirmed-present",
+        "windows. All 3/3 songs were useful and non-catastrophic; vocals, drums, bass",
+        "and residual other were useful in 3/3, while synth and guitar were each useful",
+        "in 2/2 confirmed-present cases. No scored role reported bleed, artefacts or",
+        "timing/join problems. Both specialists reported some missing content in 2/2",
+        "cases. No rating was `cannot_tell` or `not_tested`. This is",
+        "positive private musical evidence, not objective or resource qualification,",
+        "registration or public six-role support.",
+        "That exact review is now recorded in immutable private outcome status",
+        "`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`,",
+        "canonical document SHA-256",
+        "`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.",
+        "The self-contained outcome preserves every incomplete objective, resource and",
+        "product boundary and creates no execution or product authority.",
         "Do not solicit the consumed plan approval or rerun it. Any later model run",
         "needs a new bounded plan and new explicit authority.",
         "No Sunofriend command downloads music.",

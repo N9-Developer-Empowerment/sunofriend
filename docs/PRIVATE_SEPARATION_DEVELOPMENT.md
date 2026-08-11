@@ -15,8 +15,18 @@ work. The current four-lane boundary and private full-song outcome are in the
 [full-song lifecycle record](FINE_STEM_FULL_SONG_PLAN.md). The latter records
 the consumed guarded execution and the model-free recovery status
 `private_review_package_recovered_model_free_resource_gate_incomplete`; its
-resource-incomplete listening package is not a public six-role profile or full
-objective qualification.
+resource-incomplete package is not a public six-role profile or full objective
+qualification. Its later bound listening is complete: 3/3 songs and every
+scored role were useful, with no catastrophic, bleed, artefact or timing/join
+finding; both confirmed specialists retained `some` missing content in 2/2
+cases. This current-status pointer does not rewrite the chronological evidence
+below.
+
+The exact review is now captured by immutable private outcome status
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`,
+document SHA-256
+`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+It changes no resource, objective or product gate.
 
 ## Current result
 

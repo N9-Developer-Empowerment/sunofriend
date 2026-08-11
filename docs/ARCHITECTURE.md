@@ -147,7 +147,7 @@ Finished-mix separation is not one undifferentiated capability:
 | Public default | broad vocals, complementary instrumental | `broad-vocals-v1`; local experimental estimate |
 | Public explicit opt-in | vocals, drums, bass, grouped other | immutable SCNet `core-four-stems-v1` |
 | Private specialist research | vocals, drums, bass, synth, guitar, residual other | unregistered Mega-53 and BS-RoFormer evidence |
-| Private recovery | source, six roles, reconstruction review | model-free, resource-incomplete evidence only |
+| Private recovery | source, six roles, reconstruction review | model-free, listening-complete, resource-incomplete evidence only |
 
 The private full-song plan was approved and consumed once. Its guarded run
 retained objective failure; the replacement retained complete model arrays but
@@ -157,6 +157,20 @@ PCM24 publication under network denial. Its exact status is
 `private_review_package_recovered_model_free_resource_gate_incomplete`, with
 `full_objective_qualification` false. It grants no retry, registration, public
 activation, source selection or MIDI.
+
+The sibling listening state is now `human_listening_complete_no_selection`:
+3/3 complete-song cases were useful and non-catastrophic, every core role was
+useful in 3/3, and synth/guitar were each useful in 2/2 confirmed-present cases.
+No scored role reported bleed, artefacts or timing/join problems; each
+specialist had `some` missing content in both scored cases. This is an evidence
+state, not an execution or profile-qualification state.
+
+The recorded sibling outcome has status
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`
+and canonical document SHA-256
+`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+It is a self-contained private evidence document, not a public projection or
+new authority.
 
 Recovery uses `_private_verified_audio_inputs.py` to walk a canonical absolute
 root through no-follow directory descriptors, bind approved directory and leaf

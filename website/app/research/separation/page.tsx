@@ -150,11 +150,34 @@ export default function SeparationResearch() {
                 <code>
                   42500c2e9542aee5fc0e238697733923586ad1e37c54b1359a496cf832f330a0
                 </code>
-                . Human listening of this recovered package is pending. The
-                next gate is that listen, or a new bounded plan with separate
-                approval for any further model execution. Recovery performed
-                no automatic retry, public activation, source selection, MIDI,
-                hosting, redistribution, audio upload or model download.
+                . Its bound review is complete with status{" "}
+                <code>human_listening_complete_no_selection</code>, document{" "}
+                <code>
+                  093347845c41bb0c456a10564701961c627fea5737486a901627b0c4f5208a86
+                </code>
+                : all 3/3
+                songs were useful and non-catastrophic; core roles were useful
+                in 3/3, and synth and guitar were each useful in 2/2
+                confirmed-present cases. No scored role reported bleed,
+                artefacts or timing/join problems. Both specialists reported
+                some missing content in 2/2 cases. There were no cannot-tell or
+                not-tested ratings.
+              </p>
+              <p>
+                This is positive private musical evidence, not objective or
+                resource qualification. The immutable private outcome status is{" "}
+                <code>
+                  private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete
+                </code>
+                , document{" "}
+                <code>
+                  fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c
+                </code>
+                . The next technical gate is a newly bounded objective-only
+                plan that records the repaired guitar worker receipt, guard
+                counters and peak memory. Recovery, review and outcome recording
+                performed no automatic retry, public activation, source selection,
+                MIDI, hosting, redistribution, audio upload or model download.
               </p>
             </div>
 

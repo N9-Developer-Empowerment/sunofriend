@@ -7,7 +7,7 @@ Sunofriend has four deliberately distinct finished-mix lanes:
 | Public default | broad vocals and complementary instrumental | `broad-vocals-v1` |
 | Public explicit opt-in | vocals, drums, bass and grouped other | SCNet `core-four-stems-v1` |
 | Private specialist research | vocals, drums, bass, synth, guitar and residual other | unregistered Mega-53/BS-RoFormer evidence |
-| Private model-free recovery | full-song source, six roles and reconstruction | `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
+| Private model-free recovery | full-song source, six roles and reconstruction | listening complete; `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
 
 The MLX baseline and first PyTorch fallback remain blocked after their bounded
 objective remediations failed. Further retries and installs of those immutable
@@ -123,6 +123,23 @@ denial. The absent historical guitar receipt means that mechanism is
 consistent with the failure, not proven as its historical cause. A later model
 run requires a new bounded plan and explicit authority; the consumed plan and
 recovery are not retry permission.
+
+The exact recovered review is now complete with status
+`human_listening_complete_no_selection`. All 3/3 songs were useful and
+non-catastrophic; core roles were useful in 3/3 and each confirmed specialist
+was useful in 2/2. No scored role reported bleed, artefacts or timing/join
+problems. Both synth and guitar reported `some` missing content in 2/2 cases,
+and no rating was `cannot_tell` or `not_tested`. Listening success remains
+separate from the incomplete guitar receipt, resource evidence and full
+objective qualification.
+
+The immutable self-contained private outcome now records that aggregate under
+status
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`,
+document SHA-256
+`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+It performs no audio, model, inference or product action and leaves every
+objective/resource gap unchanged.
 
 ## Private evidence IO and publication invariants
 

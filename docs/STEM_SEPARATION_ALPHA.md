@@ -14,7 +14,7 @@ Keep the four current lanes distinct:
 | Public default | broad vocals plus complementary instrumental | available through `broad-vocals-v1` |
 | Public explicit opt-in | vocals, drums, bass and grouped other | SCNet `core-four-stems-v1` is `public_opt_in` |
 | Private research | vocals, drums, bass, synth, guitar and residual other | excerpt-qualified, specialist profiles unregistered |
-| Private recovery | full-song source, six roles and reconstruction review | `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
+| Private recovery | full-song source, six roles and reconstruction review | listening complete; `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
 
 The public command does not expose synth or guitar profiles. Exact
 reconstruction proves additive accounting only, not accurate source assignment.
@@ -110,6 +110,22 @@ supported-ceiling compliance is unknown. The reproduced urllib3 IPv6 loopback
 historical receipt evidence prevents claiming it as proven. Both failed roots
 remain immutable. The consumed plan must not be rerun; future model execution
 needs a new bounded plan and explicit authority.
+
+The recovered package's bound human review is complete. All 3/3 complete-song
+cases were useful and non-catastrophic. Vocals, drums, bass and residual other
+were useful in 3/3; synth and guitar were each useful in 2/2 confirmed-present
+cases. No scored role reported bleed, artefacts or timing/join problems. Each
+specialist reported `some` missing content in 2/2 cases, while core roles
+reported none. The review status is `human_listening_complete_no_selection`;
+it records positive private musical evidence without qualifying or registering
+a six-role profile.
+
+The self-contained private outcome is recorded with status
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`
+and canonical document SHA-256
+`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+It preserves all incomplete recovery/resource/product boundaries.
+
 See
 [Synth-first fine-stem challenger](OTHER_REFINEMENT_NEXT_CHALLENGER_PLAN.md).
 
