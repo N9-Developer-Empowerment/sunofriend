@@ -80,7 +80,7 @@ Finished-mix separation currently has four distinct lanes:
 | Public default | broad vocals, complementary instrumental | `broad-vocals-v1` |
 | Public explicit opt-in | vocals, drums, bass, grouped other | SCNet `core-four-stems-v1` |
 | Private research | vocals, drums, bass, synth, guitar, residual other | unregistered specialist evidence only |
-| Private recovery | the same six roles plus source and reconstruction review | `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
+| Private recovery | the same six roles plus source and reconstruction review | listening complete; `private_review_package_recovered_model_free_resource_gate_incomplete`; not objective qualification |
 
 The private synth and guitar models are not public profiles. Exact
 reconstruction demonstrates PCM accounting, not correct musical assignment.
@@ -415,6 +415,24 @@ but the missing historical worker receipt means it is not proven as that
 failure's cause. The future worker import order is repaired without weakening
 bind denial.
 
+The bound review is complete with status
+`human_listening_complete_no_selection`. Playback was recorded for all 24
+full-song items and all four confirmed-present windows. All three cases were
+overall `useful` and reported no catastrophic defect. Vocals, drums, bass and
+residual other were useful in 3/3 cases; synth and guitar were each useful in
+2/2 confirmed-present cases. No scored role reported bleed, artefacts or
+timing/join problems. Synth and guitar each reported `some` missing content in
+2/2 cases; core roles reported none. There were no `cannot_tell` or
+`not_tested` ratings. This is positive private musical evidence, not
+objective/resource qualification or a public six-role product.
+
+The immutable private outcome is now recorded with status
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`
+and canonical document SHA-256
+`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+It preserves the positive listening aggregate and every incomplete
+objective/resource/product boundary above.
+
 The original planning command and its approval are historical, consumed and
 non-reusable. Do not recreate or rerun that plan or solicit its old approval.
 Any future model run needs a new bounded plan and explicit authority. Validate
@@ -432,7 +450,7 @@ hosting, redistribution or upload. Poor listening feedback remains recordable
 without disabling core four. See [Private full-song six-role canary
 plan](docs/FINE_STEM_FULL_SONG_PLAN.md).
 
-Serve the recovered full-song review with:
+Inspect the already-completed recovered full-song review locally with:
 
 ```bash
 .venv/bin/python scripts/serve-fine-stem-full-song-six-role-review.py \

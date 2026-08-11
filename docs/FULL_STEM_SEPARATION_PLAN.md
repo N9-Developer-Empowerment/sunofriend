@@ -117,6 +117,19 @@ prevents claiming that cause as proven. No old approval may be replayed; a
 future model run needs a new bounded plan. See
 [Private full-song six-role canary plan](FINE_STEM_FULL_SONG_PLAN.md).
 
+The bound human review is now complete with status
+`human_listening_complete_no_selection`: 3/3 complete-song cases were useful
+and non-catastrophic; each core role was useful in 3/3, and synth and guitar
+were each useful in 2/2 confirmed-present cases. No scored role reported bleed,
+artefacts or timing/join problems. Both specialists reported `some` missing
+content in 2/2 cases. This positive private musical result changes none of the
+objective, resource or public gates.
+
+It is now bound in immutable private outcome status
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`,
+document SHA-256
+`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+
 ## Immutable baseline
 
 | Identity | Pinned value |

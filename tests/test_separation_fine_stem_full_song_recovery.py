@@ -16,8 +16,10 @@ import numpy as np
 import pytest
 
 import sunofriend.separation_fine_stem_full_song_recovery as recovery_module
+import sunofriend.separation_fine_stem_full_song_outcome as outcome_module
 
 from sunofriend.separation_fine_stem_full_song_execution_contract import (
+    ARTIFACT_ROLES,
     FAILURE_SCHEMA,
     WORKER_REQUEST_SCHEMA,
     WORKER_RESULT_SCHEMA,
@@ -26,7 +28,18 @@ from sunofriend.separation_fine_stem_full_song_execution_contract import (
     scnet_forward_calls,
 )
 from sunofriend.separation_fine_stem_full_song_execution_review import (
+    build_full_song_review_seed,
     build_full_song_review_server,
+    validate_full_song_review,
+)
+from sunofriend.separation_fine_stem_full_song_outcome import (
+    OUTCOME_DIRECTORY_NAME,
+    OUTCOME_FILE_NAME,
+    _verify_outcome_file,
+    build_full_song_six_role_outcome,
+    outcome_document_sha256,
+    record_full_song_six_role_outcome,
+    validate_full_song_six_role_outcome,
 )
 from sunofriend.separation_fine_stem_full_song_plan_contract import (
     FULL_SONG_PLAN_SCHEMA,
@@ -623,6 +636,278 @@ def test_report_cannot_turn_unknown_guitar_peak_into_qualification(
     changed["report_sha256"] = recovery_report_sha256(changed)
     with pytest.raises(ValueError, match="identity|resource"):
         validate_recovery_report(changed, plan, request)
+
+
+def _completed_review_fixture(
+    tmp_path: Path,
+) -> tuple[dict, dict, dict, dict, dict, Path]:
+    plan, failed, prior = _failed_fixture(tmp_path)
+    recovery_root = tmp_path / "recovered"
+    request = build_recovery_request(
+        plan,
+        failed,
+        proposed_output=recovery_root,
+        prior_failed_root_value=prior,
+    )
+    report = execute_recovery(
+        plan,
+        request,
+        approved_recovery_sha256=request["document_sha256"],
+        confirm_rights=True,
+        network_sandbox_verified=True,
+    )
+    review = build_full_song_review_seed(report, plan)
+    for row, case in zip(review["cases"], report["cases"]):
+        row["played_items"] = list(ARTIFACT_ROLES)
+        row["listened"] = True
+        row["confirmed_windows_played"] = [
+            f"{target['target_role']}:{target['window_seconds'][0]}-"
+            f"{target['window_seconds'][1]}"
+            for target in case["confirmed_present_targets"]
+        ]
+        row["confirmed_windows_replayed"] = True
+        row["catastrophic_result"] = "no_catastrophic_defect"
+        row["overall_usefulness"] = "useful"
+        row["role_usefulness"] = {role: "useful" for role in row["role_usefulness"]}
+        row["issues"] = {
+            role: {
+                field: (
+                    "some"
+                    if role in {"synth", "guitar"} and field == "missing_content"
+                    else "none"
+                )
+                for field in ratings
+            }
+            for role, ratings in row["issues"].items()
+        }
+    review["status"] = "human_listening_complete_no_selection"
+    review = validate_full_song_review(review, report, plan)
+    review_path = _write_json(
+        recovery_root / "REVIEW/FULL-SONG-SIX-ROLE-LISTENING.json",
+        review,
+    )
+    review_file = {
+        "bytes": review_path.stat().st_size,
+        "sha256": _sha(review_path),
+    }
+    return plan, request, report, review, review_file, recovery_root
+
+
+def test_completed_review_records_self_contained_resource_incomplete_outcome(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plan, request, report, review, review_file, recovery_root = (
+        _completed_review_fixture(tmp_path)
+    )
+
+    outcome = build_full_song_six_role_outcome(
+        plan=plan,
+        recovery_request=request,
+        recovery_report=report,
+        review=review,
+        review_file=review_file,
+    )
+
+    outcome_sources = {
+        "plan": plan,
+        "recovery_request": request,
+        "recovery_report": report,
+        "review": review,
+        "review_file": review_file,
+    }
+    assert validate_full_song_six_role_outcome(outcome, **outcome_sources) == outcome
+    assert outcome["review_summary"]["played_item_count"] == 24
+    assert outcome["review_summary"]["confirmed_window_replay_count"] == 4
+    assert outcome["review_summary"]["all_scored_roles_useful"] is True
+    assert outcome["review_summary"]["specialist_missing_content_rating_count"] == 4
+    assert outcome["objective_gaps"]["guitar_peak_memory_bytes"] is None
+    assert outcome["boundaries"]["profile_qualification"] is False
+    assert outcome["effects"]["audio_reads"] == 0
+
+    original_open = os.open
+
+    def reject_audio_open(path: object, *args: object, **kwargs: object) -> int:
+        if str(path).endswith((".wav", ".npy")):
+            pytest.fail(f"outcome recorder opened audio payload {path}")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "open", reject_audio_open)
+    outcome_root = recovery_root.parent / OUTCOME_DIRECTORY_NAME
+    recorded = record_full_song_six_role_outcome(
+        recovery_root,
+        plan_path=_write_json(tmp_path / "plan.json", plan),
+        out_dir=outcome_root,
+    )
+    assert recorded == outcome
+    assert (outcome_root.stat().st_mode & 0o777) == 0o700
+    outcome_path = outcome_root / OUTCOME_FILE_NAME
+    assert (outcome_path.stat().st_mode & 0o777) == 0o600
+    assert json.loads(outcome_path.read_text(encoding="utf-8")) == outcome
+    with pytest.raises(FileExistsError, match="fresh"):
+        record_full_song_six_role_outcome(
+            recovery_root,
+            plan_path=tmp_path / "plan.json",
+            out_dir=outcome_root,
+        )
+    with pytest.raises(ValueError, match="exact recovery-package sibling"):
+        record_full_song_six_role_outcome(
+            recovery_root,
+            plan_path=tmp_path / "plan.json",
+            out_dir=tmp_path / "nested" / OUTCOME_DIRECTORY_NAME,
+        )
+
+    changed = copy.deepcopy(outcome)
+    changed["objective_gaps"]["full_objective_qualification"] = True
+    changed["document_sha256"] = outcome_document_sha256(changed)
+    with pytest.raises(ValueError, match="objective gap"):
+        validate_full_song_six_role_outcome(changed, **outcome_sources)
+
+    injected = copy.deepcopy(outcome)
+    injected["review_summary"]["roles"][0]["source_path"] = "/private/song.wav"
+    injected["document_sha256"] = outcome_document_sha256(injected)
+    with pytest.raises(ValueError, match="role fields"):
+        validate_full_song_six_role_outcome(injected, **outcome_sources)
+
+    inconsistent = copy.deepcopy(outcome)
+    inconsistent["review_summary"]["catastrophic_counts"] = {
+        "not_tested": 0,
+        "no_catastrophic_defect": 0,
+        "catastrophic_defect": 3,
+        "cannot_tell": 0,
+    }
+    inconsistent["document_sha256"] = outcome_document_sha256(inconsistent)
+    with pytest.raises(ValueError, match="aggregate"):
+        validate_full_song_six_role_outcome(inconsistent, **outcome_sources)
+
+
+@pytest.mark.parametrize("mutation", ["replacement", "extra_file"])
+def test_outcome_staging_verifier_rejects_child_tree_swap(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    staging = tmp_path / "staging"
+    staging.mkdir(mode=0o700)
+    staging_descriptor = os.open(
+        staging,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+    )
+    payload = b'{"outcome":true}\n'
+    outcome_descriptor = os.open(
+        OUTCOME_FILE_NAME,
+        os.O_RDWR | os.O_CREAT | os.O_EXCL,
+        0o600,
+        dir_fd=staging_descriptor,
+    )
+    try:
+        assert os.write(outcome_descriptor, payload) == len(payload)
+        identity = _verify_outcome_file(
+            staging_descriptor,
+            outcome_descriptor,
+            payload,
+        )
+        if mutation == "replacement":
+            os.unlink(OUTCOME_FILE_NAME, dir_fd=staging_descriptor)
+            replacement = os.open(
+                OUTCOME_FILE_NAME,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+                dir_fd=staging_descriptor,
+            )
+            try:
+                assert os.write(replacement, payload) == len(payload)
+            finally:
+                os.close(replacement)
+        else:
+            extra = os.open(
+                "EXTRA",
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+                dir_fd=staging_descriptor,
+            )
+            os.close(extra)
+        with pytest.raises(RuntimeError, match="staged file identity"):
+            _verify_outcome_file(
+                staging_descriptor,
+                outcome_descriptor,
+                payload,
+                expected_identity=identity,
+            )
+    finally:
+        os.close(outcome_descriptor)
+        os.close(staging_descriptor)
+
+
+def test_outcome_recorder_quarantines_post_rename_child_swap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plan, _request, _report, _review, _review_file, recovery_root = (
+        _completed_review_fixture(tmp_path)
+    )
+    plan_path = _write_json(tmp_path / "plan.json", plan)
+    outcome_root = recovery_root.parent / OUTCOME_DIRECTORY_NAME
+    original_rename = outcome_module.rename_directory_no_replace_at
+    attacked = False
+
+    def attack_before_first_rename(
+        parent_descriptor: int,
+        source_name: str,
+        destination_name: str,
+        **kwargs: object,
+    ) -> None:
+        nonlocal attacked
+        if destination_name == OUTCOME_DIRECTORY_NAME and not attacked:
+            attacked = True
+            staging_descriptor = os.open(
+                source_name,
+                os.O_RDONLY
+                | getattr(os, "O_DIRECTORY", 0)
+                | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=parent_descriptor,
+            )
+            try:
+                os.unlink(OUTCOME_FILE_NAME, dir_fd=staging_descriptor)
+                for name, payload in (
+                    (OUTCOME_FILE_NAME, b'{"attacker":true}\n'),
+                    ("EXTRA", b"extra"),
+                ):
+                    descriptor = os.open(
+                        name,
+                        os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                        0o600,
+                        dir_fd=staging_descriptor,
+                    )
+                    try:
+                        assert os.write(descriptor, payload) == len(payload)
+                    finally:
+                        os.close(descriptor)
+            finally:
+                os.close(staging_descriptor)
+        original_rename(
+            parent_descriptor,
+            source_name,
+            destination_name,
+            **kwargs,
+        )
+
+    monkeypatch.setattr(
+        outcome_module,
+        "rename_directory_no_replace_at",
+        attack_before_first_rename,
+    )
+    with pytest.raises(RuntimeError, match="staged file identity"):
+        record_full_song_six_role_outcome(
+            recovery_root,
+            plan_path=plan_path,
+            out_dir=outcome_root,
+        )
+
+    assert not outcome_root.exists()
+    quarantines = list(outcome_root.parent.glob(f"{OUTCOME_DIRECTORY_NAME}-FAILED-*"))
+    assert len(quarantines) == 1
+    assert (quarantines[0] / OUTCOME_FILE_NAME).read_bytes() == b'{"attacker":true}\n'
+    assert (quarantines[0] / "EXTRA").read_bytes() == b"extra"
 
 
 def test_retained_mutation_and_atomic_publish_race_are_rejected(

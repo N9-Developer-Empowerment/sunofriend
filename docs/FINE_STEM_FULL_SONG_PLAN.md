@@ -1,12 +1,16 @@
-# Private full-song six-role canary: consumed plan and model-free recovery
+# Private full-song six-role canary: consumed plan, recovery and review
 
-Sunofriend has one private full-song listening package for six mutually
+Sunofriend has one reviewed private full-song package for six mutually
 exclusive roles: `vocals`, `drums`, `bass`, `synth`, `guitar` and residual
 `other`. It is not a public six-stem product and it is not full objective or
 resource qualification.
 
 The current report status is
 `private_review_package_recovered_model_free_resource_gate_incomplete`.
+The separate bound-listening status is
+`human_listening_complete_no_selection`.
+That review has now been reduced into the immutable private outcome status
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`.
 Mega-53 synth and BS-RoFormer-SW guitar remain unregistered private research
 profiles. The public default remains broad vocals/instrumental, while SCNet
 core four remains the explicit public opt-in route.
@@ -77,8 +81,8 @@ The recovered report deliberately records:
 - `within_known_ceilings: null`.
 
 The missing guitar receipt cannot be reconstructed from complete arrays. The
-package is suitable for private musical listening, but cannot qualify a public
-or private execution profile objectively.
+package has now completed private musical listening, but cannot qualify a
+public or private execution profile objectively.
 
 ## Ownership and publication invariants
 
@@ -97,7 +101,7 @@ in `finally`, stages inside the verified output parent and publishes with an
 exclusive atomic no-replace rename. A raced destination becomes a retained
 recovery failure rather than an overwrite.
 
-## Review without another doom loop
+## Completed review without another doom loop
 
 The local page presents each complete source, six roles, reconstruction and
 the exact confirmed-present specialist windows. Playback is recorded
@@ -108,6 +112,21 @@ Poor musical feedback can document limitations and inform a later bounded
 plan. It cannot disable public core four, turn recovered evidence into
 qualification or authorise a retry. The review grants no public activation,
 source selection, MIDI, hosting, redistribution or audio upload.
+
+The validated review status is `human_listening_complete_no_selection`, bound
+by document SHA-256
+`093347845c41bb0c456a10564701961c627fea5737486a901627b0c4f5208a86`.
+Playback was recorded for all 24 full-song items and all four confirmed-present
+windows. All three songs were overall `useful` and reported no catastrophic
+defect. Vocals, drums, bass and residual other were useful in 3/3 cases; synth
+and guitar were each useful in 2/2 confirmed-present cases. Across every scored
+role there was no bleed, artefact or timing/join problem. Synth and guitar each
+reported `some` missing content in 2/2 confirmed-present cases, while every
+core-role rating reported none. No rating was `cannot_tell` or `not_tested`.
+
+This meets the private musical milestone for the frozen three-song corpus. It
+does not change the recovery status, reconstruct the missing worker evidence,
+qualify a profile or authorise a product decision.
 
 Serve an already recovered package with:
 
@@ -125,6 +144,32 @@ Validate its exact request-bound report without running a model:
   --validate-report \
   PRIVATE-RECOVERY-ROOT/TECHNICAL/FULL-SONG-SIX-ROLE-RECOVERY-REPORT.json
 ```
+
+After the exact listening JSON has been saved and validated, reduce it into one
+self-contained, audio-free private outcome document without running a model:
+
+```bash
+.venv/bin/python scripts/record-fine-stem-full-song-six-role-outcome.py \
+  PRIVATE-RECOVERY-ROOT \
+  --plan PRIVATE-PLAN-ROOT/FULL-SONG-SIX-ROLE-PLAN.json \
+  --out PRIVATE-RECOVERY-PARENT/fine-stem-full-song-six-role-outcome-v1
+```
+
+The recorder reads four exact private JSON documents, embeds the exact validated
+review snapshot, reads no audio and writes one owner-only JSON outcome. Its
+status is
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`;
+the fresh output must be an exact sibling of the recovery root. It preserves
+every recovery/resource/public boundary above.
+
+That exact recorder execution is complete. The canonical outcome document
+SHA-256 is
+`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+The raw `FULL-SONG-SIX-ROLE-OUTCOME.json` identity is 16,129 bytes with SHA-256
+`39252dbf9cfe202a67693f1d07a8051c7effce983a7022e9f690a84e447be600`.
+The outcome is self-contained private evidence and embeds the exact validated
+review snapshot; neither identity authorises model execution or any product
+effect.
 
 ## Historical approval text — consumed, not reusable
 

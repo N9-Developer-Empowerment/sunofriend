@@ -248,7 +248,20 @@ test("publishes four honest public and private separation lanes", async () => {
   assert.match(html, /guitar worker result receipt and guard counters were not/);
   assert.match(html, /guitar peak-memory evidence is absent/);
   assert.match(html, /full objective qualification is false/);
-  assert.match(html, /Human listening of this recovered package is pending/);
+  assert.match(html, /human_listening_complete_no_selection/);
+  assert.match(html, /all 3\/3 songs were useful and non-catastrophic/i);
+  assert.match(html, /core roles were useful in 3\/3/);
+  assert.match(html, /synth and guitar were each useful in 2\/2/);
+  assert.match(html, /Both specialists reported\s+some missing content in 2\/2 cases/);
+  assert.match(
+    html,
+    /private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete/,
+  );
+  assert.match(
+    html,
+    /fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c/,
+  );
+  assert.doesNotMatch(html, /Human listening of this recovered package is pending/);
   assert.match(
     html,
     /no automatic retry, public activation, source selection, MIDI/,
@@ -390,6 +403,18 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /persisted no guitar worker result receipt, guard counters/);
   assert.match(text, /peak-memory evidence/);
   assert.match(text, /full objective qualification is false/);
+  assert.match(text, /human_listening_complete_no_selection/);
+  assert.match(text, /all 3\/3 songs were useful and non-catastrophic/);
+  assert.match(text, /synth and guitar were each useful in 2\/2/);
+  assert.match(
+    text,
+    /private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete/,
+  );
+  assert.match(
+    text,
+    /fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c/,
+  );
+  assert.doesNotMatch(text, /Human listening is pending/);
   assert.match(text, /sunofriend-separate doctor/);
   assert.match(text, /sunofriend-separate profiles --json/);
   assert.match(text, /FULL_STEM_SEPARATION_PLAN\.md/);
@@ -921,7 +946,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-11.2");
+  assert.equal(data.interface_contract_version, "2026-08-11.4");
   const separation = data.experiments.finished_mix_separation;
   assert.equal(separation.public_six_role_available, false);
   assert.equal(data.boundaries.public_six_role_separation, false);
@@ -970,6 +995,25 @@ test("publishes a versioned machine-readable capability contract", async () => {
     "residual_other",
   ]);
   assert.equal(privateResearch.public_six_role_support_established, false);
+
+  const recoveredLane = separation.lanes.private_model_free_recovered_review;
+  assert.equal(
+    recoveredLane.status,
+    "private_review_package_recovered_model_free_resource_gate_incomplete",
+  );
+  assert.equal(
+    recoveredLane.human_listening_status,
+    "human_listening_complete_no_selection",
+  );
+  assert.equal(
+    recoveredLane.outcome_status,
+    "private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete",
+  );
+  assert.equal(
+    recoveredLane.outcome_document_sha256,
+    "fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c",
+  );
+  assert.equal(recoveredLane.public_execution_available, false);
 
   const fullSong = separation.private_fine_stem_full_song;
   assert.equal(
@@ -1031,7 +1075,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(recovery.resource_qualification.within_known_ceilings, null);
   assert.equal(recovery.full_objective_qualification, false);
-  assert.equal(recovery.human_listening_pending, true);
+  assert.equal(recovery.human_listening_pending, false);
   assert.deepEqual(recovery.product_effects, {
     automatic_retry: false,
     public_activation: false,
@@ -1042,9 +1086,81 @@ test("publishes a versioned machine-readable capability contract", async () => {
     audio_upload: false,
     model_download: false,
   });
+  const listening = fullSong.listening_review;
+  assert.equal(
+    listening.schema,
+    "sunofriend.fine-stem-full-song-six-role-listening.v1",
+  );
+  assert.equal(listening.status, "human_listening_complete_no_selection");
+  assert.equal(
+    listening.document_sha256,
+    "093347845c41bb0c456a10564701961c627fea5737486a901627b0c4f5208a86",
+  );
+  assert.equal(listening.reviewed_song_count, 3);
+  assert.equal(listening.played_item_count, 24);
+  assert.equal(listening.confirmed_window_replay_count, 4);
+  assert.equal(listening.no_catastrophic_defect_case_count, 3);
+  assert.equal(listening.catastrophic_defect_case_count, 0);
+  assert.equal(listening.overall_useful_case_count, 3);
+  assert.deepEqual(listening.core_role_useful_case_counts, {
+    vocals: 3,
+    drums: 3,
+    bass: 3,
+    residual_other: 3,
+  });
+  assert.deepEqual(listening.confirmed_present_specialist_usefulness, {
+    synth: { scored_case_count: 2, useful_case_count: 2 },
+    guitar: { scored_case_count: 2, useful_case_count: 2 },
+  });
+  assert.deepEqual(listening.issues, {
+    bleed_some_or_severe_role_case_count: 0,
+    artefacts_some_or_severe_role_case_count: 0,
+    timing_or_join_some_or_severe_role_case_count: 0,
+    core_missing_content_some_or_severe_role_case_count: 0,
+    synth_missing_content_some_case_count: 2,
+    guitar_missing_content_some_case_count: 2,
+    severe_issue_role_case_count: 0,
+  });
+  assert.equal(listening.cannot_tell_or_not_tested_rating_count, 0);
+  assert.equal(listening.private_metadata_included, false);
+  assert.equal(
+    listening.musical_result,
+    "positive_private_full_song_six_role_evidence_with_specialist_missing_content_reported",
+  );
+  assert.equal(listening.source_selected, false);
+  assert.equal(listening.profile_qualified, false);
+  assert.equal(listening.public_activation_authorized, false);
+  assert.equal(listening.midi_authorized, false);
+  assert.doesNotMatch(JSON.stringify(listening), /track_id|filename|path|notes/);
+  const outcome = fullSong.recorded_outcome;
+  assert.equal(
+    outcome.schema,
+    "sunofriend.fine-stem-full-song-six-role-outcome.v1",
+  );
+  assert.equal(
+    outcome.status,
+    "private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete",
+  );
+  assert.equal(
+    outcome.document_sha256,
+    "fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c",
+  );
+  assert.equal(outcome.review_document_sha256, listening.document_sha256);
+  assert.equal(outcome.private_metadata_included, false);
+  assert.equal(outcome.full_objective_qualification, false);
+  assert.equal(outcome.resource_qualification, false);
+  assert.equal(outcome.profile_qualification, false);
+  assert.equal(outcome.public_activation_authorized, false);
+  assert.equal(outcome.source_selection_authorized, false);
+  assert.equal(outcome.midi_authorized, false);
+  assert.equal(outcome.hosting_authorized, false);
+  assert.equal(outcome.redistribution_authorized, false);
+  assert.equal(outcome.audio_upload_authorized, false);
+  assert.equal(outcome.automatic_retry_authorized, false);
+  assert.doesNotMatch(JSON.stringify(outcome), /track_id|filename|path|notes/);
   assert.match(
     fullSong.next_gate,
-    /listen to the recovered private package.*new bounded plan/,
+    /fresh objective-only repaired guitar-worker run.*missing receipt.*guard counters.*peak-memory evidence/,
   );
   assert.equal(
     separation.other_refinement.next_gate,

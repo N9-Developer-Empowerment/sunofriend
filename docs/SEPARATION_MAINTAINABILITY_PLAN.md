@@ -262,6 +262,21 @@ records zero checkpoint loads, model construction/loading, inference,
 canonicalisation and model subprocesses, and leaves full objective/resource
 qualification false.
 
+The subsequent bound review state is
+`human_listening_complete_no_selection`. It records 3/3 useful,
+non-catastrophic full-song cases, core roles useful in 3/3, synth/guitar useful
+in 2/2 confirmed-present cases, no bleed/artefact/timing findings and `some`
+specialist missing content in 2/2 each. This musical outcome is deliberately
+orthogonal to the recovery report's unchanged objective/resource gaps.
+
+That review is now reduced into one immutable self-contained private outcome,
+status
+`private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`,
+document SHA-256
+`fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`.
+The reducer embeds the exact validated review snapshot and keeps every
+qualification and product effect false.
+
 The recovery exposed three reusable hardening boundaries:
 
 - `_private_execution_files.py` applies process-local `umask 077` before any

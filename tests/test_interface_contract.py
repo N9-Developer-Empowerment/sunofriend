@@ -119,6 +119,19 @@ class InterfaceContractTests(unittest.TestCase):
         )
         self.assertIn("Full objective qualification is false", reference)
         self.assertIn("rather than proven for it", reference)
+        self.assertIn("human_listening_complete_no_selection", reference)
+        self.assertIn("All 3/3 songs were useful and non-catastrophic", reference)
+        self.assertIn("synth and guitar were each useful", reference)
+        self.assertIn("positive private musical evidence", reference)
+        self.assertIn(
+            "private_full_song_six_role_listening_evidence_recorded_"
+            "resource_gate_incomplete",
+            reference,
+        )
+        self.assertIn(
+            "fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c",
+            reference,
+        )
         self.assertNotIn("The execution remains forbidden", reference)
         self.assertNotIn("The next no-effects full-song plan", reference)
 
@@ -137,6 +150,12 @@ class InterfaceContractTests(unittest.TestCase):
             with self.subTest(document=document.name):
                 self.assertIn(
                     "private_review_package_recovered_model_free_resource_gate_incomplete",
+                    text,
+                )
+                self.assertIn("human_listening_complete_no_selection", text)
+                self.assertIn(
+                    "private_full_song_six_role_listening_evidence_recorded_"
+                    "resource_gate_incomplete",
                     text,
                 )
                 self.assertNotIn("executor has not been authorised or run", text)
