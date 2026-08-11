@@ -155,7 +155,9 @@ class ReconstructionEvaluation:
 
 
 @dataclass(frozen=True)
-class _PcmWaveParameters:
+class PcmWaveParameters:
+    """Validated byte layout for a bounded integer-PCM WAVE file."""
+
     channels: int
     sample_width_bytes: int
     sample_rate: int
@@ -184,7 +186,7 @@ class _OpenedPcmWave:
     path: Path
     handle: BinaryIO
     opened_stat: os.stat_result
-    parameters: _PcmWaveParameters
+    parameters: PcmWaveParameters
     inspection: PcmWaveInspection
 
 
@@ -354,7 +356,7 @@ def _open_inspected_pcm_wav(
     try:
         opened = os.fstat(handle.fileno())
         _require_opened_identity(source, opened)
-        parameters = _read_pcm_wave_parameters(
+        parameters = read_pcm_wave_parameters(
             handle,
             file_bytes=opened.st_size,
         )
@@ -486,11 +488,15 @@ def _hash_open_file(handle: Any) -> str:
     return digest.hexdigest()
 
 
-def _read_pcm_wave_parameters(
+def read_pcm_wave_parameters(
     handle: BinaryIO,
     *,
     file_bytes: int,
-) -> _PcmWaveParameters:
+) -> PcmWaveParameters:
+    """Validate classic or extensible integer-PCM RIFF/WAVE chunks.
+
+    The caller retains ownership of the already-open binary handle.
+    """
     handle.seek(0)
     header = handle.read(12)
     if (
@@ -589,7 +595,7 @@ def _read_pcm_wave_parameters(
     frames = data_bytes // block_align
     if not 1 <= frames <= MAX_PCM_WAV_FRAMES:
         raise ValueError("PCM WAV frame count is outside bounds")
-    parameters = _PcmWaveParameters(
+    parameters = PcmWaveParameters(
         channels=channels,
         sample_width_bytes=sample_width,
         sample_rate=sample_rate,
@@ -604,7 +610,7 @@ def _read_pcm_wave_parameters(
 
 def _inspect_open_file(
     handle: BinaryIO,
-    parameters: _PcmWaveParameters,
+    parameters: PcmWaveParameters,
 ) -> tuple[int, int, int, int, int]:
     peak_units = 0
     squared_units = 0
@@ -827,10 +833,12 @@ __all__ = [
     "MAX_RECONSTRUCTION_ROLES",
     "PCM_READ_FRAMES",
     "PcmWaveInspection",
+    "PcmWaveParameters",
     "RECONSTRUCTION_THRESHOLD_POLICY",
     "RECONSTRUCTION_THRESHOLD_QUANTIZATION_STEPS",
     "ReconstructionEvaluation",
     "RoleReconstructionEvidence",
     "evaluate_target_residual_reconstruction",
     "inspect_pcm_wav",
+    "read_pcm_wave_parameters",
 ]
