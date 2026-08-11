@@ -23,6 +23,7 @@ import time
 from typing import Any, Mapping
 import wave
 
+from sunofriend.separation_quality import read_pcm_wave_parameters
 from sunofriend.separation_profiles import CORE_FOUR_PROFILE_ID, separation_profile
 
 
@@ -69,18 +70,20 @@ def pack_pcm24(values: Any, *, np: Any) -> bytes:
 
 
 def read_canonical_source(path: Path, *, np: Any) -> Any:
-    with wave.open(str(path), "rb") as reader:
+    with path.open("rb") as reader:
+        reader.seek(0, 2)
+        parameters = read_pcm_wave_parameters(reader, file_bytes=reader.tell())
         if (
-            reader.getnchannels() != CHANNELS
-            or reader.getsampwidth() != 3
-            or reader.getframerate() != SAMPLE_RATE
-            or reader.getcomptype() != "NONE"
+            parameters.channels != CHANNELS
+            or parameters.sample_width_bytes != 3
+            or parameters.sample_rate != SAMPLE_RATE
         ):
             raise ValueError("worker source must be PCM24 stereo 44.1 kHz WAV")
-        frames = reader.getnframes()
-        contents = reader.readframes(frames)
-        if reader.readframes(1):
-            raise ValueError("worker source contains undeclared frames")
+        frames = parameters.frames
+        reader.seek(parameters.data_offset)
+        contents = reader.read(parameters.data_bytes)
+        if len(contents) != parameters.data_bytes:
+            raise ValueError("worker source contains truncated PCM24 frames")
     source = decode_pcm24(contents, np=np)
     if source.shape != (frames, CHANNELS) or not np.all(np.isfinite(source)):
         raise ValueError("worker source geometry or samples are invalid")
