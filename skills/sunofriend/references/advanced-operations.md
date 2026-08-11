@@ -1142,8 +1142,21 @@ guided forms.
   limitation and cannot disable core four or trigger configuration search.
   The current document SHA-256 is
   `869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d`.
-  It is a plan, not execution authority; full-song processing, activation,
-  source selection, MIDI, hosting, redistribution and upload remain false.
+  `scripts/run-fine-stem-full-song-six-role.py` implements the guarded
+  coordinator. With no `--execute` it returns a path-light request with zero
+  source-content reads, model loads, inference attempts and audio writes. Its
+  exact precomputed internal-forward budgets are 94 SCNet, 75 Mega-53 and 122
+  BS-RoFormer-SW calls. After a separate exact-hash approval, require
+  `--approved-plan-sha256`, `--confirm-rights`, a fresh private output and
+  parent `sandbox-exec` network denial. Each profile worker loads once and runs
+  three songs sequentially; the coordinator is the sole PCM24 writer and
+  retains objective failure without retry. Serve a successful package with
+  `scripts/serve-fine-stem-full-song-six-role-review.py`. The report-bound page
+  records playback and confirmed windows automatically, has no listened
+  checkbox and saves no audio, paths, filenames or telemetry in feedback.
+  This implementation is not execution authority; full-song processing,
+  activation, source selection, MIDI, hosting, redistribution and upload remain
+  false until their applicable explicit approvals.
 - Learned cleanup challenger: use `ai-cleanup` only on a focused mono/stereo
   44.1 kHz excerpt of at most 60 seconds and an existing pinned htdemucs
   checkpoint. Treat `bass`, `drums`, `other` and `vocals` as broad model source

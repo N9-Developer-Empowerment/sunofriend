@@ -217,9 +217,17 @@ on.
   model loads, nine full-song profile attempts, no automatic retry, no
   remediation cycle, automatic playback recording and no usefulness minimum.
   Planning observes regular-file paths and byte counts only; it opens no audio
-  content. The plan remains non-executable until its exact hash is separately
-  approved and grants no activation, source selection, MIDI, hosting,
-  redistribution or upload.
+  content. `scripts/run-fine-stem-full-song-six-role.py` is the guarded
+  executor; without `--execute` it emits a path-light no-effects request with
+  the fixed 94 SCNet, 75 Mega-53 and 122 BS-RoFormer-SW internal-forward
+  budgets. Do not execute it until the user separately approves the exact plan
+  hash. Then require `--approved-plan-sha256`, `--confirm-rights`, a fresh
+  private output and parent `sandbox-exec` network denial. Serve an objectively
+  complete package only with
+  `scripts/serve-fine-stem-full-song-six-role-review.py`; playback and confirmed
+  windows are recorded automatically and no listened checkbox is permitted.
+  Neither execution nor review grants activation, source selection, MIDI,
+  hosting, redistribution or upload.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.

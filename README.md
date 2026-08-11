@@ -380,7 +380,8 @@ Its manifest SHA-256 is
 `4b5bce6daa00607a93257d33db3e1055ab651287458c21ccd637b304438053bd`.
 This is a private evaluation slice, not a full-song or public six-stem claim.
 
-The next full-song step is now frozen without running a model. It binds exactly
+The next full-song step is frozen and its guarded executor is implemented,
+without having run a model. It binds exactly
 three song-disjoint sources whose requested instruments were confirmed present
 before inference: `I am a Alien mashup` for both synth and guitar, `Be Alone`
 for synth and `In the way` for guitar. Only those confirmed-present specialist
@@ -402,7 +403,12 @@ Its document SHA-256 is
 ```
 
 Planning checks source metadata only; it opens no audio content and grants no
-execution, activation, source-selection or MIDI authority. See
+execution, activation, source-selection or MIDI authority. The executor's
+default no-effects mode reports the fixed 94 SCNet, 75 Mega-53 and 122
+BS-RoFormer-SW internal forward limits. Actual execution additionally requires
+the exact plan hash, explicit rights confirmation, a fresh private output and
+macOS network denial. Poor listening feedback remains recordable without
+disabling core four. See
 [Private full-song six-role canary plan](docs/FINE_STEM_FULL_SONG_PLAN.md).
 
 Serve that repaired review with:
