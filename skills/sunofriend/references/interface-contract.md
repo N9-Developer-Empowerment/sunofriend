@@ -180,7 +180,14 @@ evidence. The next no-effects full-song plan is fixed at SHA-256
 It binds three song-disjoint sources with pre-inference synth/guitar
 presence evidence, scores only confirmed-present roles and permits no
 automatic retry, remediation cycle or minimum usefulness veto. It opens no
-audio content and remains non-executable until separately approved.
+audio content. The guarded executor is
+`scripts/run-fine-stem-full-song-six-role.py`: its default mode has no effects
+and reports the frozen forward budgets; `--execute` additionally requires the
+exact approved plan SHA-256, `--confirm-rights`, a fresh owner-only output and
+macOS network denial. The local review server is
+`scripts/serve-fine-stem-full-song-six-role-review.py`; it records playback
+automatically and has no listened checkbox. The execution remains forbidden
+until the exact plan hash is separately approved.
 No Sunofriend command downloads music.
 
 ## Product outputs

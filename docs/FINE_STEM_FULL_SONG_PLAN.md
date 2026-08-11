@@ -2,9 +2,10 @@
 
 Sunofriend has qualified private 15-second evidence for six mutually exclusive
 roles: `vocals`, `drums`, `bass`, `synth`, `guitar` and residual `other`. That
-does not yet establish full-song continuity. This increment freezes the next
-test without loading a checkpoint, running a model, reading audio content or
-granting a product permission.
+does not yet establish full-song continuity. The immutable plan and its guarded
+executor are implemented, but the executor has not been authorised or run. Its
+default mode emits a no-effects execution request without loading a checkpoint,
+running a model, reading audio content or granting a product permission.
 
 The immutable plan document is
 `sunofriend.fine-stem-full-song-six-role-plan.v1`, with SHA-256
@@ -43,10 +44,13 @@ If separately approved, the worker will:
 4. constrain synth and guitar allocation to SCNet grouped other; and
 5. write source, six roles and reconstruction check atomically for each song.
 
-Internal model forward calls are duration-dependent. They must be derived from
-the exact canonical frame counts and each frozen backend chunk contract before
-execution, then reported. This is not permission to tune chunking, overlap,
-weights or configuration.
+Internal model forward calls are duration-dependent and are now derived before
+execution from the exact canonical frame counts and frozen backend contracts:
+94 SCNet forwards after the deterministic seed-0 shift, 75 Mega-53 forwards
+using the approved 512-hop-aligned overlap-2 contract and 122
+BS-RoFormer-SW forwards using its verified reflect-pad overlap loop. These are
+accounting limits, not permission to tune chunking, overlap, weights or
+configuration.
 
 The ceilings are 900 seconds per song, 2,700 seconds total and 30 GiB peak
 unified memory on the first supported 36 GB M3 Max class. Any objective failure
@@ -88,6 +92,51 @@ Use a fresh owner-only output root:
 
 The command reads JSON and source metadata only. It writes one mode-`0600`
 plan inside a mode-`0700` directory and performs no model or audio operation.
+
+## Preflight the guarded executor
+
+This command prints the immutable, path-light execution request and exits. It
+does not require approval because it performs zero source-content reads,
+canonical writes, model loads, inference attempts or audio writes:
+
+```bash
+.venv/bin/python scripts/run-fine-stem-full-song-six-role.py \
+  --plan PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1/FULL-SONG-SIX-ROLE-PLAN.json \
+  --out PRIVATE-EVIDENCE/fine-stem-full-song-six-role-canary-v1
+```
+
+The execution path is fail-closed. It requires Apple-silicon macOS,
+`sandbox-exec` network denial, a fresh output root, `--confirm-rights` and an
+`--approved-plan-sha256` exactly equal to the immutable plan hash. It verifies
+every source before and after processing, canonicalises each source once, runs
+three single-load workers sequentially and gives one coordinator sole PCM24
+write authority. Objective failure is retained under a fresh `-FAILED` root;
+there is no retry.
+
+Once the exact approval below has been received, the authorised command is:
+
+```bash
+.venv/bin/python scripts/run-fine-stem-full-song-six-role.py \
+  --plan PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1/FULL-SONG-SIX-ROLE-PLAN.json \
+  --out PRIVATE-EVIDENCE/fine-stem-full-song-six-role-canary-v1 \
+  --approved-plan-sha256 869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d \
+  --confirm-rights \
+  --execute
+```
+
+After objective completion, serve the report-bound local page with:
+
+```bash
+.venv/bin/python scripts/serve-fine-stem-full-song-six-role-review.py \
+  PRIVATE-EVIDENCE/fine-stem-full-song-six-role-canary-v1 \
+  --plan PRIVATE-EVIDENCE/fine-stem-full-song-six-role-plan-v1/FULL-SONG-SIX-ROLE-PLAN.json
+```
+
+The page records playback automatically, including the confirmed-present
+source windows, and has no listened checkbox. Autosave, download and the
+visible fallback all bind feedback to the exact plan and report. The review
+JSON contains no audio, paths, filenames or telemetry and cannot select a
+source, start MIDI or activate a profile.
 
 ## Exact later approval
 
