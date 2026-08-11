@@ -232,15 +232,15 @@ export default function Home() {
             <span className="card-number">A / I HAVE A FINISHED SONG</span>
             <h3>I want Sunofriend to estimate stems locally.</h3>
             <p>
-              On a supported Apple-silicon Mac, the opt-in public alpha can
-              estimate broad vocals and complementary instrumental from one
-              authorised song. You listen before deciding whether either stem
-              is useful.
+              On a supported Apple-silicon Mac, the public alpha estimates broad
+              vocals and complementary instrumental by default. Its explicit
+              SCNet core-four opt-in estimates vocals, drums, bass and grouped
+              other. You listen before deciding whether any stem is useful.
             </p>
             <ul>
               <li>Audio stays on your Mac</li>
               <li>Separate model and runtime approval required</li>
-              <li>Two broad stems, not individual instrument families</li>
+              <li>Two broad stems by default; four grouped roles by explicit opt-in</li>
               <li>Experimental output is unreviewed</li>
             </ul>
             <Link className="text-link" href="/research/separation/">
@@ -400,14 +400,14 @@ export default function Home() {
             hash-pinned SCNet-large release profile is now available as an
             explicit public opt-in preview for vocals, drums, bass and grouped
             other after its finite offline canaries and catastrophic-output
-            listening checks passed. An additional installed Studio challenger
-            can refine that exact grouped other into one experimental guitar
-            target or disclosed piano-as-keys proxy plus the retained residual;
-            a completed five-song review demonstrated neither useful guitar nor
-            successful piano extraction. That negative result remains available
-            without promotion. A separate, currently non-executable research plan
-            now targets guitar plus broad keyboard/synth sounds rather than treating
-            piano as all keys.
+            listening checks passed. Separate private, unregistered six-role
+            research combined core four with synth and guitar specialists. Its
+            completed three-song review found all 3/3 cases useful and
+            non-catastrophic; synth and guitar were each useful in 2/2
+            confirmed-present cases, with some missing content reported for both.
+            This is positive private evidence only: resource and objective
+            qualification remain incomplete, and there is no public six-role
+            command, profile registration, automatic source choice or activation.
             Bring original or authorised parts when you need reliable keys,
             guitars or narrower families. See the{" "}
             <Link className="inline-link" href="/stems/">

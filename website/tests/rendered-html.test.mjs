@@ -120,6 +120,19 @@ test("server-renders an approachable skill-first musician page", async () => {
   assert.match(html, /restart Codex once/);
   assert.match(html, /I HAVE STEMS/);
   assert.match(html, /I HAVE A FINISHED SONG/);
+  assert.match(
+    html,
+    /public alpha estimates broad\s*vocals and complementary instrumental by default/,
+  );
+  assert.match(
+    html,
+    /explicit\s*SCNet core-four opt-in estimates vocals, drums, bass and grouped\s*other/,
+  );
+  assert.match(
+    html,
+    /Two broad stems by default; four grouped roles by explicit opt-in/,
+  );
+  assert.doesNotMatch(html, /Two broad stems, not individual instrument families/);
   assert.match(html, /I NEED OTHER STEM OPTIONS/);
   assert.match(html, /What stems are and where to get them/);
   assert.match(html, /Open the glossary/);
@@ -128,6 +141,15 @@ test("server-renders an approachable skill-first musician page", async () => {
   assert.match(html, /normal ChatGPT conversation/);
   assert.match(html, /automatic and unreviewed/);
   assert.match(html, /Hear Out of Place|Out of Place/);
+  assert.match(html, /private, unregistered six-role research/);
+  assert.match(html, /all 3\/3 cases useful and non-catastrophic/);
+  assert.match(
+    html,
+    /synth and guitar were each useful in 2\/2\s*confirmed-present cases/,
+  );
+  assert.match(html, /resource and objective\s*qualification remain incomplete/);
+  assert.match(html, /there is no public six-role\s*command/);
+  assert.doesNotMatch(html, /currently non-executable research plan/);
   assert.match(html, /SoftwareApplication/);
   assert.match(html, /Unsigned Media Ltd/);
   assert.match(html, /not related to or affiliated/);
@@ -210,6 +232,19 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /estimates vocals, drums, bass and grouped other/);
   assert.match(html, /Do not promise recovered studio multitracks or clean instrument isolation/);
   assert.match(html, /other-refinement-v1/);
+  assert.match(html, /private, unregistered six-role research/);
+  assert.match(html, /all 3\/3 cases useful and non-catastrophic/);
+  assert.match(
+    html,
+    /synth and\s*guitar were each useful in 2\/2 confirmed-present cases/,
+  );
+  assert.match(
+    html,
+    /private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete/,
+  );
+  assert.match(html, /does not register either specialist/);
+  assert.match(html, /there is no public six-role command/);
+  assert.doesNotMatch(html, /remains\s*blocked and non-executable/);
   assert.match(html, /\/research\/separation\//);
 });
 

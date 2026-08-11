@@ -20,8 +20,10 @@ The simplest lay description is:
 This is a local alpha, not a finished online service. Results vary by song.
 It is currently tested most deeply on macOS with GarageBand. Sunofriend never
 downloads a SoundCloud track. A user can supply local stems, or opt into an
-experimental Apple-silicon route that estimates broad vocals and instrumental
-from one local song they own or are authorised to process.
+experimental Apple-silicon route for one local song they own or are authorised
+to process. That route estimates broad vocals/instrumental by default; an
+explicitly installed SCNet profile adds a public opt-in
+vocals/drums/bass/grouped-other preview.
 
 ## The name and the independent project
 
@@ -93,13 +95,49 @@ The primary campaign sequence is:
    listener has heard a useful result.
 5. **Respond:** ask one concrete beginner or DAW compatibility question.
 
+## Current private six-role research update — not public support
+
+Use this as the current status update. It reports bounded private listening
+evidence, not a synth/guitar product launch. The public routes remain broad
+vocals/instrumental by default and vocals/drums/bass/grouped-other by explicit
+opt-in.
+
+### Short public version
+
+> Sunofriend's public local stem separation still offers broad
+> vocals/instrumental by default, with vocals/drums/bass/grouped-other as an
+> explicit opt-in. A separate private three-song research review of six-role
+> results found all 3/3 cases useful and non-catastrophic; synth and guitar were
+> each useful in 2/2 cases where that instrument was confirmed present. The
+> review also reported some missing content for both specialist roles. Synth
+> and guitar remain private, unregistered research with incomplete resource and
+> objective qualification—there is no public six-role command or activation.
+> सुनो = listen · Independent of Suno Inc.
+> https://sunofriend.com/research/separation/
+
+### Engineering version
+
+> Sunofriend's bounded private six-role experiment now has a completed,
+> immutable listening outcome after model-free recovery of its review package.
+> All 3/3 song-disjoint cases were useful and non-catastrophic; every core role
+> was useful in 3/3, while synth and guitar were each useful in 2/2
+> confirmed-present cases. No scored role reported bleed, artefacts or
+> timing/join problems, but both specialist roles had some missing content in
+> 2/2 cases. The recorded status is
+> `private_full_song_six_role_listening_evidence_recorded_resource_gate_incomplete`
+> (document SHA-256
+> `fa5d1d24627dce4cb1e27175055f1e3d5a3a70683b98e2376d92ee125bc2163c`).
+> This is positive private evidence, not profile registration, full objective
+> or resource qualification, public activation, automatic source selection or
+> MIDI authority. https://sunofriend.com/research/separation/
+
 ## Historical guitar and piano-proxy Studio-challenger draft
 
 Do not publish the original launch wording below as a current success claim.
 The completed ten-report corpus subsequently found no demonstrated useful
 guitar extraction and no successful piano extraction. The challenger remains
-available only as technically valid, negative Studio evidence while a broader
-keyboard/synth query-based experiment is prepared.
+available only as technically valid, negative Studio evidence. At that stage,
+a broader keyboard/synth query-based experiment was being prepared.
 
 ### Short public post
 
@@ -112,7 +150,7 @@ keyboard/synth query-based experiment is prepared.
 > MIDI is selected automatically. सुनो = listen · Independent of Suno Inc.
 > https://sunofriend.com/research/separation/
 
-### Current factual follow-up
+### Historical factual follow-up at that stage
 
 > We tested Sunofriend's first extra-instrument Studio challenger across five
 > authorised songs and listened to all ten guitar/piano-proxy cases. The files
@@ -135,12 +173,15 @@ keyboard/synth query-based experiment is prepared.
 > Human listening still decides whether to keep the grouped parent or use both
 > refined children. https://sunofriend.com/research/separation/
 
-## Synth-first research update — not yet a product capability
+## Historical synth-first construction/load update — superseded
 
-Use this only as a development update. Do not say Sunofriend can yet extract a
-usable synth stem with this model; no inference or song processing has run.
+This section is retained only as a chronological record of the earlier
+construction/load gate. Its statements that no inference had run and that a
+generated-tensor test came next described that moment, not the current state;
+the completed private six-role review and immutable outcome above supersede
+them. Do not publish either draft below as a current update or product claim.
 
-### Short factual post
+### Historical short factual post at the construction/load stage
 
 > Sunofriend's next fine-stem experiment is synth first, then guitar and wind.
 > We have now reproduced and strictly loaded the public 53-role BS-RoFormer
@@ -152,7 +193,7 @@ usable synth stem with this model; no inference or song processing has run.
 > disabling the working core-four preview. सुनो = listen · Independent of Suno
 > Inc. https://sunofriend.com/research/separation/
 
-### Engineering / BBC Slack version
+### Historical engineering / BBC Slack version at that stage
 
 > The synth-first Mega-53 challenger has crossed its strict construction/load
 > gate. Sunofriend sealed the exact 144,791-byte source archive and used one
