@@ -16,12 +16,29 @@
     "verified": [
       "MacBook running macOS"
     ],
-    "unverified": [
-      "Windows",
-      "Linux"
+    "partially_verified": [
+      {
+        "platform": "Windows 11 x64",
+        "observed_on": "2026-08-16",
+        "source_version": "0.4.0",
+        "source_commit": "95ca8cf",
+        "passed": [
+          "uv-managed CPython 3.11 environment and all runtime dependencies installed",
+          "doctor --require convert",
+          "doctor --require preview including a FluidSynth render smoke test",
+          "source-doctor with local FFmpeg and FFprobe"
+        ],
+        "blocked": "Native demo/create imports POSIX-only fcntl through source-lineage locking and stops with No module named 'fcntl'.",
+        "supported": false,
+        "guide_url": "https://sunofriend.com/windows/"
+      }
     ],
-    "support_boundary": "Windows and Linux compatibility has not yet been verified.",
-    "feedback_requested_from": "Every Sunofriend user, especially anyone trying another coding agent, Windows or Linux.",
+    "unverified": [
+      "Linux",
+      "Windows Subsystem for Linux"
+    ],
+    "support_boundary": "macOS remains supported. Native Windows setup and offline diagnostics are partially verified, but the normal demo/create workflow is blocked; Linux and Windows Subsystem for Linux are unverified.",
+    "feedback_requested_from": "Every Sunofriend user, especially anyone trying another coding agent or repeating the Windows and Linux portability work.",
     "feedback_url": "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml"
   },
   "agent_entry": {
@@ -1123,6 +1140,7 @@
     "demo": "https://sunofriend.com/demo/",
     "stems": "https://sunofriend.com/stems/",
     "glossary": "https://sunofriend.com/glossary/",
+    "windows_setup": "https://sunofriend.com/windows/",
     "separation_research": "https://sunofriend.com/research/separation/",
     "vocal_comping_research": "https://sunofriend.com/research/vocal-comping/",
     "separation_developer_preview": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",

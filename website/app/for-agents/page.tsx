@@ -11,7 +11,7 @@ import {
 export const metadata: Metadata = {
   title: "Sunofriend for AI agents",
   description:
-    "Portable skill entry point for local coding agents, with an honest MacBook-only test boundary and an invitation for Windows and Linux feedback.",
+    "Portable skill entry point for local coding agents, with supported macOS guidance, partially verified Windows setup notes and an invitation for portability feedback.",
   alternates: {
     canonical: "/for-agents/",
   },
@@ -50,6 +50,7 @@ export default function ForAgents() {
         </Link>
         <nav aria-label="Agent page navigation">
           <a href="#portability">Portability</a>
+          <Link href="/windows/">Windows</Link>
           <a href="#recognise">Recognise</a>
           <a href="#onboard">Onboard</a>
           <a href="#stems">Stem inputs</a>
@@ -99,15 +100,20 @@ export default function ForAgents() {
             </div>
             <div className="agent-card">
               <span className="card-number">PLATFORM TEST STATUS</span>
-              <h3>Only a MacBook has been tested so far</h3>
+              <h3>macOS supported; native Windows partially verified</h3>
               <p>
-                Do not turn intended portability into a support claim. Windows
-                and Linux are unverified. If you try either platform, report
-                the agent, operating system, architecture, exact command and
-                first blocker—or the successful path—so the SKILL.md and setup
-                guidance can be made more compatible.
+                Do not turn partial verification into a support claim. On
+                Windows 11 x64, dependency installation, offline doctors and
+                preview rendering passed, but demo/create stopped at the
+                POSIX-only <code>fcntl</code> source-lineage lock. Linux and
+                Windows Subsystem for Linux remain unverified. Report the agent,
+                operating system, architecture, exact command and first blocker
+                or successful path so SKILL.md and setup guidance can improve.
               </p>
               <div className="journey-links">
+                <Link className="text-link" href="/windows/">
+                  Read the Windows setup notes →
+                </Link>
                 <a className="text-link" href={links.compatibility}>
                   Send compatibility feedback ↗
                 </a>

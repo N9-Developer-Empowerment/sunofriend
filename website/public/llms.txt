@@ -7,7 +7,8 @@ Sunofriend is an independent Unsigned Media Ltd project. Its name begins with th
 ## Best agent entry point
 
 - Agent portability: the skill is not tied to Codex. It should be usable by skills-aware local coding agents such as Codex, Claude Code and Antigravity. Use the agent's native skill mechanism or give it the complete SKILL.md directly.
-- Test boundary: the application has only been tested on a MacBook so far. Windows and Linux are unverified; feedback from every user is welcome through the existing compatibility report below.
+- Test boundary: macOS remains supported. A native Windows 11 x64 trial verified dependency installation, offline conversion/preview doctors and FFmpeg/FFprobe discovery, but normal demo/create stops on the POSIX-only `fcntl` source-lineage lock. Linux and Windows Subsystem for Linux are unverified. Feedback from every user is welcome through the existing compatibility report below.
+- Native Windows trial notes: https://sunofriend.com/windows/
 - Install the official skill before constructing commands: https://github.com/N9-Developer-Empowerment/sunofriend/tree/main/skills/sunofriend
 - Raw SKILL.md: https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/SKILL.md
 - Generated interface contract: https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md
@@ -106,8 +107,9 @@ The source stems provide timing, horizon and level evidence. They are not mixed 
 
 ## Current boundary
 
-- local alpha tested only on a MacBook so far;
-- Windows and Linux are unverified; request and preserve user feedback so SKILL.md and setup guidance can become more portable;
+- local alpha supported on the documented macOS route;
+- native Windows setup and offline diagnostics are partially verified, but normal demo/create is blocked by POSIX-only `fcntl` locking; Linux and Windows Subsystem for Linux remain unverified;
+- preserve follow-up portability feedback so SKILL.md and setup guidance can improve;
 - no stem upload or conversion endpoint on the public website;
 - no vocal recording, vocal upload or automatic finished vocal comp on the public website;
 - optional models and checkpoints require separate explicit approval;

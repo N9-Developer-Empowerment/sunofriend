@@ -30,11 +30,11 @@ async function loadCleanRouteHandler() {
     "utf8",
   );
   const block = template.match(
-    /FunctionCode: \|\n(?<code>(?: {8}.+(?:\n|$))+)/,
+    /FunctionCode: \|\r?\n(?<code>(?: {8}.+(?:\r?\n|$))+)/,
   );
   assert.ok(block?.groups?.code, "CloudFront function code was not found");
   const code = block.groups.code
-    .split("\n")
+    .split(/\r?\n/)
     .map((line) => line.replace(/^ {8}/, ""))
     .join("\n");
   const handler = vm.runInNewContext(`${code}\nhandler;`);
@@ -45,7 +45,7 @@ async function loadCleanRouteHandler() {
 function cloudFrontErrorBlock(template, errorCode) {
   const match = template.match(
     new RegExp(
-      `^ {10}- ErrorCode: ${errorCode}\\n(?<settings>(?: {12}.+(?:\\n|$))+)`,
+      `^ {10}- ErrorCode: ${errorCode}\\r?\\n(?<settings>(?: {12}.+(?:\\r?\\n|$))+)`,
       "m",
     ),
   );
@@ -62,6 +62,8 @@ test("rewrites clean website routes to their static index files", async () => {
   assert.equal(rewrite("/demo/"), "/demo/index.html");
   assert.equal(rewrite("/for-agents"), "/for-agents/index.html");
   assert.equal(rewrite("/for-agents/"), "/for-agents/index.html");
+  assert.equal(rewrite("/windows"), "/windows/index.html");
+  assert.equal(rewrite("/windows/"), "/windows/index.html");
   assert.equal(
     rewrite("/research/separation/"),
     "/research/separation/index.html",
@@ -110,8 +112,9 @@ test("server-renders an approachable skill-first musician page", async () => {
     html,
     /Example skills-aware agents\s*include Codex, Claude Code and Antigravity/,
   );
-  assert.match(html, /Tested on a MacBook so far/);
-  assert.match(html, /Windows and Linux are not verified yet/);
+  assert.match(html, /macOS supported; Windows trial documented/);
+  assert.match(html, /demo\/create are blocked by POSIX-only locking/);
+  assert.match(html, /Windows setup notes/);
   assert.match(html, /Feedback from every Sunofriend user is welcome/);
   assert.match(html, /make SKILL\.md and the setup path more portable/);
   assert.match(html, /Send compatibility feedback/);
@@ -203,9 +206,10 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /One skill, not one agent/);
   assert.match(html, /plain-text operational guidance, not a Codex-only/);
   assert.match(html, /Codex, Claude Code, Antigravity/);
-  assert.match(html, /Only a MacBook has been tested so far/);
-  assert.match(html, /Windows\s*and Linux are unverified/);
-  assert.match(html, /SKILL\.md and setup\s*guidance can be made more compatible/);
+  assert.match(html, /macOS supported; native Windows partially verified/);
+  assert.match(html, /demo\/create stopped at the\s*POSIX-only/);
+  assert.match(html, /Windows Subsystem for Linux remain unverified/);
+  assert.match(html, /SKILL\.md and setup\s*guidance can improve/);
   assert.match(html, /Install and read the official skill/);
   assert.match(html, /Stop after confirming the skill is available/);
   assert.match(html, /\$skill-installer/);
@@ -254,6 +258,35 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /there is no public six-role command/);
   assert.doesNotMatch(html, /remains\s*blocked and non-executable/);
   assert.match(html, /\/research\/separation\//);
+});
+
+test("publishes reproducible and bounded native Windows setup notes", async () => {
+  const response = await render("/windows/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /NATIVE WINDOWS TRIAL NOTES/);
+  assert.match(html, /PARTIALLY VERIFIED · 16 AUGUST 2026/);
+  assert.match(html, /Windows 11 x64/);
+  assert.match(html, /Sunofriend 0\.4\.0 source at commit/);
+  assert.match(html, /95ca8cf/);
+  assert.match(html, /uv python install 3\.11/);
+  assert.match(html, /\.venv-windows/);
+  assert.match(html, /SUNOFRIEND_FLUIDSYNTH/);
+  assert.match(html, /SUNOFRIEND_SF2/);
+  assert.match(html, /SUNOFRIEND_FFMPEG/);
+  assert.match(html, /SUNOFRIEND_FFPROBE/);
+  assert.match(html, /9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe/);
+  assert.match(html, /doctor --require convert/);
+  assert.match(html, /doctor --require preview/);
+  assert.match(html, /source-doctor/);
+  assert.match(html, /requirement_ready/);
+  assert.match(html, /ready: false/);
+  assert.match(html, /No module named/);
+  assert.match(html, /fcntl/);
+  assert.match(html, /Do not install an unrelated package/);
+  assert.match(html, /Windows Subsystem\s*for Linux has not been tested/);
+  assert.match(html, /not a working release route/);
 });
 
 test("publishes four honest public and private separation lanes", async () => {
@@ -430,8 +463,11 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /^# Sunofriend/m);
   assert.match(text, /skill is not tied to Codex/);
   assert.match(text, /Codex, Claude Code and Antigravity/);
-  assert.match(text, /only been tested on a MacBook so far/);
-  assert.match(text, /Windows and Linux are unverified/);
+  assert.match(text, /macOS remains supported/);
+  assert.match(text, /native Windows 11 x64 trial verified/);
+  assert.match(text, /normal demo\/create stops on the POSIX-only `fcntl`/);
+  assert.match(text, /Windows Subsystem for Linux are unverified/);
+  assert.match(text, /sunofriend\.com\/windows/);
   assert.match(text, /feedback from every user is welcome/i);
   assert.match(text, /Install the official skill/);
   assert.match(text, /standard ChatGPT conversation/i);
@@ -518,7 +554,14 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(data.product.local_first, true);
   assert.equal(data.product.hosted_conversion_available, false);
   assert.deepEqual(data.platform_testing.verified, ["MacBook running macOS"]);
-  assert.deepEqual(data.platform_testing.unverified, ["Windows", "Linux"]);
+  assert.equal(data.platform_testing.partially_verified[0].platform, "Windows 11 x64");
+  assert.equal(data.platform_testing.partially_verified[0].supported, false);
+  assert.match(data.platform_testing.partially_verified[0].blocked, /fcntl/);
+  assert.deepEqual(data.platform_testing.unverified, [
+    "Linux",
+    "Windows Subsystem for Linux",
+  ]);
+  assert.match(data.platform_testing.support_boundary, /demo\/create workflow is blocked/);
   assert.match(data.platform_testing.feedback_requested_from, /Every Sunofriend user/);
   assert.deepEqual(data.agent_entry.example_agents, [
     "Codex",
@@ -1394,6 +1437,7 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(robots, /Allow: \//);
   assert.match(robots, /sunofriend\.com\/sitemap\.xml/);
   assert.match(sitemap, /sunofriend\.com\/for-agents/);
+  assert.match(sitemap, /sunofriend\.com\/windows/);
   assert.match(sitemap, /sunofriend\.com\/research\/separation/);
   assert.match(sitemap, /sunofriend\.com\/research\/vocal-comping/);
   assert.match(sitemap, /sunofriend\.com\/stems/);

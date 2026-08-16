@@ -33,9 +33,29 @@ question at a time, inspects the Mac without changing it, uses separate
 source-preparation and exact-commit installation approvals, and can run a
 copyright-safe demo even when you have no stems.
 
+## Native Windows trial status
+
+Native Windows is not a supported application route yet. A Windows 11 x64
+trial on 16 August 2026 installed Sunofriend 0.4.0 from commit `95ca8cf` with a
+uv-managed CPython 3.11 environment. `doctor --require convert`,
+`doctor --require preview` (including a FluidSynth render smoke test) and
+`source-doctor` with local FFmpeg/FFprobe all passed.
+
+The normal demo/create pipeline did not pass. It stopped with
+`No module named 'fcntl'` because source-lineage locking imports the POSIX-only
+`fcntl` module. Do not install an unrelated package merely named `fcntl` as a
+workaround. Sunofriend needs a tested cross-platform lock abstraction. Windows
+Subsystem for Linux was not tested.
+
+The maintained [Windows setup notes](https://sunofriend.com/windows/) record
+the successful uv, audio-tool and SoundFont steps, the exact PowerShell
+environment variables and how to interpret the doctor output. Use them for
+portability work, not as a claim that native Windows demo, create, Studio or
+the TUI can complete.
+
 ## Before you begin
 
-You need:
+For the supported manual route, you need:
 
 - a Mac;
 - [Homebrew](https://brew.sh/) for this manual route;

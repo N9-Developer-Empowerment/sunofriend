@@ -13,6 +13,14 @@ export const links = {
     "https://raw.githubusercontent.com/N9-Developer-Empowerment/sunofriend/main/skills/sunofriend/references/interface-contract.md",
   gettingStarted:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/GETTING_STARTED.md",
+  windowsGuide: "https://sunofriend.com/windows/",
+  uvInstall: "https://docs.astral.sh/uv/getting-started/installation/",
+  ffmpegDownload: "https://ffmpeg.org/download.html",
+  fluidSynthReleases: "https://github.com/FluidSynth/fluidsynth/releases",
+  soundFont:
+    "https://raw.githubusercontent.com/mrbumpy409/GeneralUser-GS/684543d5e5efaef08d02be50dcda8d552478fa60/GeneralUser-GS.sf2",
+  soundFontLicense:
+    "https://github.com/mrbumpy409/GeneralUser-GS/blob/684543d5e5efaef08d02be50dcda8d552478fa60/documentation/LICENSE.txt",
   separationDeveloperGuide:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
   stemGuide:
@@ -279,4 +287,4 @@ Choose a fresh output folder with me. Do not install optional AI models just for
 If you cannot access local files or run commands, do not pretend that you can. Give me manual guidance or tell me to continue in Codex with local workspace access.`;
 
 export const agentSummary =
-  "Sunofriend is a local-first, MacBook-tested alpha. On Apple-silicon macOS its opt-in experimental separator defaults to broad vocals and complementary instrumental. Its installed, hash-pinned SCNet-large profile now adds an explicit public opt-in vocals/drums/bass/grouped-other preview after finite offline canaries and catastrophic-output listening checks passed. The first verified class is a 36 GB M3 Max; other Apple-silicon classes remain accessible but unverified. It also prepares existing stems, then turns useful canonical WAV parts into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Automatic results stay explicitly unreviewed; Studio preserves candidates for explicit listening and choice.";
+  "Sunofriend is a local-first macOS alpha with partially verified native-Windows setup diagnostics; normal Windows demo/create remain blocked by POSIX-only locking. On Apple-silicon macOS its opt-in experimental separator defaults to broad vocals and complementary instrumental. Its installed, hash-pinned SCNet-large profile now adds an explicit public opt-in vocals/drums/bass/grouped-other preview after finite offline canaries and catastrophic-output listening checks passed. The first verified class is a 36 GB M3 Max; other Apple-silicon classes remain accessible but unverified. It also prepares existing stems, then turns useful canonical WAV parts into editable MIDI, a balanced MIDI-derived song-interpretation WAV and a starter ZIP. Automatic results stay explicitly unreviewed; Studio preserves candidates for explicit listening and choice.";

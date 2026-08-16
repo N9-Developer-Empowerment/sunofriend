@@ -26,15 +26,20 @@ The website and the music engine have deliberately different boundaries:
 - Sunofriend audio processing remains local. The site has no stem upload,
   account, database or music-processing API.
 
-The application has only been tested on a MacBook so far. The public copy does
-not claim verified Windows or Linux support; it explicitly asks people who try
-either platform to share what worked or failed through the existing
-compatibility form so SKILL.md and the setup guidance can be improved.
+macOS remains the supported application route. A native Windows 11 x64 trial
+verified installation, offline doctors, preview rendering and source-tool
+discovery, but the normal demo/create path is blocked by the POSIX-only
+`fcntl` source-lineage lock. The public `/windows/` guide records the exact
+setup and blocker without claiming Windows support. Linux and Windows
+Subsystem for Linux remain unverified. The site asks people to share follow-up
+results through the compatibility form so SKILL.md and setup can improve.
 
 Agent discovery has its own public surfaces so the musician page does not need
 to carry every technical detail:
 
 - `/for-agents` explains recognition, onboarding and the Simple/Studio boundary;
+- `/windows/` records the partially verified native-Windows setup, diagnostic
+  commands and first reproducible portability blocker;
 - `/llms.txt` is the concise text discovery document;
 - `/agent-capabilities.json` is the versioned machine-readable contract;
 - `/research/separation/` explains the public experimental local two-stem
