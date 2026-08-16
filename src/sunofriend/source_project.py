@@ -102,6 +102,7 @@ class SourceProject:
     rights_category: str
     sources: tuple[SourcePart, ...]
     chord_document: Mapping[str, Any] | None = None
+    musical_metadata_analysis: Mapping[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         seed = {
@@ -118,6 +119,11 @@ class SourceProject:
                 if self.chord_document is not None
                 else None
             ),
+            "musical_metadata_analysis": (
+                dict(self.musical_metadata_analysis)
+                if self.musical_metadata_analysis is not None
+                else None
+            ),
             "sources": [source.to_dict() for source in self.sources],
         }
         project_id = f"sha256:{document_sha256(seed)}"
@@ -131,6 +137,7 @@ class PreparedProjectContext:
     manifest_path: Path
     metadata: SourceMetadata
     chord_document: Path | None
+    musical_metadata_analysis: Mapping[str, Any] | None = None
 
 
 def resolve_source_metadata(
@@ -200,6 +207,7 @@ def build_source_project(
     source: SourcePart | None = None,
     sources: Sequence[SourcePart] = (),
     chord_document: Mapping[str, Any] | None = None,
+    musical_metadata_analysis: Mapping[str, Any] | None = None,
 ) -> SourceProject:
     rights = str(rights_category).strip()
     if rights not in RIGHTS_CATEGORIES:
@@ -221,6 +229,7 @@ def build_source_project(
         rights_category=rights,
         sources=parts,
         chord_document=chord_document,
+        musical_metadata_analysis=musical_metadata_analysis,
     )
     validate_source_project_document(project.to_dict())
     return project
@@ -301,6 +310,25 @@ def validate_source_project_document(document: Mapping[str, Any]) -> None:
         sha256 = str(chord.get("sha256") or "")
         if not re.fullmatch(r"[0-9a-f]{64}", sha256):
             raise ValueError("chord_document.sha256 must be a lowercase SHA-256")
+    analysis = document.get("musical_metadata_analysis")
+    if analysis is not None:
+        if not isinstance(analysis, Mapping):
+            raise ValueError("musical_metadata_analysis must be an object or null")
+        _safe_relative_path(
+            analysis.get("path"), "musical_metadata_analysis.path"
+        )
+        for field in ("sha256", "analysis_sha256"):
+            digest = str(analysis.get(field) or "")
+            if not re.fullmatch(r"[0-9a-f]{64}", digest):
+                raise ValueError(
+                    f"musical_metadata_analysis.{field} must be a lowercase SHA-256"
+                )
+        if analysis.get("schema") != (
+            "sunofriend.musical-metadata-analysis.v1"
+        ):
+            raise ValueError("musical_metadata_analysis schema is unsupported")
+        if analysis.get("review_status") != "not_reviewed":
+            raise ValueError("automatic musical metadata must remain not_reviewed")
 
 
 def discover_chord_document(source: str | Path) -> Path | None:
@@ -394,11 +422,41 @@ def load_prepared_project_context(
         if chord_value is not None
         else None
     )
+    musical_metadata_analysis = _resolve_musical_metadata_analysis(
+        root, document.get("musical_metadata_analysis")
+    )
     return PreparedProjectContext(
         manifest_path=manifest.resolve(),
         metadata=metadata,
         chord_document=chord_document,
+        musical_metadata_analysis=musical_metadata_analysis,
     )
+
+
+def _resolve_musical_metadata_analysis(
+    root: Path, value: Any
+) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError("musical_metadata_analysis must be an object or null")
+    relative = _safe_relative_path(
+        value.get("path"), "musical_metadata_analysis.path"
+    )
+    _reject_relative_symlinks(
+        root, relative, label="musical metadata analysis"
+    )
+    path = root.joinpath(*relative.parts)
+    if not path.is_file():
+        raise ValueError("declared musical metadata analysis is missing")
+    if file_sha256(path) != value.get("sha256"):
+        raise ValueError("musical metadata analysis file hash does not match")
+    from .musical_metadata import load_musical_metadata_analysis
+
+    analysis = load_musical_metadata_analysis(path)
+    if analysis.get("analysis_sha256") != value.get("analysis_sha256"):
+        raise ValueError("musical metadata analysis identity does not match")
+    return analysis
 
 
 def _strict_optional_key(value: Any) -> str | None:

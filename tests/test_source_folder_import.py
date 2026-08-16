@@ -9,6 +9,7 @@ import wave
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 from sunofriend.audio_formats import file_sha256
 from sunofriend.drum_roles import DRUM_ROLE_POLICY_SCHEMA
@@ -26,6 +27,50 @@ from sunofriend.source_receipt import (
 
 
 class SourceFolderImportTests(unittest.TestCase):
+    def test_original_mix_metadata_evidence_fills_missing_key_and_bpm(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "parts"
+            bass = folder / "bass.wav"
+            kick = folder / "kick.wav"
+            original_mix = root / "original mix.wav"
+            _write_pcm24_wav(bass, sample=1)
+            _write_pcm24_wav(kick, sample=2)
+            _write_pcm24_wav(original_mix, sample=3)
+            ffmpeg, ffprobe = _fake_toolchain(
+                root,
+                {
+                    bass.name: _probe_document(),
+                    kick.name: _probe_document(),
+                },
+            )
+
+            with patch(
+                "sunofriend.source_folder_import.analyze_musical_metadata",
+                return_value=_automatic_analysis_fixture(),
+            ):
+                plan = plan_source_folder_import(
+                    folder,
+                    root / "prepared",
+                    ffmpeg=ffmpeg,
+                    ffprobe=ffprobe,
+                    metadata_source=original_mix,
+                    discover_chords=False,
+                )
+
+            self.assertEqual(plan.metadata.key, "Ab major")
+            self.assertEqual(plan.metadata.bpm, 144)
+            self.assertIsNone(plan.metadata.tuning_hz)
+            self.assertEqual(plan.metadata_source, original_mix.resolve())
+            self.assertEqual(
+                plan.musical_metadata_analysis["resolution"]["provenance"][
+                    "key"
+                ],
+                "high_confidence_automatic",
+            )
+
     def test_folder_requires_two_to_sixty_four_top_level_assets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -967,6 +1012,35 @@ else:
     ffmpeg.chmod(0o755)
     ffprobe.chmod(0o755)
     return ffmpeg, ffprobe
+
+
+def _automatic_analysis_fixture() -> dict:
+    return {
+        "schema": "sunofriend.musical-metadata-analysis.v1",
+        "status": "complete_unreviewed",
+        "network_used": False,
+        "source": {
+            "sha256": "a" * 64,
+            "bytes": 1,
+            "duration_seconds": 1.0,
+        },
+        "algorithm": {"id": "fixture"},
+        "estimates": {
+            "key": {"selected_key": "Ab major", "confidence": "high"},
+            "tempo": {"selected_bpm": 144, "confidence": "high"},
+            "tuning": {
+                "concert_a_hz": 449.505,
+                "confidence": "review_recommended",
+            },
+        },
+        "suggested_metadata": {
+            "key": "Ab major",
+            "bpm": 144,
+            "tuning_hz": 449.505,
+        },
+        "review": {"status": "not_reviewed", "review_recommended": True},
+        "effects": {"source_audio_mutated": False},
+    }
 
 
 if __name__ == "__main__":

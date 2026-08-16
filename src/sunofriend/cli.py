@@ -364,6 +364,261 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional unique reproducible test label; an existing run is never replaced",
     )
 
+    vocal_comp_create = sub.add_parser(
+        "vocal-comp-create",
+        help=(
+            "Admit exact local vocal takes, canonical lyrics, a reviewed target "
+            "melody and reviewed phrase timing into an immutable private project"
+        ),
+    )
+    vocal_comp_create.add_argument(
+        "take_dir",
+        help="Directory containing 2-24 synchronized top-level vocal-only WAV takes",
+    )
+    vocal_comp_create.add_argument(
+        "--lyrics",
+        required=True,
+        help="Canonical UTF-8 lyrics text file",
+    )
+    vocal_comp_create.add_argument(
+        "--target-midi",
+        required=True,
+        help="Reviewed monophonic target vocal melody MIDI",
+    )
+    vocal_comp_create.add_argument(
+        "--phrase-timeline",
+        required=True,
+        help="Reviewed sunofriend.vocal-comp-timeline.v1 JSON",
+    )
+    vocal_comp_create.add_argument(
+        "--target-vocal",
+        default=None,
+        help="Optional AI reference vocal WAV, retained only as fallback evidence",
+    )
+    vocal_comp_create.add_argument("--bpm", type=float, required=True)
+    vocal_comp_create.add_argument(
+        "--tuning-hz",
+        type=float,
+        default=440.0,
+        help="Source concert A in Hz (default: 440)",
+    )
+    vocal_comp_create.add_argument(
+        "--rights-category",
+        required=True,
+        choices=sorted(RIGHTS_CATEGORIES),
+        help="Authority category recorded in the immutable project",
+    )
+    vocal_comp_create.add_argument(
+        "--processing-chain",
+        required=True,
+        choices=("dry", "same-gentle-chain"),
+        help="All human takes must be dry or share the same gentle processing chain",
+    )
+    vocal_comp_create.add_argument(
+        "--confirm-common-recorded-zero",
+        action="store_true",
+        help="Confirm every take and optional reference starts at the same song zero",
+    )
+    vocal_comp_create.add_argument(
+        "--confirm-target-reviewed",
+        action="store_true",
+        help="Confirm the target MIDI and phrase timeline were reviewed by a person",
+    )
+    vocal_comp_create.add_argument(
+        "--out-dir",
+        required=True,
+        help="Fresh private project directory; existing paths are never replaced",
+    )
+    vocal_comp_create.add_argument(
+        "--plan",
+        action="store_true",
+        help="Validate and print the exact read-only admission plan without copying",
+    )
+
+    vocal_comp_analyze = sub.add_parser(
+        "vocal-comp-analyze",
+        help=(
+            "Rank each human take against reviewed phrase melody evidence without "
+            "selecting, correcting or rendering a vocal comp"
+        ),
+    )
+    vocal_comp_analyze.add_argument(
+        "project",
+        help="Immutable vocal-comp project directory or vocal-comp-project.json",
+    )
+    vocal_comp_analyze.add_argument(
+        "--out-dir",
+        required=True,
+        help="Fresh private ranked-evidence output directory",
+    )
+    vocal_comp_analyze.add_argument(
+        "--rmvpe-frames",
+        action="append",
+        default=[],
+        metavar="TAKE_ID=PATH",
+        help=(
+            "Optional matching immutable RMVPE evidence; repeat once per take, "
+            "for example take-001=/path/to/rmvpe.frames.json"
+        ),
+    )
+    vocal_comp_analyze.add_argument(
+        "--fmin", type=float, default=65.4, help="Lowest expected vocal F0 in Hz"
+    )
+    vocal_comp_analyze.add_argument(
+        "--fmax", type=float, default=1046.5, help="Highest expected vocal F0 in Hz"
+    )
+
+    vocal_comp_draft_review = sub.add_parser(
+        "vocal-comp-draft-review",
+        help=(
+            "Build a private listening page for automatic lyric, phrase and "
+            "target-melody drafts without granting review authority"
+        ),
+    )
+    vocal_comp_draft_review.add_argument(
+        "--lyrics", required=True, help="Automatic UTF-8 lyric extraction"
+    )
+    vocal_comp_draft_review.add_argument(
+        "--target-midi", required=True, help="Automatic monophonic target MIDI"
+    )
+    vocal_comp_draft_review.add_argument(
+        "--phrase-timeline",
+        required=True,
+        help="Automatic-unreviewed vocal-comp phrase timeline JSON",
+    )
+    vocal_comp_draft_review.add_argument(
+        "--target-vocal",
+        required=True,
+        help="AI reference vocal used to hear the intended words and phrasing",
+    )
+    vocal_comp_draft_review.add_argument("--bpm", required=True, type=float)
+    vocal_comp_draft_review.add_argument(
+        "--tuning-hz", default=440.0, type=float
+    )
+    vocal_comp_draft_review.add_argument(
+        "--out-dir", required=True, help="Fresh private review-package directory"
+    )
+
+    vocal_comp_draft_resolve = sub.add_parser(
+        "vocal-comp-draft-resolve",
+        help=(
+            "Resolve one explicit complete human draft review into fresh reviewed "
+            "vocal-comp inputs"
+        ),
+    )
+    vocal_comp_draft_resolve.add_argument(
+        "package", help="Vocal-comp draft review package directory or manifest"
+    )
+    vocal_comp_draft_resolve.add_argument(
+        "review", help="Reviewed JSON explicitly exported from the listening page"
+    )
+    vocal_comp_draft_resolve.add_argument(
+        "--out-dir", required=True, help="Fresh reviewed-input bundle directory"
+    )
+
+    vocal_comp_draft_feedback = sub.add_parser(
+        "vocal-comp-draft-feedback",
+        help=(
+            "Bind an unresolved human draft review as immutable development "
+            "evidence without promoting any comp input"
+        ),
+    )
+    vocal_comp_draft_feedback.add_argument(
+        "package", help="Vocal-comp draft review package directory or manifest"
+    )
+    vocal_comp_draft_feedback.add_argument(
+        "review", help="Unresolved JSON explicitly exported from the listening page"
+    )
+    vocal_comp_draft_feedback.add_argument(
+        "--out", required=True, help="Fresh private feedback JSON path"
+    )
+
+    vocal_comp_word_align = sub.add_parser(
+        "vocal-comp-word-align",
+        help=(
+            "Align local timestamped STT words to canonical lyrics while retaining "
+            "ad-lib, omission and substitution candidates"
+        ),
+    )
+    vocal_comp_word_align.add_argument(
+        "lyrics", help="Canonical UTF-8 lyrics; speech recognition cannot rewrite them"
+    )
+    vocal_comp_word_align.add_argument(
+        "--transcript",
+        action="append",
+        default=[],
+        required=True,
+        metavar="SOURCE_ID=JSON",
+        help="Timestamped local transcript JSON; repeat for each AI/human vocal",
+    )
+    vocal_comp_word_align.add_argument(
+        "--audio",
+        action="append",
+        default=[],
+        required=True,
+        metavar="SOURCE_ID=WAV",
+        help="Exact source audio for transcript hash/duration binding; repeat per source",
+    )
+    vocal_comp_word_align.add_argument(
+        "--out-dir", required=True, help="Fresh private word-alignment directory"
+    )
+
+    vocal_comp_word_review = sub.add_parser(
+        "vocal-comp-word-review",
+        help=(
+            "Build a private detailed listening page for canonical words, ad-libs "
+            "and shared lyric-line timing without selecting a take"
+        ),
+    )
+    vocal_comp_word_review.add_argument(
+        "alignment", help="Complete-unreviewed vocal-comp word-alignment JSON"
+    )
+    vocal_comp_word_review.add_argument(
+        "--lyrics", required=True, help="Exact canonical UTF-8 lyrics used by alignment"
+    )
+    vocal_comp_word_review.add_argument(
+        "--audio",
+        action="append",
+        default=[],
+        required=True,
+        metavar="SOURCE_ID=WAV",
+        help="Exact source audio bound by the alignment; repeat for every source",
+    )
+    vocal_comp_word_review.add_argument(
+        "--out-dir", required=True, help="Fresh private word-review package directory"
+    )
+
+    vocal_comp_stt = sub.add_parser(
+        "vocal-comp-stt",
+        help=(
+            "Run unprompted local Whisper word timestamps from an exact existing "
+            "checkpoint; never download a model or rewrite lyrics"
+        ),
+    )
+    vocal_comp_stt.add_argument("audio", help="One exact AI or human vocal WAV")
+    vocal_comp_stt.add_argument(
+        "--checkpoint",
+        required=True,
+        help="Existing local Whisper .pt checkpoint; no model name/download fallback",
+    )
+    vocal_comp_stt.add_argument(
+        "--python",
+        required=True,
+        help="Existing Python interpreter containing the openai-whisper package",
+    )
+    vocal_comp_stt.add_argument(
+        "--model-label", required=True, help="Human-readable exact model label"
+    )
+    vocal_comp_stt.add_argument(
+        "--source-id", required=True, help="Safe stable ID such as take-001"
+    )
+    vocal_comp_stt.add_argument(
+        "--out-dir", required=True, help="Fresh private immutable STT run directory"
+    )
+    vocal_comp_stt.add_argument(
+        "--timeout-seconds", type=float, default=1800.0
+    )
+
     melody_review = sub.add_parser(
         "melody-review",
         help="Build a local phrase-by-phrase audition and correction package",
@@ -586,6 +841,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Bound for each read-only tool query (default: 30)",
     )
 
+    musical_metadata = sub.add_parser(
+        "musical-metadata",
+        help=(
+            "Estimate key, BPM and tuning locally and emit reviewable, "
+            "path-free evidence"
+        ),
+    )
+    musical_metadata.add_argument(
+        "source", help="One local audio file to analyse without mutating it"
+    )
+    musical_metadata.add_argument(
+        "--out",
+        default=None,
+        help=(
+            "Optional fresh JSON evidence path; without this option the "
+            "command only prints JSON"
+        ),
+    )
+
     source_import = sub.add_parser(
         "source-import",
         help=(
@@ -721,6 +995,14 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help="Concert-A tuning override, for example 440",
+    )
+    source_folder_import.add_argument(
+        "--metadata-source",
+        default=None,
+        help=(
+            "Authoritative original finished mix used for automatic key/BPM "
+            "evidence when preparing separated stems"
+        ),
     )
     source_folder_import.add_argument(
         "--chords",
@@ -2654,6 +2936,22 @@ def main(argv: list[str] | None = None) -> int:
             return _run_vocal_melody(args)
         if args.command == "vocal-trackers":
             return _run_vocal_trackers(args)
+        if args.command == "vocal-comp-create":
+            return _run_vocal_comp_create(args)
+        if args.command == "vocal-comp-analyze":
+            return _run_vocal_comp_analyze(args)
+        if args.command == "vocal-comp-draft-review":
+            return _run_vocal_comp_draft_review(args)
+        if args.command == "vocal-comp-draft-resolve":
+            return _run_vocal_comp_draft_resolve(args)
+        if args.command == "vocal-comp-draft-feedback":
+            return _run_vocal_comp_draft_feedback(args)
+        if args.command == "vocal-comp-word-align":
+            return _run_vocal_comp_word_align(args)
+        if args.command == "vocal-comp-word-review":
+            return _run_vocal_comp_word_review(args)
+        if args.command == "vocal-comp-stt":
+            return _run_vocal_comp_stt(args)
         if args.command == "melody-review":
             return _run_melody_review(args)
         if args.command == "melody-profile":
@@ -2668,6 +2966,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_doctor(args)
         if args.command == "source-doctor":
             return _run_source_doctor(args)
+        if args.command == "musical-metadata":
+            return _run_musical_metadata(args)
         if args.command == "source-import":
             return _run_source_import(args)
         if args.command == "source-import-folder":
@@ -3089,6 +3389,162 @@ def _run_vocal_trackers(args) -> int:
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
+
+
+def _run_vocal_comp_create(args) -> int:
+    """Plan or create one immutable private phrase-comping project."""
+
+    from .vocal_comp import create_vocal_comp_project, plan_vocal_comp_project
+
+    keyword = {
+        "lyrics": args.lyrics,
+        "target_midi": args.target_midi,
+        "phrase_timeline": args.phrase_timeline,
+        "target_vocal": args.target_vocal,
+        "bpm": args.bpm,
+        "tuning_hz": args.tuning_hz,
+        "rights_category": args.rights_category,
+        "processing_chain": args.processing_chain,
+        "confirm_common_recorded_zero": args.confirm_common_recorded_zero,
+        "confirm_target_reviewed": args.confirm_target_reviewed,
+    }
+    result = (
+        plan_vocal_comp_project(args.take_dir, **keyword)
+        if args.plan
+        else create_vocal_comp_project(
+            args.take_dir,
+            out_dir=args.out_dir,
+            **keyword,
+        )
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_vocal_comp_analyze(args) -> int:
+    """Publish phrase rankings, auditions and pickups with zero comp effects."""
+
+    from .vocal_comp import analyze_vocal_comp_project
+
+    result = analyze_vocal_comp_project(
+        args.project,
+        out_dir=args.out_dir,
+        rmvpe_frames=_take_path_assignments(args.rmvpe_frames),
+        fmin_hz=args.fmin,
+        fmax_hz=args.fmax,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_vocal_comp_draft_review(args) -> int:
+    """Publish a zero-authority local review page for automatic inputs."""
+
+    from .vocal_comp_review import build_vocal_comp_draft_review
+
+    result = build_vocal_comp_draft_review(
+        lyrics=args.lyrics,
+        target_midi=args.target_midi,
+        phrase_timeline=args.phrase_timeline,
+        target_vocal=args.target_vocal,
+        out_dir=args.out_dir,
+        bpm=args.bpm,
+        tuning_hz=args.tuning_hz,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_vocal_comp_draft_resolve(args) -> int:
+    """Promote only an explicitly completed review into reviewed inputs."""
+
+    from .vocal_comp_review import resolve_vocal_comp_draft_review
+
+    result = resolve_vocal_comp_draft_review(
+        args.package,
+        args.review,
+        out_dir=args.out_dir,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_vocal_comp_draft_feedback(args) -> int:
+    """Record an unresolved review with no input-promotion effects."""
+
+    from .vocal_comp_review import record_vocal_comp_draft_feedback
+
+    result = record_vocal_comp_draft_feedback(
+        args.package,
+        args.review,
+        out=args.out,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_vocal_comp_word_align(args) -> int:
+    """Align auxiliary STT words without rewriting canonical lyrics."""
+
+    from .vocal_comp_words import align_vocal_comp_transcripts
+
+    result = align_vocal_comp_transcripts(
+        args.lyrics,
+        transcripts=_take_path_assignments(
+            args.transcript, option_name="--transcript"
+        ),
+        audio=_take_path_assignments(args.audio, option_name="--audio"),
+        out_dir=args.out_dir,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_vocal_comp_word_review(args) -> int:
+    """Build detailed zero-effect word and phrase review evidence."""
+
+    from .vocal_comp_word_review import build_vocal_comp_word_review
+
+    result = build_vocal_comp_word_review(
+        args.alignment,
+        lyrics=args.lyrics,
+        audio=_take_path_assignments(args.audio, option_name="--audio"),
+        out_dir=args.out_dir,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_vocal_comp_stt(args) -> int:
+    """Run one download-disabled unprompted local Whisper transcript."""
+
+    from .vocal_comp_stt import run_vocal_comp_stt
+
+    result = run_vocal_comp_stt(
+        args.audio,
+        checkpoint=args.checkpoint,
+        python=args.python,
+        model_label=args.model_label,
+        source_id=args.source_id,
+        out_dir=args.out_dir,
+        timeout_seconds=args.timeout_seconds,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _take_path_assignments(
+    values: list[str], *, option_name: str = "--rmvpe-frames"
+) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for value in values:
+        take_id, separator, path = value.partition("=")
+        if not separator or not take_id or not path:
+            raise ValueError(f"{option_name} must use SOURCE_ID=PATH")
+        if take_id in result:
+            raise ValueError(f"duplicate {option_name} source ID: {take_id}")
+        result[take_id] = path
+    return result
 
 
 def _run_melody_review(args) -> int:
@@ -3951,6 +4407,21 @@ def _run_source_doctor(args) -> int:
     return 0 if result["requirement_ready"] else 1
 
 
+def _run_musical_metadata(args) -> int:
+    from .musical_metadata import (
+        analyze_musical_metadata,
+        write_musical_metadata_analysis,
+    )
+
+    document = analyze_musical_metadata(args.source)
+    if args.out is not None:
+        output = write_musical_metadata_analysis(args.out, document)
+        print(output)
+    else:
+        print(json.dumps(document, indent=2, sort_keys=True))
+    return 0
+
+
 def _run_source_import(args) -> int:
     from .source_import import execute_source_import, plan_source_import
 
@@ -3990,6 +4461,9 @@ def _run_source_import(args) -> int:
                     if result.chord_document is not None
                     else None
                 ),
+                "musical_metadata_analysis": str(
+                    result.musical_metadata_analysis
+                ),
                 "source_id": result.source_id,
                 "network_used": False,
                 "normalised": False,
@@ -4017,6 +4491,7 @@ def _run_source_folder_import(args) -> int:
         key=args.key,
         bpm=args.bpm,
         tuning_hz=args.tuning_hz,
+        metadata_source=args.metadata_source,
         chord_document=args.chords,
         discover_chords=not args.no_discover_chords,
         rights_category=args.rights_category,
@@ -4059,6 +4534,9 @@ def _run_source_folder_import(args) -> int:
                     str(result.chord_document)
                     if result.chord_document is not None
                     else None
+                ),
+                "musical_metadata_analysis": str(
+                    result.musical_metadata_analysis
                 ),
                 "source_ids": list(result.source_ids),
                 "source_count": len(result.source_ids),

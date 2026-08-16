@@ -18,6 +18,7 @@ from sunofriend.simple_result import (
     SimpleResultError,
     build_simple_result,
 )
+from sunofriend.source_receipt import document_sha256
 from sunofriend.workbench_mix import garageband_mix_recipe
 
 
@@ -75,6 +76,9 @@ class SimpleResultTests(unittest.TestCase):
                 encoding="utf-8",
             )
             catalog = _catalog(project, source, midi)
+            catalog["setup"]["musical_metadata_analysis"] = (
+                _musical_metadata_analysis()
+            )
             selection = plan_automatic_selection(
                 catalog,
                 (summary,),
@@ -117,6 +121,9 @@ class SimpleResultTests(unittest.TestCase):
                 1,
             )
             self.assertTrue(manifest["instrument_handoff"]["automatic"])
+            self.assertTrue(
+                manifest["project"]["automatic_metadata_evidence_included"]
+            )
             self.assertFalse(
                 manifest["instrument_handoff"]["factory_patch_selected"]
             )
@@ -174,6 +181,9 @@ class SimpleResultTests(unittest.TestCase):
                 names,
             )
             self.assertIn("sunofriend-result.json", names)
+            self.assertIn(
+                "TECHNICAL/automatic-musical-metadata.json", names
+            )
             self.assertIn("SOUNDS/INSTRUMENTS-START-HERE.md", names)
             self.assertIn("SOUNDS/automatic-starter-instruments.json", names)
             self.assertIn(starter["starter_sound_midi"]["archive_path"], names)
@@ -336,6 +346,36 @@ def _record(path: Path) -> dict:
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "bytes": path.stat().st_size,
     }
+
+
+def _musical_metadata_analysis() -> dict:
+    payload = {
+        "schema": "sunofriend.musical-metadata-analysis.v1",
+        "status": "complete_unreviewed",
+        "network_used": False,
+        "source": {
+            "sha256": "a" * 64,
+            "bytes": 1,
+            "duration_seconds": 1.0,
+        },
+        "algorithm": {"id": "fixture"},
+        "estimates": {
+            "key": {"selected_key": "B minor", "confidence": "high"},
+            "tempo": {"selected_bpm": 113, "confidence": "high"},
+            "tuning": {
+                "concert_a_hz": 440.0,
+                "confidence": "review_recommended",
+            },
+        },
+        "suggested_metadata": {
+            "key": "B minor",
+            "bpm": 113,
+            "tuning_hz": 440.0,
+        },
+        "review": {"status": "not_reviewed", "review_recommended": True},
+        "effects": {"source_audio_mutated": False},
+    }
+    return {**payload, "analysis_sha256": document_sha256(payload)}
 
 
 def _write_midi(path: Path) -> None:

@@ -1026,7 +1026,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-11.4");
+  assert.equal(data.interface_contract_version, "2026-08-16.1");
   const separation = data.experiments.finished_mix_separation;
   assert.equal(separation.public_six_role_available, false);
   assert.equal(data.boundaries.public_six_role_separation, false);

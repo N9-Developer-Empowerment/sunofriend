@@ -29,6 +29,15 @@ from .audio_formats import (
     resolve_executable,
     validate_local_source_path,
 )
+from .musical_metadata import (
+    MUSICAL_METADATA_RELATIVE_PATH,
+    MusicalMetadataError,
+    analyze_musical_metadata,
+    resolve_metadata_precedence,
+    unavailable_musical_metadata_analysis,
+    with_resolution,
+    write_musical_metadata_analysis,
+)
 from .source_project import (
     RIGHTS_CATEGORIES,
     SourceMetadata,
@@ -68,6 +77,8 @@ class SourceImportPlan:
     role: str
     instrument_label: str | None
     metadata: SourceMetadata
+    musical_metadata_analysis: Mapping[str, Any]
+    musical_metadata_relative_path: str
     rights_category: str
     title: str
     chord_document: Path | None
@@ -101,12 +112,18 @@ class SourceImportPlan:
                 "receipt": self.receipt_relative_path,
                 "source_project": self.project_relative_path,
                 "chord_document": self.chord_relative_path,
+                "musical_metadata_analysis": (
+                    self.musical_metadata_relative_path
+                ),
             },
             "context": {
                 "title": self.title,
                 "role": self.role,
                 "instrument_label": self.instrument_label,
                 "metadata": self.metadata.to_dict(),
+                "musical_metadata_analysis": dict(
+                    self.musical_metadata_analysis
+                ),
                 "rights_category": self.rights_category,
                 "original_name": self.source.name,
                 "chord_sha256": self.chord_sha256,
@@ -135,6 +152,7 @@ class SourceImportResult:
     receipt: Path
     source_project: Path
     chord_document: Path | None
+    musical_metadata_analysis: Path
     source_id: str
 
 
@@ -193,9 +211,29 @@ def plan_source_import(
             "rights_category must be one of: "
             + ", ".join(sorted(RIGHTS_CATEGORIES))
         )
-    metadata = resolve_source_metadata(
-        source_path, key=key, bpm=bpm, tuning_hz=tuning_hz
+    inferred_metadata = resolve_source_metadata(source_path)
+    try:
+        automatic_analysis = analyze_musical_metadata(
+            source_path, expected_sha256=source_hash
+        )
+    except MusicalMetadataError as exc:
+        automatic_analysis = unavailable_musical_metadata_analysis(
+            source_path,
+            source_sha256=source_hash,
+            duration_seconds=probe.duration_seconds,
+            reason_code=_analysis_reason_code(exc),
+        )
+    effective, resolution = resolve_metadata_precedence(
+        automatic_analysis,
+        explicit_key=key,
+        explicit_bpm=bpm,
+        explicit_tuning_hz=tuning_hz,
+        inferred_key=inferred_metadata.key,
+        inferred_bpm=inferred_metadata.bpm,
+        inferred_tuning_hz=inferred_metadata.tuning_hz,
     )
+    analysis = with_resolution(automatic_analysis, resolution)
+    metadata = SourceMetadata(**effective)
     chord_path = _resolve_chord_document(
         source_path,
         explicit=chord_document,
@@ -245,6 +283,8 @@ def plan_source_import(
         role=source_role,
         instrument_label=label or None,
         metadata=metadata,
+        musical_metadata_analysis=analysis,
+        musical_metadata_relative_path=MUSICAL_METADATA_RELATIVE_PATH,
         rights_category=normalized_rights,
         title=resolved_title,
         chord_document=chord_path,
@@ -266,6 +306,8 @@ def plan_source_import(
 def execute_source_import(plan: SourceImportPlan) -> SourceImportResult:
     """Execute one previously inspected plan into a new atomic run directory."""
 
+    if plan.musical_metadata_relative_path != MUSICAL_METADATA_RELATIVE_PATH:
+        raise ValueError("musical metadata evidence path changed after planning")
     source = validate_local_source_path(plan.source, limits=plan.limits)
     if source != plan.source or file_sha256(source) != plan.source_sha256:
         raise ValueError("source audio changed after the import plan was created")
@@ -297,6 +339,9 @@ def execute_source_import(plan: SourceImportPlan) -> SourceImportResult:
         canonical = staging / plan.canonical_relative_path
         receipt_path = staging / plan.receipt_relative_path
         project_path = staging / plan.project_relative_path
+        musical_metadata_path = (
+            staging / plan.musical_metadata_relative_path
+        )
         copied_chord = (
             staging / plan.chord_relative_path
             if plan.chord_relative_path is not None
@@ -340,6 +385,19 @@ def execute_source_import(plan: SourceImportPlan) -> SourceImportResult:
             decoder_arguments=_receipt_arguments(arguments),
         )
         write_source_receipt(receipt_path, receipt)
+        write_musical_metadata_analysis(
+            musical_metadata_path, plan.musical_metadata_analysis
+        )
+        musical_metadata_record = {
+            "path": plan.musical_metadata_relative_path,
+            "sha256": file_sha256(musical_metadata_path),
+            "analysis_sha256": plan.musical_metadata_analysis[
+                "analysis_sha256"
+            ],
+            "schema": plan.musical_metadata_analysis["schema"],
+            "review_status": "not_reviewed",
+            "review_recommended": True,
+        }
 
         chord_record = (
             {
@@ -368,6 +426,7 @@ def execute_source_import(plan: SourceImportPlan) -> SourceImportResult:
             rights_category=plan.rights_category,
             source=source_part,
             chord_document=chord_record,
+            musical_metadata_analysis=musical_metadata_record,
         )
         write_source_project(project_path, project)
         validate_source_receipt_files(receipt.to_dict(), root=staging)
@@ -378,6 +437,7 @@ def execute_source_import(plan: SourceImportPlan) -> SourceImportResult:
             copied_chord,
             receipt_path,
             project_path,
+            musical_metadata_path,
         ):
             if immutable is not None:
                 immutable.chmod(0o444)
@@ -406,8 +466,24 @@ def execute_source_import(plan: SourceImportPlan) -> SourceImportResult:
             if plan.chord_relative_path is not None
             else None
         ),
+        musical_metadata_analysis=(
+            destination / plan.musical_metadata_relative_path
+        ),
         source_id=f"sha256:{plan.source_sha256}",
     )
+
+
+def _analysis_reason_code(error: MusicalMetadataError) -> str:
+    message = str(error).casefold()
+    if "one second" in message:
+        return "audio_too_short"
+    if "silence" in message:
+        return "silent_audio"
+    if "requires numpy and librosa" in message:
+        return "analysis_dependency_unavailable"
+    if "decode" in message:
+        return "analysis_decode_failed"
+    return "analysis_unavailable"
 
 
 def import_source(

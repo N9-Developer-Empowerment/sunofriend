@@ -509,6 +509,12 @@ separate a finished mix, repair alignment or prove the musical downbeat.
 One broad `drums` part can now produce review-required mixed-kit MIDI; it does
 not create separate kick, snare or cymbal audio files.
 The narrower `source-import` command still prepares one standalone asset.
+Both import routes now retain automatic, unreviewed key/BPM evidence. Inspect
+one file without importing it with `sunofriend musical-metadata SOURCE`; when
+preparing separated stems, pass the original finished mix with
+`source-import-folder --metadata-source ORIGINAL_MIX`. Explicit and filename
+metadata remain authoritative, and tuning observations are never promoted
+automatically.
 See [source preparation](docs/GETTING_STARTED.md#prepare-a-folder-of-existing-audio-parts).
 
 ## What you receive
@@ -521,6 +527,7 @@ AUTOMATIC-SONG/
 ├── MIDI/individual parts and combined-gm-interpretation.mid
 ├── SOUNDS/named starter-sound MIDI, short previews and GarageBand guide
 ├── AUDIO/balanced-midi-song-interpretation.wav
+├── TECHNICAL/automatic-musical-metadata.json and mix evidence
 ├── garageband-mix-recipe.md
 └── sunofriend-automatic-midi-and-wav.zip
 ```
@@ -576,7 +583,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | Compare results visually | [Workbench](docs/WORKBENCH.md) |
 | Understand the WAV and mix boundary | [Musical rendering](docs/MUSICAL_RENDERING_AND_MASTERING.md) |
 | Work with vocal melody | [Vocal melody](docs/VOCAL_MELODY.md) |
-| Review the future vocal-comping design | [Vocal comping design](docs/VOCAL_COMPING_DESIGN.md) and [implementation plan](docs/VOCAL_COMPING_IMPLEMENTATION_PLAN.md) |
+| Try or review experimental evidence-first vocal comping | [Ranked-evidence pilot](docs/VOCAL_COMPING_PILOT.md), [design](docs/VOCAL_COMPING_DESIGN.md) and [implementation plan](docs/VOCAL_COMPING_IMPLEMENTATION_PLAN.md) |
 | Match or build instruments | [Instruments](docs/INSTRUMENTS.md) |
 | Review the architecture and code | [Technical tour](docs/TECHNICAL_TOUR.md) |
 | Use every expert command | Run `sunofriend --help` and read the [skill interface contract](skills/sunofriend/references/interface-contract.md) |
