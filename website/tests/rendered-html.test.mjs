@@ -256,6 +256,8 @@ test("publishes a canonical developer and agent integration page", async () => {
   );
   assert.match(html, /does not register either specialist/);
   assert.match(html, /there is no public six-role command/);
+  assert.match(html, /two-candidate reference-conditioned/);
+  assert.match(html, /installing or starting a model service without approval/);
   assert.doesNotMatch(html, /remains\s*blocked and non-executable/);
   assert.match(html, /\/research\/separation\//);
 });
@@ -1069,7 +1071,20 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-16.1");
+  assert.equal(data.interface_contract_version, "2026-08-16.2");
+  assert.equal(data.song_generation.public_command_available, true);
+  assert.equal(data.song_generation.default_is_read_only_plan, true);
+  assert.equal(data.song_generation.candidate_count, 2);
+  assert.deepEqual(data.song_generation.independent_strength_controls, [
+    "reference_strength",
+    "style_description_strength",
+  ]);
+  assert.deepEqual(data.song_generation.backends, ["ace-step-api"]);
+  assert.equal(data.song_generation.backend_service_started_implicitly, false);
+  assert.equal(data.song_generation.backend_service_installed_implicitly, false);
+  assert.equal(data.song_generation.candidate_selected_automatically, false);
+  assert.equal(data.song_generation.creates_stems, false);
+  assert.equal(data.song_generation.creates_midi, false);
   const separation = data.experiments.finished_mix_separation;
   assert.equal(separation.public_six_role_available, false);
   assert.equal(data.boundaries.public_six_role_separation, false);

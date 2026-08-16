@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-16.1"
+INTERFACE_CONTRACT_VERSION = "2026-08-16.2"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -27,6 +27,7 @@ PUBLIC_COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
         "midi-ports",
     ),
     "transcribe_and_generate": (
+        "song-generate",
         "remake",
         "listen",
         "listen-all",
@@ -182,6 +183,17 @@ def render_skill_interface_reference() -> str:
         "of synchronized top-level WAV stems to make MIDI, a MIDI-derived",
         "song-interpretation WAV and a GarageBand handoff. Preparing a folder",
         "and converting it are separate actions.",
+        "",
+        "`sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION`",
+        "plans one reference-conditioned full-song request. It uses separate",
+        "0-1 reference and style-description strength controls and requests two",
+        "complete candidates. Planning is read-only. Execution requires both",
+        "`--execute` and `--confirm-rights`, writes only to a fresh destination",
+        "and retains a hash-bound request plus success or failure receipt. The",
+        "first adapter uses an existing ACE-Step API and shared local reference",
+        "path; it neither installs nor starts the model service. No candidate is",
+        "selected, separated, converted to MIDI or admitted to a final mix",
+        "automatically.",
         "",
         "Finished-mix separation has four deliberately distinct lanes:",
         "",

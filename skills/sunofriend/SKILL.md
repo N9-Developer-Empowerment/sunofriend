@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-16.1 -->
+<!-- sunofriend-interface-contract: 2026-08-16.2 -->
 
 # Sunofriend
 
@@ -260,6 +260,16 @@ on.
   High-confidence automatic key/BPM may fill only missing metadata; explicit
   or filename/folder values win, alternatives remain visible and every result
   stays `not_reviewed` until the musician checks it.
+- `song-generate` plans a new full-song request from one authorised reference,
+  a separate UTF-8 annotated lyric sheet and descriptive style text. Keep
+  reference strength and style-description strength independent. A normal run
+  requests two complete candidates and lets the model determine duration. The
+  default is a read-only JSON plan; require both `--execute` and
+  `--confirm-rights` before contacting a configured backend. The first adapter
+  uses an existing ACE-Step API service and shared reference path. Never install
+  or start that service implicitly, never claim the command supports an
+  unregistered backend, and never select or send a candidate to MIDI
+  automatically.
 - `vocal-comp-create` and `vocal-comp-analyze` are expert, private pilot
   commands for 2–24 synchronized vocal-only takes. Require canonical lyrics,
   a reviewed monophonic target melody, a reviewed musical-phrase timeline,

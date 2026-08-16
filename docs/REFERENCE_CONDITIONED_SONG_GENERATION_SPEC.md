@@ -1,10 +1,35 @@
 # Reference-conditioned song generation
 
-Status: product goal agreed; implementation not started
+Status: product goal agreed; first backend-neutral vertical slice implemented
 
 Discovery completed: 16 August 2026
 
 Source: twenty-question product interview with the project owner
+
+## Implementation progress
+
+Implemented on the current feature branch:
+
+- a path-free, hash-bound generation request contract and durable success or
+  failure receipt;
+- a read-only-by-default `sunofriend song-generate` CLI operation with explicit
+  execution and rights-confirmation gates;
+- exactly two candidate outputs, independent reference/style controls and
+  model-selected duration in the public interface contract;
+- a first adapter for an already running ACE-Step API using a Base model,
+  shared-filesystem reference transport, `audio_cover_strength` and
+  `guidance_scale`; and
+- agent-skill and website capability documentation for the new boundary.
+
+Still to validate or implement:
+
+- a real two-song generation run on the RTX 4080 Laptop GPU and subjective
+  listening acceptance;
+- empirical calibration of both strength mappings and lyric annotations;
+- a service lifecycle command or approved setup workflow (the generation
+  command deliberately does not install or start a model server);
+- backend selection beyond the first ACE-Step API adapter; and
+- equivalent TUI/web controls after the CLI contract is proven.
 
 ## Product goal
 

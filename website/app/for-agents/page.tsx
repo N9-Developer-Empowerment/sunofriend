@@ -136,6 +136,10 @@ export default function ForAgents() {
                 <li>authorised stems or vocals to MIDI;</li>
                 <li>a balanced MIDI-derived listening WAV;</li>
                 <li>GarageBand or another DAW handoff;</li>
+                <li>
+                  planning and running two-candidate reference-conditioned
+                  full-song generation through an already configured backend;
+                </li>
                 <li>comparing several transcription processes;</li>
                 <li>key, BPM, tuning, alignment and bounded MIDI correction;</li>
                 <li>matching or building local sample instruments.</li>
@@ -147,7 +151,10 @@ export default function ForAgents() {
               <ul>
                 <li>exact multitrack recovery or narrow instrument-family separation;</li>
                 <li>downloading music from a streaming link;</li>
-                <li>lyrics or full-song generation;</li>
+                <li>
+                  silently writing lyrics, selecting a generated song, or
+                  installing or starting a model service without approval;
+                </li>
                 <li>a guaranteed exact transcription;</li>
                 <li>a human-approved release master;</li>
                 <li>unapproved model, plugin or checkpoint downloads.</li>

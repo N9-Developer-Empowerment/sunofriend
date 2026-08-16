@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-16.1",
+  "interface_contract_version": "2026-08-16.2",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -187,6 +187,30 @@
     "provider_ranking_for_downstream_midi_available": false,
     "cloud_privacy_check_required": true,
     "rights_check_required": true
+  },
+  "song_generation": {
+    "status": "backend_contract_and_first_ace_step_api_adapter",
+    "public_command_available": true,
+    "plan_command": "sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.5 --style-strength 0.5 --out-dir FRESH",
+    "execute_suffix": "--execute --confirm-rights",
+    "default_is_read_only_plan": true,
+    "candidate_count": 2,
+    "output": "complete listener-ready mixed tracks",
+    "model_selects_duration": true,
+    "independent_strength_controls": [
+      "reference_strength",
+      "style_description_strength"
+    ],
+    "backends": [
+      "ace-step-api"
+    ],
+    "backend_service_started_implicitly": false,
+    "backend_service_installed_implicitly": false,
+    "reference_transport": "shared_filesystem_path",
+    "candidate_selected_automatically": false,
+    "creates_stems": false,
+    "creates_midi": false,
+    "spec_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/REFERENCE_CONDITIONED_SONG_GENERATION_SPEC.md"
   },
   "modes": {
     "agent_create": {

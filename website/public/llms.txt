@@ -66,6 +66,16 @@ Sunofriend never downloads streaming audio or infers processing permission from 
 - Canonical public/private status: https://sunofriend.com/research/separation/
 - Feedback may improve instructions, portability and the next bounded experiment. It never selects a model or musical default automatically.
 
+## Reference-conditioned song generation
+
+- `sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.5 --style-strength 0.5 --out-dir FRESH` creates a read-only, hash-bound plan by default.
+- The request uses one authorised reference song or excerpt, an exact annotated lyric sheet, a descriptive style prompt and two independent 0–1 strength controls.
+- Add `--execute --confirm-rights` only after reviewing the plan and affirming private personal processing authority.
+- One execution requests exactly two complete listener-ready mixed songs. The model chooses song duration from the lyrics, style and arrangement; Sunofriend does not select a winner or create stems or MIDI in this step.
+- The first adapter targets an already running ACE-Step API with a Base model. It passes the reference by a shared local filesystem path, maps reference strength to audio-cover strength and style strength to guidance scale, and records the mapping, output hashes and available seeds in durable receipts.
+- The command does not install or start a model service. The website does not accept audio. Backend availability, model quality and the first human listening acceptance demonstration remain empirical work.
+- Product contract: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/REFERENCE_CONDITIONED_SONG_GENERATION_SPEC.md
+
 ## Vocal comping research
 
 - Status: private phrase-level pilot; whole-song browser workflow is being designed. It is not a public product route.
