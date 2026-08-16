@@ -67,7 +67,8 @@ export default function Home() {
           <a href="#agent">Start</a>
           <a href="#choose">Choose a route</a>
           <Link href="/stems/">What are stems?</Link>
-          <Link href="/research/separation/">Research</Link>
+          <Link href="/research/separation/">Stem research</Link>
+          <Link href="/research/vocal-comping/">Vocal comping</Link>
           <a href="#demo">Try the demo</a>
           <Link href="/for-agents">For AI agents</Link>
         </nav>
@@ -380,6 +381,49 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="vocal-lab section-shell" aria-labelledby="vocal-lab-title">
+        <div className="section-index">05 / IN THE LAB</div>
+        <div className="vocal-lab-grid">
+          <div>
+            <p className="kicker">KEEP YOUR VOICE. BUILD THE PERFORMANCE.</p>
+            <h2 id="vocal-lab-title">Vocal comping is taking shape.</h2>
+            <p>
+              Sunofriend is exploring a local browser workflow for recording
+              several attempts, comparing complete musical phrases and asking
+              for focused pickups until your own vocal is ready to assemble.
+              Known lyrics and a reviewed melody guide the process; your ears
+              still make every musical choice.
+            </p>
+            <Link className="button button-hot" href="/research/vocal-comping/">
+              See the pilot and whole-song concept →
+            </Link>
+          </div>
+          <div className="vocal-lab-status" aria-label="Current vocal comping research status">
+            <article>
+              <span>WORKING PRIVATELY</span>
+              <strong>Phrase recording + aligned pickups</strong>
+            </article>
+            <article>
+              <span>WORKING PRIVATELY</span>
+              <strong>Listening-first take comparison</strong>
+            </article>
+            <article>
+              <span>DESIGNING NEXT</span>
+              <strong>Whole-song map + natural assembly</strong>
+            </article>
+            <article>
+              <span>NOT IMPLEMENTED</span>
+              <strong>Automatic selection, joins or tuning</strong>
+            </article>
+          </div>
+        </div>
+        <p className="guide-note">
+          This is a private research pilot, not a public recording service. The
+          website cannot receive audio, and no automatic finished vocal comp is
+          available yet.
+        </p>
+      </section>
+
       <section className="boundary section-shell" aria-labelledby="boundary-title">
         <div>
           <span className="card-number">CURRENT BOUNDARY</span>
@@ -434,7 +478,7 @@ export default function Home() {
       </section>
 
       <section className="signal section-shell" aria-labelledby="signal-title">
-        <div className="section-index">05 / HELP SHAPE THE NEXT VERSION</div>
+        <div className="section-index">06 / HELP SHAPE THE NEXT VERSION</div>
         <div className="signal-grid">
           <div>
             <p className="kicker">YOUR EXPERIENCE CAN IMPROVE THE NEXT VERSION.</p>
@@ -483,6 +527,7 @@ export default function Home() {
           <Link href="/demo/">Demo</Link>
           <Link href="/for-agents">For AI agents</Link>
           <Link href="/research/separation/">Separation research</Link>
+          <Link href="/research/vocal-comping/">Vocal comping research</Link>
           <a href="/llms.txt">llms.txt</a>
           <ExternalLink href={links.repo}>GitHub ↗</ExternalLink>
           <ExternalLink href={links.license}>Apache 2.0 ↗</ExternalLink>
