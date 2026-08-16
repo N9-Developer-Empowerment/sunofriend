@@ -71,6 +71,22 @@ def build_simple_result(
         audio_root.mkdir()
         technical_root.mkdir()
 
+        musical_metadata_record: dict[str, Any] | None = None
+        musical_metadata = catalog.get("setup", {}).get(
+            "musical_metadata_analysis"
+        )
+        if isinstance(musical_metadata, Mapping):
+            from .musical_metadata import validate_musical_metadata_analysis
+
+            validate_musical_metadata_analysis(musical_metadata)
+            musical_metadata_path = (
+                technical_root / "automatic-musical-metadata.json"
+            )
+            _write_json(musical_metadata_path, musical_metadata)
+            musical_metadata_record = _relative_record(
+                musical_metadata_path, work
+            )
+
         artifacts = WorkbenchArtifacts(
             artifact_cache_root,
             soundfont_path=soundfont_path,
@@ -182,6 +198,10 @@ def build_simple_result(
             "instrument_plan": instrument_handoff["plan_record"],
             "instrument_guide": instrument_handoff["guide_record"],
         }
+        if musical_metadata_record is not None:
+            output_records["automatic_musical_metadata"] = (
+                musical_metadata_record
+            )
         manifest_payload = {
             "schema": SIMPLE_RESULT_SCHEMA,
             "workflow_status": "automatic_complete",
@@ -191,6 +211,9 @@ def build_simple_result(
                 "bpm": bpm,
                 "key": catalog.get("setup", {}).get("key"),
                 "tuning_hz": catalog.get("setup", {}).get("tuning_hz"),
+                "automatic_metadata_evidence_included": (
+                    musical_metadata_record is not None
+                ),
             },
             "selection": plan.receipt,
             "selected_midi": selected_files,
@@ -446,6 +469,14 @@ def _write_deterministic_zip(path: Path, root: Path) -> None:
 def _start_here_text(manifest: Mapping[str, Any]) -> str:
     selected = len(manifest.get("selected_midi", []))
     omitted = len(manifest.get("omitted", []))
+    outputs = manifest.get("outputs", {})
+    analysis_line = (
+        "Automatic key/BPM evidence: "
+        "TECHNICAL/automatic-musical-metadata.json (not reviewed).\n"
+        if isinstance(outputs, Mapping)
+        and "automatic_musical_metadata" in outputs
+        else ""
+    )
     return (
         "SUNOFRIEND AUTOMATIC SONG\n"
         "========================\n\n"
@@ -455,6 +486,8 @@ def _start_here_text(manifest: Mapping[str, Any]) -> str:
         f"to {manifest['project']['bpm']} and import "
         "MIDI/combined-gm-interpretation.mid, or import the separate files under "
         "SOUNDS/MIDI/.\n"
+        f"Project key: {manifest['project'].get('key') or 'not confirmed'}.\n"
+        f"{analysis_line}"
         "Open SOUNDS/INSTRUMENTS-START-HERE.md for every named starter instrument "
         "and its short audible preview. The original automatic-primary MIDI stays "
         "unchanged under MIDI/.\n\n"

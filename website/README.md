@@ -40,6 +40,10 @@ to carry every technical detail:
 - `/research/separation/` explains the public experimental local two-stem
   default and explicit SCNet core-four opt-in, while keeping private six-role
   research and model-free recovery evidence clearly outside public support;
+- `/research/vocal-comping/` describes the private phrase-level vocal-comping
+  pilot, compares three whole-song recording routes and presents the proposed
+  local listening-first workspace without claiming that automatic selection,
+  joining, tuning, rendering, website recording or audio upload exists;
 - `../docs/SEPARATION_DEVELOPER_PREVIEW.md` is the concise public
   architecture, usage, test and feedback guide; the much longer private
   development record remains chronological evidence rather than newcomer

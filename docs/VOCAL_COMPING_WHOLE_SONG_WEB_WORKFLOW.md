@@ -1,0 +1,462 @@
+# Whole-song vocal comping web workflow
+
+Prepared: 16 August 2026
+
+Status: product and engineering design. The existing private pilot records and
+reviews one phrase at a time. It does not yet select, assemble, correct or
+render a complete vocal comp.
+
+Companion documents:
+
+- [Implementation and evaluation plan](VOCAL_COMPING_IMPLEMENTATION_PLAN.md)
+- [Current ranked-evidence pilot](VOCAL_COMPING_PILOT.md)
+- [Product and technical design](VOCAL_COMPING_DESIGN.md)
+
+## Product decision
+
+The recommended whole-song workflow is **a broad human base performance plus
+guided phrase pickups**.
+
+This hybrid preserves breath, tone, emotion and room continuity across the
+song while retaining the low-stress browser experience that made individual
+pickup recording productive. The software should help the singer replace weak
+phrases, not encourage an automatic word-by-word mosaic.
+
+The initial product unit is a complete musical phrase or lyric line. A word or
+syllable becomes an edit unit only as a reviewed rescue operation with safe
+boundaries. The user can always return `no_acceptable_candidate` and record
+again.
+
+## Three recording options
+
+| Option | Strength | Cost or risk | Product role |
+| --- | --- | --- | --- |
+| Guided phrase-by-phrase | Low stress, focused pitch/range effort, immediate feedback | Slow; can lose long-range emotional flow | Always available as Recording mode |
+| Several complete takes, then repair | Natural breaths, timbre and expression continuity | Requires at least one broadly usable full take | Available for confident singers and imported sessions |
+| One base pass plus guided pickups | Combines continuity with attainable local improvements | Needs a clear song map and transition review | Recommended default |
+
+The user chooses a route during session setup, but all routes use the same
+phrase map, take store, review decisions and renderer. A session may switch
+from full-take to guided pickup mode without copying or flattening its sources.
+
+## End-to-end experience
+
+```mermaid
+flowchart LR
+    A["Prepare: lyrics, song zero, phrase map, melody"] --> B["Choose recording route"]
+    B --> C["Record or import human takes"]
+    C --> D["Listen to phrase candidates"]
+    D --> E{"Human decision"}
+    E -->|"Use base"| F["Lock phrase source"]
+    E -->|"Try again"| C
+    E -->|"Keep AI region"| G["Labelled AI fallback"]
+    E -->|"No decision"| H["Leave phrase open"]
+    F --> I["Continuity and join review"]
+    G --> I
+    I --> J{"Join acceptable?"}
+    J -->|"No"| C
+    J -->|"Yes"| K["Optional gentle-correction audition"]
+    K --> L["Reviewed dry comp and edit map"]
+```
+
+The app should reopen exactly where the singer stopped. Recording ten minutes
+today and ten tomorrow must be a normal workflow, not a recovery case.
+
+## One-screen workspace
+
+The desktop layout has three stable regions.
+
+### 1. Song map
+
+The left rail shows every musical phrase in order, grouped by song section.
+Each phrase has one visible state:
+
+- `not_prepared`: lyrics, timing or target still needs review;
+- `ready_to_record`: the phrase can be recorded safely;
+- `has_attempts`: at least one aligned take exists;
+- `needs_pickup`: no attempt is yet acceptable;
+- `candidate_chosen`: a phrase source is selected but its transitions are not;
+- `join_review`: adjacent choices are ready for contextual listening;
+- `locked`: source and joins are explicitly accepted;
+- `ai_fallback`: the user chose a visibly labelled authorised AI region; or
+- `blocked`: a technical or source-integrity problem prevents progress.
+
+Progress counts explicit decisions, not recordings or audio playback. A phrase
+with ten takes and no choice remains open.
+
+Filters should include `needs me`, `ready to record`, `needs join review`,
+`human locked`, `AI fallback` and `all`. A singer can work sequentially or jump
+to every difficult high/low-range phrase in one session.
+
+### 2. Phrase stage
+
+The centre remains listening- and recording-led:
+
+- canonical lyric phrase in large type;
+- two preceding and following lyric lines as dim context;
+- phrase waveform and reviewed melody overlay;
+- cue selector: backing only, melody guide, authorised AI reference;
+- loop with a configurable pre-roll and post-roll;
+- microphone input meter and clipping warning;
+- record, stop, keep and discard-last controls;
+- take tray with neutral labels until the user listens; and
+- contextual playback modes: phrase only, with previous phrase, with next
+  phrase, and in the backing mix.
+
+No analysis rank is shown initially. After at least one candidate has been
+played, the singer may reveal pitch, timing, coverage and signal evidence. The
+interface must still avoid a preselected radio button or a “best take” badge.
+
+### 3. Decision panel
+
+The right panel contains explicit actions rather than a generic Save button:
+
+- `Use as phrase base`;
+- `Keep as benchmark and record again`;
+- `No acceptable human take`;
+- `Keep authorised AI here for now`;
+- `Defer this phrase`; and
+- `Add a note for the next pickup`.
+
+A later continuity stage replaces those actions with `accept join`, `change
+left phrase`, `change right phrase`, `move boundary`, `adjust crossfade` and
+`record a bridging pickup`.
+
+## Session setup
+
+The setup screen should remain short but enforce the existing evidence gates.
+
+Required:
+
+- canonical lyrics;
+- backing/instrumental or full mix used for cue playback;
+- reviewed phrase timeline;
+- reviewed monophonic melody target;
+- song BPM and tuning;
+- rights category;
+- microphone choice and a ten-second level check; and
+- confirmation that imported complete takes share the same song zero.
+
+Optional:
+
+- one or more imported full human takes;
+- authorised AI vocal reference;
+- section/chorus labels;
+- preferred base take; and
+- the singer's comfortable range, used only for coaching and workload order.
+
+Automatic lyric, phrase and melody drafts must enter the existing draft-review
+flow. Playback cannot silently approve them.
+
+## Recording mechanics
+
+### Common timeline
+
+Every attempt is stored against full-song sample time even when the browser
+downloads a phrase-only WAV. The receipt binds:
+
+- session ID and phrase ID;
+- song-zero frame and exact crop window;
+- pre-roll and post-roll handles;
+- sample rate, channel count and sample format;
+- cue type and cue gain;
+- browser-requested echo cancellation, noise suppression and automatic-gain
+  settings;
+- microphone label or stable device alias when available;
+- clipping and level descriptors; and
+- hashes for phrase-only and project-zero derivatives.
+
+The cue never enters the recorded vocal. Headphones remain the safe default.
+
+### Loop behaviour
+
+Recommended first defaults, subject to user testing:
+
+- 1.5 seconds of audible pre-roll;
+- 250–500 ms preserved input handle before the reviewed phrase;
+- 500–900 ms preserved input handle after the phrase;
+- optional preceding-phrase pickup cue for entrances;
+- automatic stop after post-roll, with a visible manual stop; and
+- immediate neutral playback without analysis badges.
+
+The singer can record several attempts without returning to the song map. A
+short note such as “stronger last word” persists into the next attempt and may
+be cleared explicitly.
+
+### Input-quality coaching
+
+Real-time coaching is limited to observable recording safety:
+
+- too quiet to analyse reliably;
+- clipping;
+- input not detected;
+- likely cue leakage; and
+- recording stopped early.
+
+It must not label live singing “bad,” “off-key” or “wrong.” Musical feedback is
+shown after a take and framed as target-relative evidence.
+
+## Lyric and melody evidence
+
+Known lyrics are the authority. Speech-to-text may suggest where related
+phonetic material occurs, but cannot replace a word, reassign a phrase or
+declare an ad-lib to be a canonical lyric.
+
+For each phrase retain:
+
+- canonical words and optional reviewed phonemes/syllables;
+- STT observations and uncertainty per source;
+- continuous F0 and confidence;
+- discrete note candidates per tracker;
+- reviewed target MIDI notes;
+- voiced/unvoiced and consonant regions;
+- timing displacement and coverage;
+- signal descriptors; and
+- human notes.
+
+Percussive consonants, guttural closures, breaths and intentional unvoiced
+regions must be representable as reviewed non-pitch events. Missing stable F0
+there is not a melody failure.
+
+## Candidate proposal and global optimisation
+
+The first whole-song release should not automatically choose phrases. It may
+order evidence after listening and suggest what to compare next.
+
+When an automatic comp proposal is later enabled, use a base-take-first global
+path rather than independently choosing the top score for every phrase.
+
+Conceptually:
+
+```text
+total cost =
+  phrase fit cost
+  + predicted correction cost
+  + take-switch penalty
+  + join mismatch cost
+  + breath discontinuity cost
+  + timbre/level discontinuity cost
+  + unreviewed-boundary penalty
+  + AI-fallback penalty
+```
+
+The optimiser should prefer staying with a credible base take and substitute
+only where the expected improvement exceeds the continuity cost. It may return
+`no_acceptable_candidate`; it must not fill that state with the least-bad take.
+
+The proposal is a new review layer with full provenance. It does not mutate
+phrase decisions or become the default render until accepted.
+
+## Natural assembly
+
+### Edit boundary policy
+
+Prefer boundaries in this order:
+
+1. reviewed silence between phrases;
+2. stable low-energy breath/noise region;
+3. consonant transition reviewed in context;
+4. sustained voiced material only as a last resort.
+
+Retain source handles around every candidate. A phrase display window is not
+automatically its edit boundary.
+
+### Join preview
+
+For every switch between sources, render several temporary challengers:
+
+- equal-power crossfade with a conservative default;
+- shorter and longer fades within safe handles;
+- boundary shifted left or right within the reviewed gap; and
+- a no-switch base-take control.
+
+Preview previous phrase + join + next phrase both dry and against the backing.
+The user may accept one challenger, move the boundary, restore the base take or
+request a bridging pickup. Join review is separate from phrase-quality review.
+
+### Global continuity pass
+
+After all phrases have sources, provide three uninterrupted listens:
+
+- dry vocal only;
+- vocal against the backing/instrumental; and
+- optional human/AI duet balance when authorised AI regions exist.
+
+Flag source switches, large level/timbre steps, repeated breaths, missing
+breaths and regions close to phrase edges. Flags request attention; they do not
+automatically alter the comp.
+
+## Optional gentle correction
+
+Correction is downstream of source and join approval.
+
+Per locked phrase, offer:
+
+- `off`;
+- `gentle centre` for small sustained-note drift;
+- `review notes` for explicit note-by-note bounds; and
+- `leave expressive movement` for vibrato, scoops and transitions.
+
+The correction preview must preserve consonants and unvoiced events, limit
+maximum cents and transition speed, and never time-stretch a phrase by default.
+Display original and corrected alternatives at matched loudness. Keep both
+renders and the exact correction map.
+
+For notes outside the comfortable range, first propose a new pickup strategy:
+different cue, lower backing level, preceding-word pickup or optional key
+decision at the project level. Correction should not become the only answer to
+a phrase the singer cannot phonate reliably.
+
+## Human/AI duet rules
+
+An AI vocal may be present because the goal is a gradual human replacement or
+a deliberate duet. The interface must therefore support three identities:
+
+- `human`;
+- `authorised_ai`; and
+- `blend`, created only as an explicit mix decision.
+
+AI fallback regions use a different colour and appear in the export edit map.
+They are never scored as if they were another human take or silently substituted
+when no human candidate passes.
+
+Repeated chorus reuse is also explicit. “Reuse this phrase choice in matching
+choruses” creates review proposals for those locations; it does not copy audio
+or decisions until each target region is heard in context.
+
+## Local data model
+
+The web UI should be a view over immutable local artifacts rather than a
+browser-only database.
+
+### `vocal-comp-session.v1`
+
+- exact project and source hashes;
+- phrase-map and target versions;
+- active workflow route;
+- session progress summary;
+- links to attempts and decisions; and
+- no embedded raw audio.
+
+### `vocal-comp-attempt.v1`
+
+- phrase/source/take identity;
+- exact timeline geometry and source handles;
+- capture receipt and audio hashes;
+- cue and recording-chain declaration;
+- local evidence links; and
+- immutable creation timestamp.
+
+### `vocal-comp-phrase-decision.v1`
+
+- exact candidate evidence hash;
+- selected source or explicit no-candidate/AI/defer outcome;
+- listening note;
+- author and timestamp;
+- supersedes pointer for later revisions; and
+- zero join/correction authority.
+
+### `vocal-comp-join-decision.v1`
+
+- exact adjacent phrase decisions;
+- source edit frames, handles and fade geometry;
+- accepted preview hash;
+- contextual review mode; and
+- supersedes pointer.
+
+### `vocal-comp-correction-decision.v1`
+
+- exact locked source render;
+- bounded target notes and correction settings;
+- accepted original/corrected outcome; and
+- reversible map to the dry comp.
+
+The UI may cache form drafts locally for crash recovery, but only explicit
+exports/resolutions create authoritative decisions.
+
+## Implementation increments
+
+### W1 — whole-song navigator and session persistence
+
+- Render all reviewed phrases and states in one local page.
+- Reuse the current phrase recorder for any selected row.
+- Persist attempts and non-authoritative form drafts.
+- Resume safely after closing the browser.
+- No selection, assembly or correction.
+
+Acceptance: a singer can cover a complete song over multiple sessions and see
+which phrases still need work without inspecting folders or a DAW.
+
+### W2 — explicit phrase decisions
+
+- Add immutable phrase-decision artifacts.
+- Support human base, benchmark/redo, no candidate, defer and AI fallback.
+- Provide section and range filters.
+- Keep scores hidden until listening.
+- No rendered comp.
+
+Acceptance: every phrase has an explicit reviewed state and no visible default
+can become a choice.
+
+### W3 — assembly and join workbench
+
+- Preserve source handles and compute safe-boundary candidates.
+- Render temporary join challengers and a no-switch control.
+- Add immutable join decisions and an uninterrupted dry-comp preview.
+- Do not correct pitch.
+
+Acceptance: the dry comp is sample-reproducible from its edit map, contains no
+unreviewed source switch and is judged at least as useful as the best broad
+human take.
+
+### W4 — optional gentle correction
+
+- Apply correction only to selected, joined regions.
+- Protect unvoiced/consonant events.
+- Match loudness for original/corrected review.
+- Keep reversible maps and uncorrected export.
+
+Acceptance: the singer prefers the corrected challenger in a blind matched
+comparison and no accepted word, breath or join becomes less natural.
+
+### W5 — reviewed global proposal
+
+- Add base-take-first path optimisation with switch and join costs.
+- Produce a proposal, comparison rationale and unresolved gaps.
+- Never replace human decisions automatically.
+
+Acceptance: review time falls below manual from-scratch comping without adding
+unacceptable joins or hiding no-candidate phrases.
+
+## Evaluation
+
+Measure the product, not just pitch extraction:
+
+- time to obtain one acceptable phrase;
+- number of attempts before a usable benchmark;
+- whole-song completion rate;
+- time spent navigating versus singing/listening;
+- percentage of phrases using the broad base;
+- number of source switches and rejected joins;
+- number of pickups requested after analysis;
+- correction amount and corrected-region count;
+- human/AI duration share;
+- comparison with the best complete human take; and
+- singer stress/enjoyment after each session.
+
+The strongest success signal is that the singer chooses to continue recording
+because the loop feels productive. A higher pitch score with a stressful or
+confusing workflow is a product failure.
+
+## Decisions that can wait for the next complete-song trial
+
+- exact pre/post-roll defaults;
+- whether the default first screen is the song map or the current phrase;
+- how many attempts appear before the tray collapses older takes;
+- whether an optional coach orders phrases by section, range or urgency;
+- default crossfade challenger lengths;
+- how much evidence is useful before it becomes distracting; and
+- whether the full-song base is recorded in-browser or imported from a DAW.
+
+These should be resolved by using the W1 navigator on one complete owned song,
+not by adding preferences before the full workflow exists.

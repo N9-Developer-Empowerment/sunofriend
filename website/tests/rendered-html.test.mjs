@@ -66,6 +66,10 @@ test("rewrites clean website routes to their static index files", async () => {
     rewrite("/research/separation/"),
     "/research/separation/index.html",
   );
+  assert.equal(
+    rewrite("/research/vocal-comping/"),
+    "/research/vocal-comping/index.html",
+  );
   assert.equal(rewrite("/stems"), "/stems/index.html");
   assert.equal(rewrite("/stems/"), "/stems/index.html");
   assert.equal(rewrite("/glossary"), "/glossary/index.html");
@@ -154,6 +158,10 @@ test("server-renders an approachable skill-first musician page", async () => {
   assert.match(html, /Unsigned Media Ltd/);
   assert.match(html, /not related to or affiliated/);
   assert.match(html, /hello@sunofriend\.com/);
+  assert.match(html, /Vocal comping is taking shape/);
+  assert.match(html, /Phrase recording \+ aligned pickups/);
+  assert.match(html, /Automatic selection, joins or tuning/);
+  assert.match(html, /href="\/research\/vocal-comping\/"/);
   assert.doesNotMatch(html, /brew install|git clone/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Starter Project/);
 });
@@ -314,6 +322,27 @@ test("publishes four honest public and private separation lanes", async () => {
     /provider Synth|same-transcriber|source-visible local presence/i,
   );
   assert.doesNotMatch(html, /model\.safetensors|separation-bakeoff|\/Users\//);
+});
+
+test("publishes an honest vocal-comping pilot and whole-song GUI concept", async () => {
+  const response = await render("/research/vocal-comping/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /PRIVATE RESEARCH PILOT · NOT A FINISHED PRODUCT/);
+  assert.match(html, /Keep your voice\. Build the best performance/);
+  assert.match(html, /A working phrase pilot—not automatic comping/);
+  assert.match(html, /Phrase-by-phrase recording/);
+  assert.match(html, /Complete takes, then repair gaps/);
+  assert.match(html, /One base pass plus guided pickups/);
+  assert.match(html, /The proposed whole-song workspace/);
+  assert.match(html, /SONG MAP · 18 PHRASES/);
+  assert.match(html, /Reveal analysis after listening/);
+  assert.match(html, /From first phrase to export/);
+  assert.match(html, /the public website does not record, upload or process audio/i);
+  assert.match(html, /No acceptable take is a valid result/);
+  assert.match(html, /Correction is optional and downstream/);
+  assert.doesNotMatch(html, /\/Users\//);
 });
 
 test("explains stems, neutral providers, privacy and the current boundary", async () => {
@@ -527,6 +556,22 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.experiments.finished_mix_separation.human_listening_required,
     true,
+  );
+  assert.equal(
+    data.experiments.vocal_comping.status,
+    "private_phrase_pilot_whole_song_gui_in_design",
+  );
+  assert.equal(
+    data.experiments.vocal_comping.public_product_route_available,
+    false,
+  );
+  assert.equal(
+    data.experiments.vocal_comping.current_effects.automatic_take_selection,
+    false,
+  );
+  assert.equal(
+    data.experiments.vocal_comping.current_effects.vocal_comp_rendering,
+    false,
   );
   assert.equal(
     data.experiments.finished_mix_separation.read_only_doctor_loads_model,
@@ -981,7 +1026,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-11.4");
+  assert.equal(data.interface_contract_version, "2026-08-16.1");
   const separation = data.experiments.finished_mix_separation;
   assert.equal(separation.public_six_role_available, false);
   assert.equal(data.boundaries.public_six_role_separation, false);
@@ -1302,6 +1347,10 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.canonical_pages.separation_research,
     "https://sunofriend.com/research/separation/",
   );
+  assert.equal(
+    data.canonical_pages.vocal_comping_research,
+    "https://sunofriend.com/research/vocal-comping/",
+  );
   assert.equal(data.canonical_pages.contact, "https://sunofriend.com/contact/");
   assert.equal(data.canonical_pages.privacy, "https://sunofriend.com/privacy/");
   assert.equal(data.contact.email, "hello@sunofriend.com");
@@ -1346,6 +1395,7 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(robots, /sunofriend\.com\/sitemap\.xml/);
   assert.match(sitemap, /sunofriend\.com\/for-agents/);
   assert.match(sitemap, /sunofriend\.com\/research\/separation/);
+  assert.match(sitemap, /sunofriend\.com\/research\/vocal-comping/);
   assert.match(sitemap, /sunofriend\.com\/stems/);
   assert.match(sitemap, /sunofriend\.com\/glossary/);
   assert.match(sitemap, /sunofriend\.com\/contact/);

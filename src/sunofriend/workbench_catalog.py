@@ -197,6 +197,21 @@ def build_workbench_catalog(
         )
         stem["warnings"] = list(drum_role_policy["warnings"])
 
+    setup: dict[str, Any] = {
+        "bpm": metadata.bpm,
+        "key": metadata.key,
+        "tuning_hz": metadata.tuning_hz,
+        "downbeat": None,
+        "files": setup_files,
+    }
+    if (
+        prepared_context is not None
+        and prepared_context.musical_metadata_analysis is not None
+    ):
+        setup["musical_metadata_analysis"] = dict(
+            prepared_context.musical_metadata_analysis
+        )
+
     return {
         "schema": WORKBENCH_CATALOG_SCHEMA,
         "project_id": project_id,
@@ -204,13 +219,7 @@ def build_workbench_catalog(
         "root": str(project),
         "candidate_roots": [str(root) for root in roots],
         "catalog_source": catalog_source,
-        "setup": {
-            "bpm": metadata.bpm,
-            "key": metadata.key,
-            "tuning_hz": metadata.tuning_hz,
-            "downbeat": None,
-            "files": setup_files,
-        },
+        "setup": setup,
         "stems": stems,
         "drum_role_policy": drum_role_policy,
         "shadowed_roles": list(drum_role_policy["shadowed_roles"]),
@@ -2534,13 +2543,17 @@ def _public_setup(setup: Mapping[str, Any]) -> dict[str, Any]:
     files = []
     for record in setup.get("files", []):
         files.append({key: value for key, value in record.items() if key != "path"})
-    return {
+    result = {
         "bpm": setup.get("bpm"),
         "key": setup.get("key"),
         "tuning_hz": setup.get("tuning_hz"),
         "downbeat": setup.get("downbeat"),
         "files": files,
     }
+    analysis = setup.get("musical_metadata_analysis")
+    if isinstance(analysis, Mapping):
+        result["musical_metadata_analysis"] = dict(analysis)
+    return result
 
 
 def _optional_text(value: Any) -> str | None:

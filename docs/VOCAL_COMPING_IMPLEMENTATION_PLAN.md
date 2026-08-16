@@ -2,7 +2,8 @@
 
 Prepared: 1 August 2026
 
-Status: issue-ready backlog and acceptance plan; no implementation started.
+Status: VC1 admission and a bounded VC2 ranked-evidence pilot implemented;
+human selection, assembly and correction have not started.
 
 Companion documents:
 
@@ -27,6 +28,65 @@ The start checkpoint should record:
 
 Comping remains usable without separation for already isolated takes. The gate
 is sequencing requested by the user, not a permanent runtime dependency.
+
+## Implementation checkpoint — 12 August 2026
+
+The first private, expert-CLI increment now provides:
+
+- `vocal-comp-create`, with a read-only plan and fresh owner-only immutable
+  project publication for 2–24 top-level vocal-only WAV takes;
+- hash-bound canonical lyrics, reviewed monophonic target MIDI, reviewed
+  musical-phrase timing, rights category, BPM, tuning, processing-chain and
+  common-recorded-zero evidence;
+- `vocal-comp-analyze`, preserving independent pYIN and Basic Pitch evidence
+  plus optional separately completed, source-matched RMVPE evidence;
+- fixed, transparent target-relative phrase scores, uncertainty and block
+  reasons, with expression assigned zero weight in this uncalibrated pilot;
+- top-three phrase auditions, `no_acceptable_candidate` outcomes and pickup
+  instructions; and
+- optional AI-reference auditions only when no human candidate clears the
+  experimental evidence floor.
+- a separate local draft-review page and strict resolver, so automatically
+  extracted lyrics, phrase timing and target MIDI cannot acquire human-review
+  status from playback or a visible default.
+
+This checkpoint deliberately has no human decision store, global optimiser,
+join boundary engine, crossfade renderer or pitch correction. It cannot create
+a selected or finished comp. The Heart Sees material can be admitted only
+after its target MIDI and phrase timeline have been explicitly reviewed; this
+code does not manufacture either review decision.
+
+## Implementation checkpoint — 13 August 2026
+
+The first listening review rejected every automatic phrase. It established a
+specific blocking failure rather than a vague quality concern: the AI singer
+added an ad-lib, so vocal-energy segmentation shifted the lyric-to-phrase map.
+Some early target-MIDI phrases were musically close, but that did not make the
+word or phrase identity correct.
+
+The implementation now records this unresolved review as immutable private
+feedback with zero promotion effects. It also adds two deliberately auxiliary
+evidence stages:
+
+- `vocal-comp-stt` produces local unprompted OpenAI Whisper word timestamps
+  from an exact existing checkpoint and interpreter. It cannot select a model
+  name or download a checkpoint, does not prompt with the known lyrics, and
+  remains `complete_unreviewed`;
+- `vocal-comp-word-align` hash-binds each transcript to its AI/human vocal and
+  globally aligns observed words to immutable canonical lyrics; and
+- insertions, omissions and substitutions remain explicit review candidates.
+  No STT result can rewrite lyrics, approve timing or create a comp.
+
+This does not solve syllable timing. Dividing a word duration evenly would
+create false precision, especially for melisma and held vowels, so the result
+explicitly reports syllable alignment as unavailable. A separately qualified
+singing-oriented phoneme aligner and human correction surface remain required
+before word/syllable-scale edit boundaries can be used.
+
+The immediate programme order is therefore revised: obtain and review
+word-level evidence, correct phrase mapping, then resume phrase ranking. A
+global optimiser or renderer built before that gate would optimise the wrong
+units more confidently.
 
 ## Programme success criterion
 

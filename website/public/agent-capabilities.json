@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-11.4",
+  "interface_contract_version": "2026-08-16.1",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -215,6 +215,37 @@
     }
   },
   "experiments": {
+    "vocal_comping": {
+      "status": "private_phrase_pilot_whole_song_gui_in_design",
+      "public_product_route_available": false,
+      "website_recording_available": false,
+      "website_audio_upload_available": false,
+      "working_private_scope": "reviewed phrase playback, aligned browser pickup recording, target-relative evidence and explicit human feedback",
+      "required_inputs": [
+        "multiple synchronized vocal-only takes or aligned browser pickups",
+        "canonical known lyrics",
+        "reviewed monophonic target melody",
+        "reviewed musical phrase timeline",
+        "common recorded song zero"
+      ],
+      "current_effects": {
+        "automatic_take_selection": false,
+        "vocal_comp_rendering": false,
+        "join_rendering": false,
+        "pitch_correction": false,
+        "ai_voice_generation": false
+      },
+      "human_authority": "listen before revealing scores; explicitly choose a phrase base, request another pickup, or retain a clearly labelled AI region",
+      "recommended_whole_song_route": "one broad human base performance plus guided phrase pickups, followed by reviewed joins and optional gentle correction",
+      "unit_policy": "phrase or line by default; word or syllable substitutions only as reviewed rescue edits",
+      "known_evidence_limits": [
+        "speech transcription is phonetic timing evidence and cannot rewrite canonical lyrics",
+        "MIDI is a melodic skeleton and cannot represent diction, breath, tone or expression",
+        "consonant and guttural closures may be intentionally unpitched",
+        "an automated ranking is not a take selection or musical preference"
+      ],
+      "research_status_url": "https://sunofriend.com/research/vocal-comping/"
+    },
     "finished_mix_separation": {
       "status": "public_experimental_local_alpha",
       "public_product_route_available": true,
@@ -1068,6 +1099,8 @@
     "streaming_download": false,
     "exact_waveform_reconstruction": false,
     "guaranteed_perfect_transcription": false,
+    "automatic_finished_vocal_comp": false,
+    "public_vocal_recording_or_upload": false,
     "human_approved_release_master": false,
     "source_audio_mixed_into_balanced_wav": false,
     "rights_required": true,
@@ -1091,6 +1124,7 @@
     "stems": "https://sunofriend.com/stems/",
     "glossary": "https://sunofriend.com/glossary/",
     "separation_research": "https://sunofriend.com/research/separation/",
+    "vocal_comping_research": "https://sunofriend.com/research/vocal-comping/",
     "separation_developer_preview": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
     "contact": "https://sunofriend.com/contact/",
     "privacy": "https://sunofriend.com/privacy/",

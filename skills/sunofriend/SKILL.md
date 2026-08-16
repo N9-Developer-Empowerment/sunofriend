@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-11.4 -->
+<!-- sunofriend-interface-contract: 2026-08-16.1 -->
 
 # Sunofriend
 
@@ -256,6 +256,40 @@ on.
 - `source-import` prepares one local audio asset. `source-import-folder`
   prepares 2–64 existing separated parts. Neither command separates, aligns,
   pads, stretches or normalizes audio.
+- `musical-metadata` calculates local path-free key/BPM/tuning evidence.
+  High-confidence automatic key/BPM may fill only missing metadata; explicit
+  or filename/folder values win, alternatives remain visible and every result
+  stays `not_reviewed` until the musician checks it.
+- `vocal-comp-create` and `vocal-comp-analyze` are expert, private pilot
+  commands for 2–24 synchronized vocal-only takes. Require canonical lyrics,
+  a reviewed monophonic target melody, a reviewed musical-phrase timeline,
+  rights authority and common recorded zero. The current increment only
+  publishes independent tracker evidence, phrase rankings, auditions and
+  pickups. It must not be described as selecting, tuning, joining or rendering
+  a finished vocal comp; an optional AI vocal is fallback evidence only.
+- Automatic lyrics, phrase timing and target MIDI remain drafts until every
+  phrase is explicitly heard and approved through `vocal-comp-draft-review`.
+  Playback creates no decision. Only `vocal-comp-draft-resolve` may turn one
+  exact complete exported review into fresh reviewed inputs; unresolved JSON
+  must have zero authority and zero downstream comp effects.
+- Preserve explicit unresolved vocal-comp input feedback with
+  `vocal-comp-draft-feedback`; never coerce it through the resolver or discard
+  its private notes. It remains development evidence and grants no review,
+  selection, render or correction authority.
+- Use `vocal-comp-word-align` only with local timestamped STT bound to each
+  exact AI/human vocal. Known lyrics remain canonical. Insertions are ad-lib
+  candidates; omissions and substitutions remain uncertain. Never infer
+  syllable boundaries from a word duration or use speech ASR to silently
+  rewrite lyrics.
+- `vocal-comp-stt` may run only with an exact already-present OpenAI Whisper
+  checkpoint and interpreter. It must be unprompted, offline, hash-bound and
+  unreviewed. Never let the command trigger a checkpoint download; obtain
+  explicit model/checkpoint approval separately first.
+- Use `vocal-comp-word-review` to hear the full AI/human sources, the shared
+  leading ad-lib window and every canonical lyric line across all sources.
+  Playback and browser draft persistence create no decision. Only an explicit
+  exported JSON is feedback, and even a complete export cannot select a take,
+  approve target melody, render a comp or apply correction.
 - The balanced WAV contains rendered MIDI. The source stems provide timing,
   horizon and relative-level evidence but are not mixed into it.
 - Call the WAV a **MIDI-derived song interpretation**, not an exact
@@ -631,6 +665,7 @@ existing parts need preparation, read the command help, then run:
 SUNOFRIEND source-doctor
 SUNOFRIEND source-import-folder "/absolute/path/to/source-parts" \
   --out-dir "/absolute/path/to/fresh-prepared-project" \
+  --metadata-source "/absolute/path/to/original-finished-mix.wav" \
   --rights-category authorised_private_use \
   --plan
 ```
@@ -699,6 +734,7 @@ The automatic bundle under `AUTOMATIC-SONG/` should include:
 - named starter sounds, sound-aware MIDI and previews under `SOUNDS/`;
 - `AUDIO/balanced-midi-song-interpretation.wav`;
 - `TECHNICAL/balanced-mix-report.json`;
+- `TECHNICAL/automatic-musical-metadata.json` when import analysis exists;
 - `garageband-mix-recipe.md`, result receipt and ZIP.
 
 Verify every reported file exists and is non-empty. Report omitted, ambiguous,
