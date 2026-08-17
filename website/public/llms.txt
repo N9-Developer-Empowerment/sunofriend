@@ -68,11 +68,14 @@ Sunofriend never downloads streaming audio or infers processing permission from 
 
 ## Reference-conditioned song generation
 
+- `sunofriend song-providers` prints a secret-free provider capability registry without network access. An evaluated provider is not necessarily registered for the current operation.
 - `sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.5 --style-strength 0.5 --out-dir FRESH` creates a read-only, hash-bound plan by default.
 - The request uses one authorised reference song or excerpt, an exact annotated lyric sheet, a descriptive style prompt and two independent 0–1 strength controls.
 - Add `--execute --confirm-rights` only after reviewing the plan and affirming private personal processing authority.
 - One execution requests exactly two complete listener-ready mixed songs. The model chooses song duration from the lyrics, style and arrangement; Sunofriend does not select a winner or create stems or MIDI in this step.
 - The first adapter targets an already running ACE-Step API with a Base model. It passes the reference by a shared local filesystem path, maps reference strength to audio-cover strength and style strength to guidance scale, and records the mapping, output hashes and available seeds in durable receipts.
+- TREBLO Melodia v3 is documented as an optional proprietary BYO-key cloud provider but is not registered for this reference-conditioned operation: v3 accepts prompt and lyrics, while source audio is continuation-only and there is no independent reference-strength control. Never silently discard the reference, incur charges, upload audio or expose a key to browser JavaScript.
+- Any future cloud adapter requires explicit provider selection, terms/privacy/cost acknowledgement, a user-owned environment key, required attribution and immediate local archiving of expiring results. Provider policy: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SONG_GENERATION_PROVIDERS.md
 - The command does not install or start a model service. The website does not accept audio. Backend availability, model quality and the first human listening acceptance demonstration remain empirical work.
 - Product contract: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/REFERENCE_CONDITIONED_SONG_GENERATION_SPEC.md
 

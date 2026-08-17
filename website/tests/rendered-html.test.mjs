@@ -257,6 +257,10 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /does not register either specialist/);
   assert.match(html, /there is no public six-role command/);
   assert.match(html, /two-candidate reference-conditioned/);
+  assert.match(html, /song-providers/);
+  assert.match(html, /TREBLO v3/);
+  assert.match(html, /optional proprietary BYO-key cloud provider/);
+  assert.match(html, /prompt-only generation or source-audio continuation/);
   assert.match(html, /installing or starting a model service without approval/);
   assert.doesNotMatch(html, /remains\s*blocked and non-executable/);
   assert.match(html, /\/research\/separation\//);
@@ -1071,8 +1075,13 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-16.2");
+  assert.equal(data.interface_contract_version, "2026-08-17.1");
   assert.equal(data.song_generation.public_command_available, true);
+  assert.equal(
+    data.song_generation.provider_inventory_command,
+    "sunofriend song-providers",
+  );
+  assert.equal(data.song_generation.provider_inventory_uses_network, false);
   assert.equal(data.song_generation.default_is_read_only_plan, true);
   assert.equal(data.song_generation.candidate_count, 2);
   assert.deepEqual(data.song_generation.independent_strength_controls, [
@@ -1085,6 +1094,16 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(data.song_generation.candidate_selected_automatically, false);
   assert.equal(data.song_generation.creates_stems, false);
   assert.equal(data.song_generation.creates_midi, false);
+  const treblo = data.song_generation.evaluated_providers.find(
+    (provider) => provider.id === "treblo-v3-api",
+  );
+  assert.equal(treblo.reference_conditioned_full_song_registered, false);
+  assert.equal(treblo.prompt_and_lyrics_generation, true);
+  assert.equal(treblo.annotated_lyrics_semantics_verified, false);
+  assert.equal(treblo.reference_audio_conditioning, false);
+  assert.equal(treblo.source_audio_extension_only, true);
+  assert.equal(treblo.remote_result_retention_hours, 168);
+  assert.equal(treblo.explicit_cloud_consent_required, true);
   const separation = data.experiments.finished_mix_separation;
   assert.equal(separation.public_six_role_available, false);
   assert.equal(data.boundaries.public_six_role_separation, false);

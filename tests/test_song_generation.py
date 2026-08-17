@@ -195,6 +195,14 @@ class SongGenerationTests(unittest.TestCase):
                     **common,
                     api_base_url="http://music.example.test:8001",
                 )
+            with self.assertRaisesRegex(ValueError, "song-providers"):
+                plan_song_generation(
+                    reference,
+                    lyrics,
+                    root / "treblo",
+                    **common,
+                    backend="treblo-v3-api",
+                )
 
     def test_ace_step_payload_maps_both_strengths_and_exact_inputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

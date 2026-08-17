@@ -1,4 +1,4 @@
-<!-- sunofriend-interface-contract: 2026-08-16.2 -->
+<!-- sunofriend-interface-contract: 2026-08-17.1 -->
 
 # Sunofriend advanced operations
 

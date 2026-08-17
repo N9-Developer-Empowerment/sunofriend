@@ -140,6 +140,11 @@ export default function ForAgents() {
                   planning and running two-candidate reference-conditioned
                   full-song generation through an already configured backend;
                 </li>
+                <li>
+                  inspecting local, self-hosted and BYO-key cloud provider
+                  capabilities with the read-only <code>song-providers</code>
+                  command;
+                </li>
                 <li>comparing several transcription processes;</li>
                 <li>key, BPM, tuning, alignment and bounded MIDI correction;</li>
                 <li>matching or building local sample instruments.</li>
@@ -155,12 +160,27 @@ export default function ForAgents() {
                   silently writing lyrics, selecting a generated song, or
                   installing or starting a model service without approval;
                 </li>
+                <li>
+                  treating prompt-only generation or source-audio continuation
+                  as equivalent to reference-conditioned generation;
+                </li>
                 <li>a guaranteed exact transcription;</li>
                 <li>a human-approved release master;</li>
                 <li>unapproved model, plugin or checkpoint downloads.</li>
               </ul>
             </div>
           </div>
+          <p className="guide-note">
+            Provider eligibility is capability-based. ACE-Step is registered
+            for the current reference-conditioned operation; TREBLO v3 is
+            visible as an optional proprietary BYO-key cloud provider, but its
+            documented source-audio operation is continuation rather than
+            general reference conditioning. Read the{" "}
+            <a href="https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SONG_GENERATION_PROVIDERS.md">
+              song-generation provider policy
+            </a>
+            .
+          </p>
         </section>
 
         <section id="onboard">

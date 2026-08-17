@@ -1,9 +1,9 @@
 ---
 name: sunofriend
-description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
+description: Guide Sunofriend setup and use for reference-conditioned two-song generation through registered local or self-hosted providers, secret-free inspection of optional BYO-key cloud providers, authorised experimental separation, existing-stem preparation, editable MIDI, listening WAVs, GarageBand handoff, vocal comping, melody review, instruments, key/BPM/tuning/alignment transforms, mashups and Clip reuse. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for comparison and feedback. Use for Sunofriend, AI music generation providers, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Never silently upload audio, incur cloud charges, expose API keys, download music, use unpinned models, write lyrics, edit a DAW GUI, claim human-approved mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-16.2 -->
+<!-- sunofriend-interface-contract: 2026-08-17.1 -->
 
 # Sunofriend
 
@@ -270,6 +270,14 @@ on.
   or start that service implicitly, never claim the command supports an
   unregistered backend, and never select or send a candidate to MIDI
   automatically.
+- Use `song-providers` for a read-only, secret-free capability inventory before
+  suggesting a generation provider. ACE-Step is registered for the current
+  reference-conditioned operation. TREBLO v3 is an evaluated optional BYO-key
+  cloud provider but is not registered for that operation: it accepts prompt
+  and lyrics, while source audio is continuation-only and it cannot implement
+  the independent reference-strength control. Never silently fall back to it,
+  expose a key to browser JavaScript, imply that it is local/open-weight, or
+  incur charges/upload audio without explicit terms, privacy and cost consent.
 - `vocal-comp-create` and `vocal-comp-analyze` are expert, private pilot
   commands for 2–24 synchronized vocal-only takes. Require canonical lyrics,
   a reviewed monophonic target melody, a reviewed musical-phrase timeline,

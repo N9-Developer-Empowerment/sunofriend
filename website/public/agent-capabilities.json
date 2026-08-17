@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-16.2",
+  "interface_contract_version": "2026-08-17.1",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -191,6 +191,9 @@
   "song_generation": {
     "status": "backend_contract_and_first_ace_step_api_adapter",
     "public_command_available": true,
+    "provider_inventory_command": "sunofriend song-providers",
+    "provider_inventory_is_read_only": true,
+    "provider_inventory_uses_network": false,
     "plan_command": "sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.5 --style-strength 0.5 --out-dir FRESH",
     "execute_suffix": "--execute --confirm-rights",
     "default_is_read_only_plan": true,
@@ -204,13 +207,37 @@
     "backends": [
       "ace-step-api"
     ],
+    "evaluated_providers": [
+      {
+        "id": "ace-step-api",
+        "type": "open_weights_local_or_self_hosted",
+        "reference_conditioned_full_song_registered": true
+      },
+      {
+        "id": "treblo-v3-api",
+        "type": "proprietary_cloud_byok",
+        "reference_conditioned_full_song_registered": false,
+        "prompt_and_lyrics_generation": true,
+        "annotated_lyrics_semantics_verified": false,
+        "reference_audio_conditioning": false,
+        "source_audio_extension_only": true,
+        "independent_reference_strength": false,
+        "candidate_count_per_request": 1,
+        "remote_result_retention_hours": 168,
+        "api_key_environment": "SUNOFRIEND_TREBLO_API_KEY",
+        "attribution_required": true,
+        "possible_charges": true,
+        "explicit_cloud_consent_required": true
+      }
+    ],
     "backend_service_started_implicitly": false,
     "backend_service_installed_implicitly": false,
     "reference_transport": "shared_filesystem_path",
     "candidate_selected_automatically": false,
     "creates_stems": false,
     "creates_midi": false,
-    "spec_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/REFERENCE_CONDITIONED_SONG_GENERATION_SPEC.md"
+    "spec_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/REFERENCE_CONDITIONED_SONG_GENERATION_SPEC.md",
+    "provider_policy_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SONG_GENERATION_PROVIDERS.md"
   },
   "modes": {
     "agent_create": {

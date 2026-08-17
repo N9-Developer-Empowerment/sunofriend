@@ -860,6 +860,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    sub.add_parser(
+        "song-providers",
+        help=(
+            "Print the secret-free local/cloud provider capability registry "
+            "without using the network"
+        ),
+    )
+
     song_generate = sub.add_parser(
         "song-generate",
         help=(
@@ -3073,6 +3081,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_source_doctor(args)
         if args.command == "musical-metadata":
             return _run_musical_metadata(args)
+        if args.command == "song-providers":
+            return _run_song_providers()
         if args.command == "song-generate":
             return _run_song_generate(args)
         if args.command == "source-import":
@@ -4575,6 +4585,19 @@ def _run_song_generate(args) -> int:
                 "candidate_count": len(result.candidates),
                 "candidate_selected": False,
             },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_song_providers() -> int:
+    from .song_generation_providers import song_generation_providers_document
+
+    print(
+        json.dumps(
+            song_generation_providers_document(),
             indent=2,
             sort_keys=True,
         )

@@ -1,7 +1,7 @@
 interface:
   display_name: "Sunofriend"
-  short_description: "Local stems, editable MIDI and a listening WAV"
+  short_description: "Local AI music, stems and editable MIDI"
   icon_small: "./assets/sunofriend-logo.png"
   icon_large: "./assets/sunofriend-logo.png"
   brand_color: "#00E6FF"
-  default_prompt: "Use $sunofriend. I may be new to music software, so offer the built-in demo, experimental local separation of one authorised finished song on a supported Apple-silicon Mac, my authorised synchronized stems, preparation of 2–64 already-separated parts, or help obtaining stems. Explain one step at a time. Inspect and plan first. Ask before every installation or model download, and require a separate rights confirmation before processing my song. Keep experimental broad vocals/instrumental estimates unreviewed until I listen. Prefer the automatic local MIDI/WAV/ZIP route after useful stems exist, then use the TUI and Workbench Studio when I want multi-method comparison, explicit feedback or a reviewed GarageBand handoff."
+  default_prompt: "Use $sunofriend to plan a local-first workflow for my authorised music: offer the demo, existing stems, experimental separation or reference-conditioned generation; inspect providers first, keep cloud BYO-key use explicit, and ask before installations, model downloads, uploads, charges, rights confirmation or execution."

@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-16.2"
+INTERFACE_CONTRACT_VERSION = "2026-08-17.1"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -19,6 +19,7 @@ PUBLIC_COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
         "doctor",
         "source-doctor",
         "musical-metadata",
+        "song-providers",
         "source-import",
         "source-import-folder",
         "ai-doctor",
@@ -194,6 +195,15 @@ def render_skill_interface_reference() -> str:
         "path; it neither installs nor starts the model service. No candidate is",
         "selected, separated, converted to MIDI or admitted to a final mix",
         "automatically.",
+        "",
+        "`sunofriend song-providers` prints the secret-free provider capability",
+        "registry without network access. Only providers registered for the full",
+        "reference-conditioned contract may appear in `song-generate --backend`.",
+        "Evaluated cloud APIs may remain visible but ineligible when they cannot",
+        "honour reference audio or both independent strength controls. Cloud",
+        "providers must use a user-supplied environment key, explicit terms/cost",
+        "acknowledgement and immediate local archiving; never send a shared key to",
+        "browser JavaScript.",
         "",
         "Finished-mix separation has four deliberately distinct lanes:",
         "",

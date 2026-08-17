@@ -19,6 +19,9 @@ Implemented on the current feature branch:
 - a first adapter for an already running ACE-Step API using a Base model,
   shared-filesystem reference transport, `audio_cover_strength` and
   `guidance_scale`; and
+- a secret-free `song-providers` capability registry that can describe local,
+  self-hosted and BYO-key cloud providers without treating unlike operations as
+  interchangeable; and
 - agent-skill and website capability documentation for the new boundary.
 
 Still to validate or implement:
@@ -189,6 +192,24 @@ behind one Sunofriend request and receipt contract. Local inference is a likely
 first implementation because the current machine is available, but it has no
 permanent priority in the product design.
 
+Interchangeability is capability-gated. A provider may be documented without
+being registered for this operation. Registration requires genuine support for
+the authorised reference audio, annotated lyrics, two independent strength
+controls and two retained candidates; Sunofriend must not silently discard an
+input or simulate support with an unrelated endpoint.
+
+Cloud providers are optional and bring-your-own-key. They require explicit
+selection plus terms, privacy and possible-cost acknowledgement before any
+network call. Keys must remain in the user's environment or secret store and
+must never enter a plan, receipt, browser bundle or repository. Remote outputs
+must be archived locally immediately with hashes and task/model evidence. See
+[`SONG_GENERATION_PROVIDERS.md`](SONG_GENERATION_PROVIDERS.md).
+
+TREBLO Melodia v3 has been evaluated as a future prompt-and-lyrics cloud
+provider, but is not registered for `reference_conditioned_full_song`. Its v3
+API documents one song per task and source audio for continuation, not general
+reference conditioning or an independent reference-strength control.
+
 The primary user experience is an agent skill. The skill may drive the same
 capability through the CLI, TUI or web interface; those interfaces must not
 develop incompatible definitions of the request.
@@ -206,6 +227,8 @@ private use. Musical usefulness takes priority over realtime output.
 - Making the reference duration determine the new song duration.
 - Requiring offline-only execution.
 - Requiring the generation backend itself to return stems or MIDI.
+- Falling back to a prompt-only cloud provider while claiming it used the
+  reference audio.
 - Guaranteeing singer-identity preservation on an incapable backend.
 - Guaranteeing bit-identical reproduction when a backend cannot provide it.
 

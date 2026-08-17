@@ -17,6 +17,7 @@ from urllib.parse import urlsplit, urlunsplit
 from .audio_formats import file_sha256, validate_local_source_path
 from .source_project import RIGHTS_CATEGORIES
 from .source_receipt import canonical_json_bytes, document_sha256
+from .song_generation_providers import registered_provider_ids
 
 
 SONG_GENERATION_PLAN_SCHEMA = "sunofriend.song-generation-plan.v1"
@@ -214,10 +215,14 @@ def plan_song_generation(
             "authorised_private_use"
         )
     backend_id = str(backend).strip()
-    if backend_id != SONG_GENERATION_BACKEND:
+    registered_backends = registered_provider_ids()
+    if backend_id not in registered_backends:
         raise ValueError(
             f"unsupported song-generation backend {backend_id!r}; "
-            f"available: {SONG_GENERATION_BACKEND}"
+            "available for reference-conditioned generation: "
+            + ", ".join(registered_backends)
+            + "; run `sunofriend song-providers` for evaluated providers and "
+            "their capability limits"
         )
     base_url = _api_base_url(api_base_url)
     token_environment = str(api_key_env).strip()
