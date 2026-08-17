@@ -951,6 +951,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional reproducible non-negative seed; omitted requests random variants",
     )
     song_generate.add_argument(
+        "--bpm",
+        type=int,
+        default=None,
+        help="Optional explicit whole-number tempo; omitted lets the backend infer it",
+    )
+    song_generate.add_argument(
+        "--key",
+        default=None,
+        help="Optional explicit musical key, for example 'A Major'",
+    )
+    song_generate.add_argument(
+        "--time-signature",
+        default=None,
+        help="Optional explicit time signature, for example 4/4",
+    )
+    song_generate.add_argument(
+        "--duration-seconds",
+        type=float,
+        default=None,
+        help="Optional 10-600 second target; omitted keeps model-selected duration",
+    )
+    song_generate.add_argument(
         "--timeout-seconds",
         type=float,
         default=7200.0,
@@ -4561,6 +4583,10 @@ def _run_song_generate(args) -> int:
         output_format=args.output_format,
         inference_steps=args.inference_steps,
         seed=args.seed,
+        bpm=args.bpm,
+        key=args.key,
+        time_signature=args.time_signature,
+        duration_seconds=args.duration_seconds,
         timeout_seconds=args.timeout_seconds,
         poll_seconds=args.poll_seconds,
     )

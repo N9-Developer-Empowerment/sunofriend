@@ -153,6 +153,11 @@ class SongGenerationTests(unittest.TestCase):
                 ]["value"],
                 8.2,
             )
+            self.assertEqual(
+                request["controls"]["duration_policy"],
+                "model_selected_from_lyrics_style_and_arrangement",
+            )
+            self.assertIsNone(request["controls"]["musical_metadata"]["bpm"])
             self.assertNotIn(str(root), json.dumps(request, sort_keys=True))
 
     def test_plan_rejects_invalid_strength_rights_and_turbo_mapping(self) -> None:
@@ -230,6 +235,174 @@ class SongGenerationTests(unittest.TestCase):
             self.assertEqual(payload["seed"], 71)
             self.assertFalse(payload["use_random_seed"])
             self.assertEqual(payload["task_type"], "text2music")
+
+    def test_ace_step_payload_preserves_explicit_metadata_and_infers_duration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reference, lyrics = _inputs(root)
+            plan = plan_song_generation(
+                reference,
+                lyrics,
+                root / "metadata",
+                style_description="bright acoustic electronic pop",
+                reference_strength=0.35,
+                style_strength=0.75,
+                bpm=120,
+                key="A Major",
+                time_signature="4/4",
+            )
+
+            payload = AceStepApiBackend().request_payload(plan)
+            controls = plan.request_document()["controls"]
+
+            self.assertEqual(payload["bpm"], 120)
+            self.assertEqual(payload["key_scale"], "A Major")
+            self.assertEqual(payload["time_signature"], "4/4")
+            self.assertNotIn("audio_duration", payload)
+            self.assertEqual(controls["musical_metadata"]["bpm"], 120)
+            self.assertEqual(controls["musical_metadata"]["key"], "A Major")
+            self.assertEqual(
+                controls["duration_policy"],
+                "model_selected_from_lyrics_style_and_arrangement",
+            )
+
+    def test_plan_rejects_invalid_explicit_musical_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reference, lyrics = _inputs(root)
+            common = {
+                "style_description": "indie pop",
+                "reference_strength": 0.35,
+                "style_strength": 0.75,
+            }
+            with self.assertRaisesRegex(ValueError, "bpm"):
+                plan_song_generation(
+                    reference,
+                    lyrics,
+                    root / "bad-bpm",
+                    bpm=19,
+                    **common,
+                )
+            with self.assertRaisesRegex(ValueError, "time_signature"):
+                plan_song_generation(
+                    reference,
+                    lyrics,
+                    root / "bad-signature",
+                    time_signature="common time",
+                    **common,
+                )
+            with self.assertRaisesRegex(ValueError, "at least 10"):
+                plan_song_generation(
+                    reference,
+                    lyrics,
+                    root / "bad-duration",
+                    duration_seconds=9.5,
+                    **common,
+                )
+
+    def test_ace_step_accepts_current_openai_style_model_inventory(self) -> None:
+        backend = AceStepApiBackend()
+
+        backend._require_model(
+            {
+                "object": "list",
+                "data": [
+                    {
+                        "id": "acestep/acestep-v15-base",
+                        "name": "ACE-Step acestep-v15-base",
+                    }
+                ],
+            },
+            "acestep-v15-base",
+        )
+
+    def test_ace_step_allows_empty_inventory_during_lazy_initialisation(self) -> None:
+        backend = AceStepApiBackend()
+
+        backend._require_model(
+            {"object": "list", "data": []},
+            "acestep-v15-base",
+        )
+
+    def test_ace_step_rejects_a_different_current_model_inventory(self) -> None:
+        backend = AceStepApiBackend()
+
+        with self.assertRaisesRegex(RuntimeError, "acestep-v15-turbo"):
+            backend._require_model(
+                {
+                    "object": "list",
+                    "data": [{"id": "acestep/acestep-v15-turbo"}],
+                },
+                "acestep-v15-base",
+            )
+
+    def test_ace_step_streams_reference_as_multipart_not_absolute_path(self) -> None:
+        class RecordingBackend(AceStepApiBackend):
+            def __init__(self) -> None:
+                super().__init__()
+                self.submission = None
+
+            def _json_request(self, base_url, method, path, *, payload=None):
+                self.assert_local(base_url)
+                self.assertEqual(method, "GET")
+                self.assertEqual(path, "/v1/models")
+                return {
+                    "object": "list",
+                    "data": [{"id": "acestep/acestep-v15-base"}],
+                }
+
+            def _multipart_json_request(
+                self, base_url, path, *, fields, file_field, file_path
+            ):
+                self.assert_local(base_url)
+                self.submission = (path, fields, file_field, file_path)
+                return {"code": 200, "data": {"task_id": "task-1"}}
+
+            def _wait_for_result(self, plan, base_url, task_id):
+                self.assertEqual(task_id, "task-1")
+                return (
+                    [
+                        {"file": "/audio/one.wav", "seed_value": "11"},
+                        {"file": "/audio/two.wav", "seed_value": "12"},
+                    ],
+                    {"status": 1},
+                )
+
+            def _download(self, base_url, value, destination):
+                destination.write_bytes(b"RIFF" + value.encode("utf-8"))
+
+            def assert_local(self, base_url):
+                self.assertEqual(base_url, "http://127.0.0.1:8001")
+
+            def assertEqual(self, first, second):
+                if first != second:
+                    raise AssertionError(f"{first!r} != {second!r}")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reference, lyrics = _inputs(root)
+            plan = plan_song_generation(
+                reference,
+                lyrics,
+                root / "planned",
+                style_description="warm acoustic electronic pop",
+                reference_strength=0.35,
+                style_strength=0.75,
+            )
+            execution_root = root / "execution"
+            execution_root.mkdir()
+            backend = RecordingBackend()
+
+            run = backend.generate(plan, execution_root)
+
+            path, fields, file_field, file_path = backend.submission
+            self.assertEqual(path, "/release_task")
+            self.assertEqual(file_field, "reference_audio")
+            self.assertEqual(file_path, reference)
+            self.assertNotIn("reference_audio_path", fields)
+            self.assertEqual(fields["batch_size"], 2)
+            self.assertEqual(run.request_mapping["transport"], "multipart_file_upload")
+            self.assertEqual(len(run.candidates), 2)
 
     def test_execution_retains_two_candidates_and_reproducibility_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

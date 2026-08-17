@@ -5,7 +5,7 @@ import { links } from "../content";
 export const metadata: Metadata = {
   title: "Windows setup notes",
   description:
-    "Reproducible Sunofriend setup findings from a native Windows 11 x64 trial, including the working diagnostics and the current fcntl blocker.",
+    "Reproducible native Windows 11 setup findings for Sunofriend and local ACE-Step song generation, including current limits.",
   alternates: {
     canonical: "/windows/",
   },
@@ -27,6 +27,24 @@ const checkCommands = `.\\.venv-windows\\Scripts\\sunofriend.exe --version
 .\\.venv-windows\\Scripts\\sunofriend.exe doctor --require convert
 .\\.venv-windows\\Scripts\\sunofriend.exe doctor --require preview
 .\\.venv-windows\\Scripts\\sunofriend.exe source-doctor`;
+
+const aceStepCommands = `git clone https://github.com/ACE-Step/ACE-Step-1.5.git
+Set-Location ACE-Step-1.5
+uv sync
+$env:PYTHONUTF8 = "1"
+$env:ACESTEP_CONFIG_PATH = "acestep-v15-base"
+$env:ACESTEP_OFFLOAD_TO_CPU = "true"
+.\\.venv\\Scripts\\acestep-api.exe --host 127.0.0.1 --port 8001 --init-llm --lm-model-path acestep-5Hz-lm-0.6B`;
+
+const generationCommands = `$style = Get-Content -LiteralPath "C:\\Music\\style.txt" -Raw
+$generationArgs = @(
+  "song-generate", "C:\\Music\\reference.wav",
+  "--lyrics", "C:\\Music\\lyrics.txt", "--style", $style,
+  "--reference-strength", "0.35", "--style-strength", "0.75",
+  "--bpm", "120", "--key", "A Major", "--time-signature", "4/4",
+  "--out-dir", "C:\\Music\\generation-01", "--execute", "--confirm-rights"
+)
+& .\\.venv-windows\\Scripts\\sunofriend.exe @generationArgs`;
 
 function CommandBox({ label, value, rows }: { label: string; value: string; rows: number }) {
   return (
@@ -53,6 +71,7 @@ export default function WindowsSetup() {
           <a href="#install">Install</a>
           <a href="#tools">Audio tools</a>
           <a href="#check">Check</a>
+          <a href="#local-ai">Local AI</a>
           <a href="#blocker">Blocker</a>
         </nav>
         <a className="header-cta" href={links.compatibility}>
@@ -208,8 +227,60 @@ export default function WindowsSetup() {
           </div>
         </section>
 
+        <section id="local-ai">
+          <h2>4. Run local ACE-Step song generation</h2>
+          <p className="lede">
+            The separate <code>song-generate</code> path completed a native
+            Windows test on an RTX 4080 Laptop GPU with 12 GB VRAM. ACE-Step
+            Base plus the 0.6B language model produced two 232-second WAV songs
+            in one request. The model reported about 116 seconds of generation
+            time; this is one machine&apos;s result, not a performance guarantee.
+          </p>
+          <div className="prompt-stack">
+            <CommandBox label="POWERSHELL · INSTALL AND START ACE-STEP API" value={aceStepCommands} rows={9} />
+            <CommandBox label="POWERSHELL · FROM THE SUNOFRIEND REPOSITORY" value={generationCommands} rows={11} />
+          </div>
+          <div className="agent-grid">
+            <article className="agent-card">
+              <span className="card-number">WINDOWS CONSOLE</span>
+              <h3>Keep UTF-8 mode enabled</h3>
+              <p>
+                Without <code>PYTHONUTF8=1</code>, ACE-Step successfully wrote
+                a smoke-test WAV and then the Windows CP1252 console failed
+                while printing a Unicode status symbol. UTF-8 mode made the
+                same command exit cleanly.
+              </p>
+            </article>
+            <article className="agent-card">
+              <span className="card-number">12 GB VRAM</span>
+              <h3>Start with Base and the 0.6B LM</h3>
+              <p>
+                CPU offload left enough headroom for two long candidates. This
+                is the first verified configuration; larger XL or language
+                models need a separate memory and quality comparison.
+              </p>
+            </article>
+          </div>
+          <p className="guide-note">
+            In the OneDrive-based trial, the vLLM/Triton cache failed while
+            creating a temporary compiler file. ACE-Step automatically fell
+            back to its PyTorch language-model backend and completed the songs.
+            Prefer a short, non-synchronised checkout/cache path for future
+            trials. Sunofriend now streams reference audio as a multipart file;
+            current ACE-Step rejects client-supplied absolute audio paths.
+          </p>
+          <p className="guide-note">
+            Planning is read-only. <code>--execute --confirm-rights</code> is
+            required before the local API receives audio. Omit BPM, key, time
+            signature or duration to let ACE-Step infer that value; supplied
+            values are recorded and sent as explicit API metadata. Every run
+            writes two candidates plus hash-bound request and receipt files to
+            a fresh output folder.
+          </p>
+        </section>
+
         <section id="blocker">
-          <h2>4. Stop at the current native-Windows blocker</h2>
+          <h2>5. Stop at the current full-workflow blocker</h2>
           <div className="agent-grid">
             <article className="agent-card">
               <span className="card-number">FIRST REPRODUCIBLE FAILURE</span>
@@ -235,6 +306,11 @@ export default function WindowsSetup() {
             If you repeat the trial, report the Sunofriend commit, Windows
             edition, architecture, Python version, exact command and first
             error. Do not attach stems, private music, filenames or metadata.
+            The working local song-generation path does not clear the separate
+            source-lineage locking blocker used by demo, create and Studio.
+            Broader AI-session tests also encounter the POSIX-only
+            <code> resource</code> module, so passing <code>song-generate</code>
+            must not be generalised into full native-Windows support.
           </p>
         </section>
 

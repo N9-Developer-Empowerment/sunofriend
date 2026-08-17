@@ -46,8 +46,10 @@ plans one reference-conditioned full-song request. It uses separate
 complete candidates. Planning is read-only. Execution requires both
 `--execute` and `--confirm-rights`, writes only to a fresh destination
 and retains a hash-bound request plus success or failure receipt. The
-first adapter uses an existing ACE-Step API and shared local reference
-path; it neither installs nor starts the model service. No candidate is
+first adapter uses an existing ACE-Step API and a streaming multipart
+reference upload; it neither installs nor starts the model service. Optional
+explicit BPM, key, time signature and duration values are sent as real backend
+metadata, while omitted values remain model-selected. No candidate is
 selected, separated, converted to MIDI or admitted to a final mix
 automatically.
 

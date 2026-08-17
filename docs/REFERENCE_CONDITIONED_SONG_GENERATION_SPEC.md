@@ -1,7 +1,8 @@
 # Reference-conditioned song generation
 
 Status: iterative product goal agreed; first backend-neutral whole-song slice
-implemented; empirical comparison awaiting the owner's private song fixture
+and Windows ACE-Step adapter implemented; private diagnostic pairs awaiting
+owner listening
 
 Discovery completed: 16 August 2026
 

@@ -55,6 +55,10 @@ class SongGenerationPlan:
     vocal_language: str
     output_format: str
     seed: int | None
+    bpm: int | None
+    key: str | None
+    time_signature: str | None
+    duration_seconds: float | None
     candidate_count: int = SONG_GENERATION_CANDIDATE_COUNT
 
     def request_document(self) -> dict[str, Any]:
@@ -80,7 +84,18 @@ class SongGenerationPlan:
                 "reference_strength": self.reference_strength,
                 "style_description_strength": self.style_strength,
                 "candidate_count": self.candidate_count,
-                "duration_policy": "model_selected_from_lyrics_style_and_arrangement",
+                "musical_metadata": {
+                    "bpm": self.bpm,
+                    "key": self.key,
+                    "time_signature": self.time_signature,
+                    "duration_seconds": self.duration_seconds,
+                    "policy": "explicit_values_override_backend_inference",
+                },
+                "duration_policy": (
+                    "explicit_seconds"
+                    if self.duration_seconds is not None
+                    else "model_selected_from_lyrics_style_and_arrangement"
+                ),
                 "seed": self.seed,
             },
             "vocals": {
@@ -188,6 +203,10 @@ def plan_song_generation(
     output_format: str = "wav",
     inference_steps: int = 32,
     seed: int | None = None,
+    bpm: int | None = None,
+    key: str | None = None,
+    time_signature: str | None = None,
+    duration_seconds: float | None = None,
     timeout_seconds: float = 7200.0,
     poll_seconds: float = 5.0,
 ) -> SongGenerationPlan:
@@ -253,6 +272,21 @@ def plan_song_generation(
         raise ValueError("inference_steps must be an integer from 1 to 200")
     if seed is not None and (isinstance(seed, bool) or int(seed) != seed or seed < 0):
         raise ValueError("seed must be a non-negative integer or omitted")
+    selected_bpm = _optional_integer(
+        bpm,
+        "bpm",
+        minimum=20,
+        maximum=400,
+    )
+    selected_key = _optional_bounded_text(key, label="key", maximum_bytes=128)
+    selected_time_signature = _optional_time_signature(time_signature)
+    selected_duration = (
+        _positive_number(duration_seconds, "duration_seconds", maximum=600.0)
+        if duration_seconds is not None
+        else None
+    )
+    if selected_duration is not None and selected_duration < 10.0:
+        raise ValueError("duration_seconds must be at least 10")
     timeout = _positive_number(timeout_seconds, "timeout_seconds", maximum=86400.0)
     polling = _positive_number(poll_seconds, "poll_seconds", maximum=60.0)
     if polling >= timeout:
@@ -261,7 +295,7 @@ def plan_song_generation(
     backend_configuration = {
         "api_base_url": base_url,
         "api_key_env": token_environment,
-        "transport": "shared_filesystem_path",
+        "transport": "multipart_file_upload",
         "model": selected_model,
         "inference_steps": int(inference_steps),
         "timeout_seconds": timeout,
@@ -276,6 +310,13 @@ def plan_song_generation(
                 "value": guidance_scale,
                 "effective_for_model": True,
             },
+        },
+        "musical_metadata_mapping": {
+            "bpm": "bpm",
+            "key": "key_scale",
+            "time_signature": "time_signature",
+            "duration_seconds": "audio_duration",
+            "missing_values": "ace_step_lm_inference",
         },
     }
     return SongGenerationPlan(
@@ -296,6 +337,10 @@ def plan_song_generation(
         vocal_language=language,
         output_format=audio_format,
         seed=int(seed) if seed is not None else None,
+        bpm=selected_bpm,
+        key=selected_key,
+        time_signature=selected_time_signature,
+        duration_seconds=selected_duration,
     )
 
 
@@ -563,6 +608,47 @@ def _positive_number(value: float, label: str, *, maximum: float) -> float:
     if not math.isfinite(number) or number <= 0 or number > maximum:
         raise ValueError(f"{label} must be greater than 0 and no more than {maximum}")
     return number
+
+
+def _optional_integer(
+    value: int | None,
+    label: str,
+    *,
+    minimum: int,
+    maximum: int,
+) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or int(value) != value:
+        raise ValueError(f"{label} must be a whole number or omitted")
+    number = int(value)
+    if not minimum <= number <= maximum:
+        raise ValueError(f"{label} must be from {minimum} to {maximum}")
+    return number
+
+
+def _optional_bounded_text(
+    value: str | None,
+    *,
+    label: str,
+    maximum_bytes: int,
+) -> str | None:
+    if value is None:
+        return None
+    return _bounded_text(value, label=label, maximum_bytes=maximum_bytes)
+
+
+def _optional_time_signature(value: str | None) -> str | None:
+    selected = _optional_bounded_text(
+        value,
+        label="time_signature",
+        maximum_bytes=16,
+    )
+    if selected is None:
+        return None
+    if not re.fullmatch(r"[1-9][0-9]?(?:/[1-9][0-9]?)?", selected):
+        raise ValueError("time_signature must look like 4 or 4/4")
+    return selected
 
 
 def _bounded_text(value: str, *, label: str, maximum_bytes: int) -> str:

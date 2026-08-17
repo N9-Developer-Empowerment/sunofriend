@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import http.client
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.error import HTTPError, URLError
@@ -36,7 +38,7 @@ class AceStepApiBackend:
         """Map the neutral request onto documented ACE-Step parameters."""
 
         mapping = plan.backend_configuration["strength_mapping"]
-        return {
+        payload = {
             "prompt": plan.style_description,
             "lyrics": plan.lyrics,
             "thinking": True,
@@ -55,17 +57,36 @@ class AceStepApiBackend:
             "use_cot_language": True,
             "constrained_decoding": True,
         }
+        optional_metadata = {
+            "bpm": plan.bpm,
+            "key_scale": plan.key,
+            "time_signature": plan.time_signature,
+            "audio_duration": plan.duration_seconds,
+        }
+        payload.update(
+            {
+                parameter: value
+                for parameter, value in optional_metadata.items()
+                if value is not None
+            }
+        )
+        return payload
 
     def generate(self, plan: SongGenerationPlan, root: Path) -> BackendRun:
         base_url = str(plan.backend_configuration["api_base_url"])
         model_inventory = self._json_request(base_url, "GET", "/v1/models")
         self._require_model(model_inventory, str(plan.backend_configuration["model"]))
         payload = self.request_payload(plan)
-        submitted = self._json_request(
+        submitted = self._multipart_json_request(
             base_url,
-            "POST",
             "/release_task",
-            payload=payload,
+            fields={
+                key: value
+                for key, value in payload.items()
+                if key != "reference_audio_path"
+            },
+            file_field="reference_audio",
+            file_path=plan.reference,
         )
         submission_data = _response_data(submitted, "ACE-Step task submission")
         if not isinstance(submission_data, Mapping):
@@ -103,7 +124,7 @@ class AceStepApiBackend:
         ]
         request_mapping = {
             "api": "ACE-Step /release_task",
-            "transport": "shared_filesystem_path",
+            "transport": "multipart_file_upload",
             "parameters": {
                 key: value
                 for key, value in payload.items()
@@ -163,19 +184,16 @@ class AceStepApiBackend:
             time.sleep(poll_seconds)
 
     def _require_model(self, response: Mapping[str, Any], expected: str) -> None:
-        data = _response_data(response, "ACE-Step model inventory")
-        if not isinstance(data, Mapping):
-            raise RuntimeError("ACE-Step model inventory returned invalid data")
-        models = data.get("models")
-        if not isinstance(models, list):
-            raise RuntimeError("ACE-Step model inventory omitted models")
-        names = {
-            str(item.get("name"))
+        models = _model_inventory_records(response)
+        if not models and _is_lazy_openai_inventory(response):
+            return
+        aliases = {
+            alias
             for item in models
-            if isinstance(item, Mapping) and item.get("name")
+            for alias in _model_aliases(item)
         }
-        if expected not in names:
-            available = ", ".join(sorted(names)) or "<none>"
+        if expected.casefold() not in aliases:
+            available = ", ".join(_model_inventory_labels(models)) or "<none>"
             raise RuntimeError(
                 f"ACE-Step model {expected!r} is not available; server reports: "
                 f"{available}"
@@ -214,6 +232,90 @@ class AceStepApiBackend:
             ) from exc
         except (URLError, OSError) as exc:
             raise RuntimeError(f"ACE-Step API is unavailable: {exc}") from exc
+        if len(body) > 16 * 1024 * 1024:
+            raise RuntimeError("ACE-Step API JSON response exceeded the safety limit")
+        try:
+            document = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError("ACE-Step API returned invalid UTF-8 JSON") from exc
+        if not isinstance(document, Mapping):
+            raise RuntimeError("ACE-Step API returned a non-object response")
+        return document
+
+    def _multipart_json_request(
+        self,
+        base_url: str,
+        path: str,
+        *,
+        fields: Mapping[str, Any],
+        file_field: str,
+        file_path: Path,
+    ) -> Mapping[str, Any]:
+        """Stream one local audio file through ACE-Step multipart upload."""
+
+        boundary = f"sunofriend-{uuid.uuid4().hex}"
+        field_parts = [
+            _multipart_field(boundary, key, value)
+            for key, value in fields.items()
+            if value is not None
+        ]
+        file_header = _multipart_file_header(
+            boundary,
+            field=file_field,
+            filename=file_path.name,
+        )
+        closing = f"\r\n--{boundary}--\r\n".encode("ascii")
+        content_length = (
+            sum(len(part) for part in field_parts)
+            + len(file_header)
+            + file_path.stat().st_size
+            + len(closing)
+        )
+        url = urlsplit(urljoin(base_url + "/", path.lstrip("/")))
+        connection_type = (
+            http.client.HTTPSConnection
+            if url.scheme.casefold() == "https"
+            else http.client.HTTPConnection
+        )
+        connection = connection_type(
+            url.hostname,
+            url.port,
+            timeout=_AUDIO_DOWNLOAD_TIMEOUT_SECONDS,
+        )
+        request_path = url.path or "/"
+        if url.query:
+            request_path = f"{request_path}?{url.query}"
+        try:
+            connection.putrequest("POST", request_path)
+            connection.putheader("Accept", "application/json")
+            connection.putheader(
+                "Content-Type", f"multipart/form-data; boundary={boundary}"
+            )
+            connection.putheader("Content-Length", str(content_length))
+            if self._api_token is not None:
+                connection.putheader("Authorization", f"Bearer {self._api_token}")
+            connection.endheaders()
+            for part in field_parts:
+                connection.send(part)
+            connection.send(file_header)
+            with file_path.open("rb") as handle:
+                while True:
+                    block = handle.read(1024 * 1024)
+                    if not block:
+                        break
+                    connection.send(block)
+            connection.send(closing)
+            response = connection.getresponse()
+            body = response.read(16 * 1024 * 1024 + 1)
+            if response.status >= 400:
+                detail = body[:4096].decode("utf-8", errors="replace")
+                raise RuntimeError(
+                    f"ACE-Step API returned HTTP {response.status}: {detail}"
+                )
+        except (OSError, http.client.HTTPException) as exc:
+            raise RuntimeError(f"ACE-Step API is unavailable: {exc}") from exc
+        finally:
+            connection.close()
         if len(body) > 16 * 1024 * 1024:
             raise RuntimeError("ACE-Step API JSON response exceeded the safety limit")
         try:
@@ -266,6 +368,36 @@ def _response_data(response: Mapping[str, Any], label: str) -> Any:
     return response.get("data")
 
 
+def _multipart_field(boundary: str, name: str, value: Any) -> bytes:
+    rendered = _multipart_value(value)
+    return (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
+        f"{rendered}\r\n"
+    ).encode("utf-8")
+
+
+def _multipart_file_header(
+    boundary: str,
+    *,
+    field: str,
+    filename: str,
+) -> bytes:
+    safe_name = filename.replace("\\", "_").replace('"', "_")
+    return (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{field}"; '
+        f'filename="{safe_name}"\r\n'
+        "Content-Type: audio/wav\r\n\r\n"
+    ).encode("utf-8")
+
+
+def _multipart_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
 def _result_records(value: Any) -> list[Mapping[str, Any]]:
     if isinstance(value, str):
         try:
@@ -299,26 +431,62 @@ def _candidate_metadata(record: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _sanitise_model_inventory(response: Mapping[str, Any]) -> dict[str, Any]:
+    models = _model_inventory_records(response)
+    records = [
+        {
+            key: item[key]
+            for key in ("id", "name", "is_default", "is_loaded")
+            if key in item
+        }
+        for item in models
+    ]
     data = response.get("data")
-    if not isinstance(data, Mapping):
-        return {}
-    models = data.get("models")
-    records = []
-    if isinstance(models, list):
-        for item in models:
-            if not isinstance(item, Mapping):
-                continue
-            records.append(
-                {
-                    key: item[key]
-                    for key in ("name", "is_default", "is_loaded")
-                    if key in item
-                }
-            )
     return {
         "models": records,
-        "default_model": data.get("default_model"),
+        "default_model": (
+            data.get("default_model") if isinstance(data, Mapping) else None
+        ),
+        "inventory_format": (
+            "openai-list" if isinstance(data, list) else "ace-step-wrapped"
+        ),
     }
+
+
+def _model_inventory_records(response: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    data = _response_data(response, "ACE-Step model inventory")
+    if isinstance(data, list):
+        return [item for item in data if isinstance(item, Mapping)]
+    if isinstance(data, Mapping) and isinstance(data.get("models"), list):
+        return [item for item in data["models"] if isinstance(item, Mapping)]
+    raise RuntimeError("ACE-Step model inventory returned invalid data")
+
+
+def _is_lazy_openai_inventory(response: Mapping[str, Any]) -> bool:
+    """Recognise the empty model list returned before current ACE-Step lazy init."""
+
+    return response.get("object") == "list" and response.get("data") == []
+
+
+def _model_aliases(item: Mapping[str, Any]) -> set[str]:
+    aliases: set[str] = set()
+    for key in ("id", "name"):
+        value = str(item.get(key, "")).strip()
+        if not value:
+            continue
+        aliases.add(value.casefold())
+        aliases.add(value.rsplit("/", 1)[-1].casefold())
+        if value.casefold().startswith("ace-step "):
+            aliases.add(value[len("ACE-Step ") :].casefold())
+    return aliases
+
+
+def _model_inventory_labels(models: list[Mapping[str, Any]]) -> list[str]:
+    labels = {
+        str(item.get("id") or item.get("name")).strip()
+        for item in models
+        if item.get("id") or item.get("name")
+    }
+    return sorted(labels)
 
 
 def _origin(value: str) -> tuple[str, str, int | None]:

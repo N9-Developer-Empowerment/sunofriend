@@ -54,6 +54,14 @@ the authorised reference and turn them into provider-neutral musical evidence.
 That would be a new, explicit workflow with its own tests; it would not be
 described as native TREBLO reference conditioning.
 
+The current ACE-Step adapter streams reference audio as multipart upload; the
+current server rejects client-supplied absolute audio paths. Optional explicit
+BPM, key, time signature and duration are transported as real API fields.
+Omitted metadata remains available for ACE-Step LM inference. A Windows RTX
+4080 Laptop GPU trial completed two 199-232 second candidates per request with
+Base plus the 0.6B LM and CPU offload. This verifies execution, not subjective
+quality or strict adherence to the requested key.
+
 ## MiniMax routes under evaluation
 
 MiniMax currently exposes two materially different routes and Sunofriend must

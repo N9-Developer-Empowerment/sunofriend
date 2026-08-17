@@ -266,7 +266,10 @@ on.
   requests two complete candidates and lets the model determine duration. The
   default is a read-only JSON plan; require both `--execute` and
   `--confirm-rights` before contacting a configured backend. The first adapter
-  uses an existing ACE-Step API service and shared reference path. Never install
+  uses an existing ACE-Step API service and streams the reference as a
+  multipart file upload. Optional explicit BPM, key, time signature and
+  duration values override backend inference; omitted values remain
+  model-selected. Never install
   or start that service implicitly, never claim the command supports an
   unregistered backend, and never select or send a candidate to MIDI
   automatically.

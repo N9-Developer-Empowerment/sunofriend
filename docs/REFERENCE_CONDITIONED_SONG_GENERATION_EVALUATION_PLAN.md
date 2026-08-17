@@ -1,9 +1,55 @@
 # Empirical reference-conditioned song evaluation
 
-Status: agreed plan; awaiting the owner's private input pack; no model run is
-authorised or started by this document
+Status: private intake and local runtime gates complete; two diagnostic
+ACE-Step pairs retained; awaiting owner listening before advancement
 
 Plan agreed: 17 August 2026
+
+Evidence updated: 17 August 2026
+
+## Current empirical evidence
+
+The owner supplied one owner-made, privately authorised input pack through
+Google Drive. The audio and extracted lyric/style files remain outside this
+repository; no private asset was sent to a cloud model. The intake records a
+237.769-second stereo, 44.1 kHz, 24-bit PCM WAV with SHA-256
+`aa0cdb7ba15cf45d3a016fa5726d22db565743d2872769fb60d768bf025edd43`.
+The supplied target is 120 BPM in A Major. Sunofriend's unreviewed automatic
+analysis estimated the 123 BPM tempo family with medium confidence; its key
+selection was low-confidence C# minor, while A Major was the strongest major
+candidate and won more analysis windows. The explicit owner metadata therefore
+remains authoritative for the controlled run.
+
+Gate 1 passed locally on Windows 11 with an RTX 4080 Laptop GPU (12 GB VRAM),
+64 GB system RAM, NVIDIA driver 610.88, ACE-Step source commit `14c0211`, the
+`acestep-v15-base` DiT and `acestep-5Hz-lm-0.6B`. A non-private 10-second smoke
+request completed. For full songs, CPU offload was enabled. vLLM/Triton failed
+to create a temporary cache artifact under the OneDrive checkout, after which
+ACE-Step's automatic PyTorch LM fallback loaded and completed normally.
+
+The first private submission exposed two current API compatibility differences:
+the model inventory now uses an OpenAI-style list, and `/release_task` rejects
+client-supplied absolute audio paths. Sunofriend now accepts both current and
+older inventory shapes and streams the reference as multipart audio. The
+failed absolute-path attempt is retained as a failure receipt rather than
+erased.
+
+Two diagnostic pairs are retained:
+
+| Pair | Fixed controls | ACE-Step reported metadata | Independent unreviewed analysis | Result evidence |
+| --- | --- | --- | --- | --- |
+| Inferred metadata | reference `0.35`; style `0.75`; metadata omitted | 70 BPM, E minor, 4/4, model-selected 232 s | candidates: 136 BPM/C# minor (medium/low) and 144 BPM/E minor (low/low); the detected double-time tempo family is broadly compatible with 70 BPM | request `965a910e542170b9208a39aa928d65885ba26e32964a49d9bac85adff1b52de1`, receipt `8d658a5e550b249ae43f16822e9a2b3adefd21c70b6fdde0cebd886ce150bb2d`; elapsed 121.187 s |
+| Explicit target metadata | reference `0.35`; style `0.75`; 120 BPM, A Major, 4/4; duration omitted | 120 BPM, A Major, 4/4, model-selected 199 s | both candidates: 117 BPM; both A minor, with high key confidence; musician/DAW review is required to distinguish relative-major/minor behaviour from analysis error | request `61bfc378abc4ec225be7598dc46f6b8600084d004eead8702e22f063d798427d`, receipt `81c2713a2b428d993f73665d425958d362208630bde90bb4752ba9ee53dd3dd7`; elapsed 110.984 s |
+
+All four outputs are stereo, 48 kHz, 32-bit float WAVs with distinct hashes.
+The explicit parameters moved the measured tempo family close to the requested
+120 BPM, but backend metadata alone does not prove the rendered key or musical
+quality. These runs used bring-up settings rather than the formal Gate 2 centre
+point and must not be presented as a provider win. The next gate is the owner's
+blind-enough listening decision on enjoyment, lyric behaviour, reference
+influence, style adherence and downstream usefulness. No additional candidates,
+strength sweep, stem separation or MIDI reconstruction should begin until that
+decision is recorded.
 
 ## Decision to make
 
