@@ -170,6 +170,15 @@ lightweight song and production directions, for example:
 The lyrics define how much lyrical material the new song must accommodate.
 They do not impose a fixed duration or note-by-note timing.
 
+The user-authored annotated document remains canonical, but it is not blindly
+copied into every backend's lyrics field. A provider adapter must compile a
+backend-safe transport: keep the exact words and concise temporal tags; route
+long production descriptions into the caption; route BPM, key, meter or similar
+metadata into dedicated controls only when the user has actually locked them.
+The receipt records the canonical hash, transported hash and every cue mapping.
+No adapter may silently drop a cue, and metadata such as `120 BPM` must not be
+exposed to a model as text it may sing.
+
 ### Style description
 
 The style description is free descriptive language. Genre, era, mood,
@@ -206,6 +215,12 @@ The generator should:
 - generate a complete arrangement, lead vocal and any useful additional
   vocals; and
 - return two alternatives from a normal request.
+
+For production-oriented requests, arrangement quality includes distinct,
+musically useful drums, bass, synth and other named roles with stable timing and
+limited masking so downstream stem separation and MIDI transcription are
+practical. The generated lead vocal is a guide and part of an enjoyable full
+song, but should not automatically dominate the accompaniment.
 
 The lead vocal should, when technically possible and appropriate to the style
 description, preserve the reference vocalist's recognisable identity. If that
@@ -283,6 +298,10 @@ network call. Keys must remain in the user's environment or secret store and
 must never enter a plan, receipt, browser bundle or repository. Remote outputs
 must be archived locally immediately with hashes and task/model evidence. See
 [`SONG_GENERATION_PROVIDERS.md`](SONG_GENERATION_PROVIDERS.md).
+
+The receipt must verify the checkpoint or hosted model actually reported for
+every candidate. A missing identity or silent substitution is a failed run,
+even when valid audio was returned.
 
 TREBLO Melodia v3 has been evaluated as a future prompt-and-lyrics cloud
 provider, but is not registered for `reference_conditioned_full_song`. Its v3

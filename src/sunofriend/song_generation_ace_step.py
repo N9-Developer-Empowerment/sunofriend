@@ -100,6 +100,10 @@ class AceStepApiBackend:
                 f"ACE-Step returned {len(records)} successful audio records; "
                 f"expected {plan.candidate_count}"
             )
+        self._require_candidate_models(
+            records,
+            str(plan.backend_configuration["model"]),
+        )
         candidates_dir = root / "candidates"
         candidates_dir.mkdir(parents=True, exist_ok=False)
         candidates: list[BackendCandidate] = []
@@ -197,6 +201,30 @@ class AceStepApiBackend:
             raise RuntimeError(
                 f"ACE-Step model {expected!r} is not available; server reports: "
                 f"{available}"
+            )
+
+    def _require_candidate_models(
+        self,
+        records: list[Mapping[str, Any]],
+        expected: str,
+    ) -> None:
+        """Reject silent server-side checkpoint substitution in task results."""
+
+        expected_name = _checkpoint_name(expected)
+        reported = [
+            _checkpoint_name(str(record.get("dit_model", "")))
+            for record in records
+        ]
+        if any(not model for model in reported):
+            raise RuntimeError(
+                "ACE-Step candidate metadata omitted dit_model; requested checkpoint "
+                f"{expected!r} cannot be verified"
+            )
+        mismatched = sorted({model for model in reported if model != expected_name})
+        if mismatched:
+            raise RuntimeError(
+                f"ACE-Step substituted checkpoint(s) {', '.join(mismatched)!r}; "
+                f"requested {expected_name!r}"
             )
 
     def _json_request(
@@ -487,6 +515,12 @@ def _model_inventory_labels(models: list[Mapping[str, Any]]) -> list[str]:
         if item.get("id") or item.get("name")
     }
     return sorted(labels)
+
+
+def _checkpoint_name(value: str) -> str:
+    """Return a case-insensitive checkpoint basename for result comparison."""
+
+    return value.strip().replace("\\", "/").rsplit("/", 1)[-1].casefold()
 
 
 def _origin(value: str) -> tuple[str, str, int | None]:

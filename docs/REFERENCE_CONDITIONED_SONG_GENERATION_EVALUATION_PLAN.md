@@ -1,7 +1,7 @@
 # Empirical reference-conditioned song evaluation
 
-Status: private intake and local runtime gates complete; two diagnostic
-ACE-Step pairs retained; awaiting owner listening before advancement
+Status: first owner listening decision recorded; one clean accompaniment pair
+retained and awaiting owner review before stem/MIDI advancement
 
 Plan agreed: 17 August 2026
 
@@ -14,11 +14,13 @@ Google Drive. The audio and extracted lyric/style files remain outside this
 repository; no private asset was sent to a cloud model. The intake records a
 237.769-second stereo, 44.1 kHz, 24-bit PCM WAV with SHA-256
 `aa0cdb7ba15cf45d3a016fa5726d22db565743d2872769fb60d768bf025edd43`.
-The supplied target is 120 BPM in A Major. Sunofriend's unreviewed automatic
-analysis estimated the 123 BPM tempo family with medium confidence; its key
-selection was low-confidence C# minor, while A Major was the strongest major
-candidate and won more analysis windows. The explicit owner metadata therefore
-remains authoritative for the controlled run.
+The supplied draft described 120 BPM in A Major. Sunofriend's unreviewed
+automatic analysis estimated the 123 BPM tempo family with medium confidence;
+its key selection was low-confidence C# minor, while A Major was the strongest
+major candidate and won more analysis windows. The owner subsequently clarified
+that preserving BPM or key is not a creative goal: enjoyment and downstream
+production usefulness take precedence. Tempo and key remain analysis/grid
+evidence unless explicitly locked for a later operation.
 
 Gate 1 passed locally on Windows 11 with an RTX 4080 Laptop GPU (12 GB VRAM),
 64 GB system RAM, NVIDIA driver 610.88, ACE-Step source commit `14c0211`, the
@@ -50,6 +52,30 @@ blind-enough listening decision on enjoyment, lyric behaviour, reference
 influence, style adherence and downstream usefulness. No additional candidates,
 strength sweep, stem separation or MIDI reconstruction should begin until that
 decision is recorded.
+
+The owner selected inferred-metadata candidate 02 as the best of those four.
+They reported that every first-pass candidate leaned too heavily on the rough
+reference vocal and asked for substantially better, more distinct drums, bass
+and synth accompaniment that can become useful MIDI. They also heard the
+`120 BPM` lyric-sheet header sung. Inspection established that the backend had
+received the entire annotated document verbatim. Exact transport proves that
+all text was submitted, not that every intended word was performed.
+
+A follow-up pair therefore used reference strength `0.15`, style strength
+`0.8`, no BPM/key/duration lock, concise lyric tags and an
+accompaniment-priority caption. Detailed production directions moved out of the
+lyrics field. Both valid outputs are 210-second stereo 48 kHz float WAVs,
+reported `acestep-v15-base`, peak at -1 dBFS without near-full-scale samples,
+and await owner listening. Automatic analysis estimated 117 BPM/A minor for
+candidate 01 and 123 BPM/A minor for candidate 02; these values do not rank the
+music.
+
+The first attempt at that pair also exposed a runtime-integrity defect: an
+ACE-Step server lazily initialised its Turbo default and silently substituted it
+for the requested Base checkpoint. Those outputs are retained as invalid
+diagnostic evidence and excluded from comparison. Sunofriend now requires each
+candidate to report the requested `dit_model`; missing or mismatched checkpoint
+evidence fails the run before candidates are accepted.
 
 ## Decision to make
 
@@ -151,6 +177,10 @@ consume an exhaustive parameter search.
 
 - Preserve and hash the private inputs.
 - Validate audio and annotated-lyric structure.
+- Preserve the canonical annotated document, then compile a backend-specific
+  transport: keep concise temporal tags with the words; route detailed
+  production direction and musical metadata to caption/control fields; record
+  both hashes and every translation so no cue is silently discarded.
 - Produce automatic tempo, key, section, instrumentation and vocal-trait
   observations with confidence/evidence where available.
 - Let the owner correct a clearly wrong analysis without forcing manual control
@@ -171,13 +201,17 @@ No model generation occurs at this gate.
 ### Gate 2 — centre-point full-song comparison
 
 - Every eligible method receives the same canonical reference evidence, exact
-  target lyrics and style brief to the extent it truthfully supports them.
+  target words and style brief to the extent it truthfully supports them. A
+  backend-safe annotation translation is allowed only when its exact mapping is
+  recorded.
 - Start both public strength controls at the neutral centre (`0.5`). Record the
   exact backend mapping; do not pretend unlike scales are equivalent.
 - Produce exactly two complete candidates per method with fixed, recorded seeds
   when available.
 - Archive outputs locally immediately and audition them under randomised
   candidate labels so provider reputation does not dominate the first review.
+- Treat BPM, key and duration as model-selected unless a particular experiment
+  explicitly requires a musical lock.
 - Advance only methods with at least one candidate worth further production.
 
 ### Gate 3 — independent strength calibration
@@ -219,6 +253,12 @@ For the best candidate from each surviving route:
 6. perform vocal comping only after the remix and instrumental arrangement are
    settled; and
 7. audit whether any generated audio remains in the exported master.
+
+For ACE-Step Base, test `complete` for a mixed accompaniment challenger and
+`lego` for named drums, bass, synth or other isolated-role challengers after a
+whole-song candidate passes listening. Track-by-track generation may be more
+useful for MIDI than separating a dense full mix, but it must be evaluated as a
+distinct method with its own receipts.
 
 The downstream result, not generator prestige, selects the preferred method.
 

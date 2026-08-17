@@ -336,6 +336,27 @@ class SongGenerationTests(unittest.TestCase):
                 "acestep-v15-base",
             )
 
+    def test_ace_step_rejects_candidate_checkpoint_substitution(self) -> None:
+        backend = AceStepApiBackend()
+
+        with self.assertRaisesRegex(RuntimeError, "substituted checkpoint"):
+            backend._require_candidate_models(
+                [
+                    {"file": "/audio/one.wav", "dit_model": "acestep-v15-turbo"},
+                    {"file": "/audio/two.wav", "dit_model": "acestep-v15-turbo"},
+                ],
+                "acestep-v15-base",
+            )
+
+    def test_ace_step_rejects_missing_candidate_checkpoint_evidence(self) -> None:
+        backend = AceStepApiBackend()
+
+        with self.assertRaisesRegex(RuntimeError, "omitted dit_model"):
+            backend._require_candidate_models(
+                [{"file": "/audio/one.wav"}],
+                "acestep-v15-base",
+            )
+
     def test_ace_step_streams_reference_as_multipart_not_absolute_path(self) -> None:
         class RecordingBackend(AceStepApiBackend):
             def __init__(self) -> None:
@@ -362,8 +383,16 @@ class SongGenerationTests(unittest.TestCase):
                 self.assertEqual(task_id, "task-1")
                 return (
                     [
-                        {"file": "/audio/one.wav", "seed_value": "11"},
-                        {"file": "/audio/two.wav", "seed_value": "12"},
+                        {
+                            "file": "/audio/one.wav",
+                            "seed_value": "11",
+                            "dit_model": "acestep-v15-base",
+                        },
+                        {
+                            "file": "/audio/two.wav",
+                            "seed_value": "12",
+                            "dit_model": "acestep-v15-base",
+                        },
                     ],
                     {"status": 1},
                 )
