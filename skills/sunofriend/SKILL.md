@@ -270,6 +270,18 @@ on.
   or start that service implicitly, never claim the command supports an
   unregistered backend, and never select or send a candidate to MIDI
   automatically.
+- Treat that command as the implemented whole-song vertical slice, not the
+  complete creative workflow. The agreed destination is an immutable
+  song-project version graph: retain both initial candidates, branch instead of
+  overwrite, support capability-gated whole-song/section/stem revisions, then
+  reconstruct selected instruments as editable MIDI and record/comp human
+  vocals after the AI-assisted arrangement has settled. The owner's private
+  projects have a standing personal-use authorisation assumption in the target
+  project manifest, but the current CLI still truthfully requires its existing
+  `--confirm-rights` execution flag until that manifest is implemented. Follow
+  `docs/REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md` when the owner
+  supplies the private empirical song fixture; the plan alone starts no model
+  and uploads nothing.
 - Use `song-providers` for a read-only, secret-free capability inventory before
   suggesting a generation provider. ACE-Step is registered for the current
   reference-conditioned operation. TREBLO v3 is an evaluated optional BYO-key
@@ -278,6 +290,10 @@ on.
   the independent reference-strength control. Never silently fall back to it,
   expose a key to browser JavaScript, imply that it is local/open-weight, or
   incur charges/upload audio without explicit terms, privacy and cost consent.
+  MiniMax Music 3 is currently a description-and-lyrics candidate, while the
+  separately hosted MiniMax `music-cover` model is a reference-audio candidate
+  without a documented independent reference-strength control; do not merge
+  or silently register those routes.
 - `vocal-comp-create` and `vocal-comp-analyze` are expert, private pilot
   commands for 2–24 synchronized vocal-only takes. Require canonical lyrics,
   a reviewed monophonic target melody, a reviewed musical-phrase timeline,
@@ -285,6 +301,9 @@ on.
   publishes independent tracker evidence, phrase rankings, auditions and
   pickups. It must not be described as selecting, tuning, joining or rendering
   a finished vocal comp; an optional AI vocal is fallback evidence only.
+  In the iterative song-generation workflow, vocal comping is downstream of
+  AI remix, stem/MIDI reconstruction and arrangement; never make it a
+  prerequisite for generating the song sketches.
 - Automatic lyrics, phrase timing and target MIDI remain drafts until every
   phrase is explicitly heard and approved through `vocal-comp-draft-review`.
   Playback creates no decision. Only `vocal-comp-draft-resolve` may turn one

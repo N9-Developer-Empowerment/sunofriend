@@ -1,8 +1,11 @@
 # Reference-conditioned song generation
 
-Status: product goal agreed; first backend-neutral vertical slice implemented
+Status: iterative product goal agreed; first backend-neutral whole-song slice
+implemented; empirical comparison awaiting the owner's private song fixture
 
 Discovery completed: 16 August 2026
+
+Iterative workflow refinement: 17 August 2026
 
 Source: twenty-question product interview with the project owner
 
@@ -28,11 +31,15 @@ Still to validate or implement:
 
 - a real two-song generation run on the RTX 4080 Laptop GPU and subjective
   listening acceptance;
+- the bounded, successive-gate comparison in
+  [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;
 - a service lifecycle command or approved setup workflow (the generation
   command deliberately does not install or start a model server);
 - backend selection beyond the first ACE-Step API adapter; and
-- equivalent TUI/web controls after the CLI contract is proven.
+- an immutable song-project/version graph, section and stem revision operations,
+  project-level authorisation settings, and equivalent TUI/web controls after
+  the CLI contract is proven.
 
 ## Product goal
 
@@ -41,6 +48,19 @@ annotated lyric sheet and a written style description into **two new,
 complete, enjoyable songs**. Each result should be ready to listen to as a
 finished track and useful as source material for further human production in
 Sunofriend.
+
+Generation is the beginning of an iterative production process, not the final
+operation. The musician must be able to keep, compare, branch, revise and
+replace material without destroying an earlier candidate. A selected sketch
+then moves through separation, editable MIDI reconstruction, human arrangement
+and human vocal recording. Vocal comping happens after the AI-assisted remix
+and arrangement have settled, not before them.
+
+The intended final master may contain only human vocals and user-selected
+MIDI/human-rendered instruments. It is therefore accurate to describe the
+result as **AI-assisted composition and arrangement with no generated audio in
+the final master** when that audit passes. It would be inaccurate to claim
+that no part of the musical composition or arrangement was AI-assisted.
 
 The reference is creative guidance, not a template. A result may be generally
 similar in musical character while changing the structure, melody, chords,
@@ -52,27 +72,66 @@ The first success criterion is deliberately subjective: the project owner
 hears two enjoyable full songs and considers at least one of them good enough
 to continue producing in Sunofriend.
 
-## First-release journey
+## Standing personal-use authorisation
+
+For the owner's private projects, Sunofriend assumes that every imported track
+is authorised for private personal use. That scope is recorded once in the
+song-project manifest and inherited by local operations; the interface should
+not ask the same rights question before every local generation or analysis
+run.
+
+This standing assumption does not grant model-execution authority, publish an
+asset or approve a network transfer. Selecting a cloud/API backend remains a
+separate explicit decision because it sends private audio or text to another
+party and may accept provider terms or incur a charge. That acknowledgement is
+about privacy, provider terms and cost rather than repeating the track-rights
+question.
+
+The implemented `song-generate --execute --confirm-rights` gate predates this
+project-level design. It remains truthful for the current vertical slice until
+a versioned project manifest and migration are implemented.
+
+## Target iterative journey
 
 1. The user selects a full reference song or an excerpt.
-2. The user affirms that they are authorised to process it for private personal
-   use.
-3. The user supplies separate annotated lyrics and a written style description.
-4. The user independently sets reference strength and style-description
+2. Sunofriend imports it into a private song project, records its hash and
+   inherits the standing personal-use authorisation scope.
+3. Sunofriend automatically analyses useful musical traits. The default route
+   does not require the user to configure those traits separately; an advanced
+   review may correct a clearly wrong inference.
+4. The user supplies separate annotated lyrics and a written style description.
+5. The user independently sets reference strength and style-description
    strength.
-5. An agent skill submits the same backend-neutral request through a CLI, TUI
+6. An agent skill submits the same backend-neutral request through a CLI, TUI
    or web interface.
-6. The selected backend generates two complete song alternatives.
-7. Sunofriend retains the songs and their generation receipts for comparison.
-8. If neither result is suitable, the user changes the lyrics, prompt or either
-   strength and generates two complete songs again.
-9. A selected result can enter the existing Sunofriend production workflow,
-   where generated instruments may be reconstructed with MIDI instruments and
-   generated vocals may be replaced with recorded human vocals and vocal
-   comping.
+7. The selected backend generates two complete song alternatives as sibling
+   branches.
+8. The user auditions both and may keep neither, one or both. Every subsequent
+   operation creates a child version rather than overwriting its parent.
+9. The user may regenerate a whole song, revise one section, extend or shorten
+   the arrangement, change a named musical property, or add/remove/replace a
+   stem when the selected backend truthfully supports that operation.
+10. A selected version enters separation and editable MIDI reconstruction.
+    Generated stems may remain temporarily as production guides while the user
+    replaces instruments with MIDI or human performances in GarageBand.
+11. The user records human vocal takes against the settled arrangement and uses
+    vocal comping to replace the generated guide vocal.
+12. Sunofriend exports audio, MIDI, stems and decision/provenance manifests and
+    reports whether any generated audio remains in the final master.
 
-The first release regenerates whole songs. It does not repair or regenerate an
-individual section.
+At every creative stage, the shared operations are: accept or lock; adjust and
+regenerate; branch; compare; revert; and replace with human or MIDI material.
+The correct persistence model is therefore a version graph rather than one
+mutable linear checklist.
+
+## Current implemented vertical slice
+
+The current CLI deliberately implements only steps 1 and 4-8 for whole-song
+generation. If neither candidate is useful, it changes the lyrics, prompt or
+strengths and generates two complete songs again. It does not yet create a
+project graph, inherit a project-level authorisation setting, lock regions,
+repair a section or replace a stem. Those are planned capabilities, not claims
+about the present command.
 
 ## Inputs
 
@@ -184,6 +243,25 @@ the backend makes the data available, the receipt contains:
 Exact regeneration is required when the backend can guarantee it and is
 best-effort otherwise.
 
+### Iterative project record
+
+The target project record retains immutable version nodes and explicit parent
+edges. A version node binds its input hashes, operation, selected backend,
+parameters, generated assets and review status. An edge records why a child
+exists, for example `whole_song_regeneration`, `section_repaint`,
+`arrangement_extension`, `stem_replacement`, `midi_reconstruction` or
+`human_vocal_comp`.
+
+Locks apply to declared sections, time ranges or stems and must never be
+silently ignored. A backend that cannot honour the requested lock is
+ineligible for that operation. The user may compare any siblings or ancestors,
+and deleting a working selection must not erase its retained provenance.
+
+The project record also distinguishes generated source audio from the final
+render. A final "no generated audio remains" result requires evidence that all
+audible generated stems and vocals have been replaced or deliberately excluded;
+MIDI derived from a generated arrangement remains AI-assisted musical evidence.
+
 ## Backend and interface contract
 
 The product contract must not depend on a single model or hosting location.
@@ -218,12 +296,13 @@ On the current RTX 4080 Laptop GPU, a run taking up to about 60 minutes is
 acceptable. Generation time is not a hard product constraint for local,
 private use. Musical usefulness takes priority over realtime output.
 
-## First-release non-goals
+## Current vertical-slice non-goals
 
 - Preserving the reference song's exact form, melody, chords, key or tempo.
 - Directly copying identifiable material from the reference.
 - Asking the user to configure individual similarity dimensions.
-- Regenerating, inpainting or repairing a selected section.
+- Regenerating, inpainting or repairing a selected section in the current CLI;
+  section revision is part of the target iterative workflow.
 - Making the reference duration determine the new song duration.
 - Requiring offline-only execution.
 - Requiring the generation backend itself to return stems or MIDI.
@@ -250,7 +329,19 @@ The first end-to-end demonstration passes when:
 Automated audio validity, provenance and reproducibility checks support this
 decision but cannot replace the listening judgement.
 
+The later iterative-production acceptance demonstration additionally passes
+when the user can branch from a retained candidate, improve at least one weak
+part without losing the parent, reconstruct useful editable musical material,
+record and comp human vocals after the arrangement, and export an auditable
+final master. The first empirical fixture will be an owner-made track containing
+sample initial vocals and music plus separate target annotated lyrics. Private
+audio is not committed to this repository.
+
 ## Implementation questions to answer empirically
+
+The staged protocol, comparison matrix, listening rubric and stop/replan gates
+are defined in
+[`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md).
 
 These are engineering questions, not missing product decisions:
 
@@ -268,3 +359,11 @@ These are engineering questions, not missing product decisions:
   remaining reproducible?
 - What maximum lyric length and generated duration are reliable on local,
   hosted and API backends?
+- Is native reference conditioning materially more useful than a reviewed
+  reference-analysis bridge for downstream Sunofriend production?
+- Which revision unit should be implemented first after whole-song generation:
+  section/time range, arrangement/stem, or both behind capability gates?
+- Can a selected result be separated and transcribed into MIDI that is easier
+  to finish than the owner's initial arrangement?
+- Can the complete downstream process remove all generated audio while
+  retaining the useful AI-assisted musical decisions?

@@ -1,7 +1,8 @@
 # Song-generation provider policy
 
 Status: provider capability registry implemented; ACE-Step registered; TREBLO
-evaluated but not registered for reference-conditioned generation
+evaluated but not registered; MiniMax candidate routes documented for empirical
+evaluation
 
 Last verified: 17 August 2026
 
@@ -53,6 +54,32 @@ the authorised reference and turn them into provider-neutral musical evidence.
 That would be a new, explicit workflow with its own tests; it would not be
 described as native TREBLO reference conditioning.
 
+## MiniMax routes under evaluation
+
+MiniMax currently exposes two materially different routes and Sunofriend must
+not merge their names or capabilities:
+
+- The downloadable **MiniMax Music 3** checkpoint documents complete-song
+  generation from lyrics and a detailed music description. Its published local
+  serving route uses two CUDA GPUs. The released interface does not document a
+  reference-audio input, reference-strength control, repaint operation or LoRA
+  training path. Sunofriend may evaluate it through an explicitly labelled
+  reference-analysis/structured-caption bridge, but that is not native remix.
+- The hosted **`music-cover` / `music-cover-free`** API model accepts reference
+  audio, a target cover-style prompt and optional replacement lyrics. It is a
+  separate model family from API `music-3.0`, and the current API documentation
+  does not expose an independent reference-strength control. It may be tested as
+  an opt-in BYO-key cloud method, but does not yet meet the complete registered
+  operation contract.
+
+An ordinary style LoRA would personalise an existing input route; it would not
+by itself add missing audio conditioning to Music 3. Genuine Music 3 remix
+research would require a reference encoder/conditioning path, a learned
+strength signal and paired training evidence. That research is tracked as an
+option in
+[`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md),
+not presented as a current laptop capability.
+
 ## Bring-your-own-key rules
 
 An optional cloud adapter must:
@@ -94,6 +121,8 @@ and is outside the current scope.
 - [TREBLO developer pricing](https://treblo.com/developers/pricing)
 - [TREBLO terms of service](https://treblo.com/tos)
 - [ACE-Step 1.5 repository](https://github.com/ace-step/ACE-Step-1.5)
+- [MiniMax Music 3 repository](https://github.com/MiniMax-AI/MiniMax-Music3)
+- [MiniMax music API documentation](https://platform.minimax.io/docs/api-reference/music-generation)
 
 Provider behaviour, prices and terms can change. Re-verify them before enabling
 or materially changing an adapter.
