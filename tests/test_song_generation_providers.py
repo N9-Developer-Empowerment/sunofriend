@@ -39,6 +39,11 @@ class SongGenerationProviderTests(unittest.TestCase):
         self.assertFalse(
             ace_step["capabilities"]["native_audio_remix_quality_verified"]
         )
+        self.assertFalse(ace_step["capabilities"]["native_audio_remix_advances"])
+        self.assertIn(
+            "flat_monotonic_vocals",
+            ace_step["capabilities"]["native_audio_remix_human_evaluation"],
+        )
         self.assertEqual(
             registered_provider_ids(NATIVE_AUDIO_REMIX_OPERATION),
             ("ace-step-api",),

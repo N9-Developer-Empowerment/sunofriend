@@ -68,10 +68,17 @@ operation, not a synonym for creative-reference generation.
 Windows RTX 4080 Laptop GPU trials completed two 199-232 second reference-mode
 candidates per request and a two-candidate 237.56-second native-remix request
 with Base plus the 0.6B LM and CPU offload. Execution, requested-checkpoint
-identity, exact lyric transport and audio validity are verified. The native
-pair still awaits the owner's judgement on tuning, actually performed lyric
-coverage, creative value and downstream stem/MIDI usefulness, so its quality
-capability remains false in the registry.
+identity, exact lyric transport and audio validity are verified. The owner
+rejected both native-remix candidates: the voices were in tune but flat and
+talk-sung, while the accompaniment was unmusical and neither result was
+enjoyable or creative. Native remix therefore remains executable but does not
+advance on this fixture; its quality capability is false in the registry.
+
+The next private experiment uses ACE-Step only for bounded roles. Base
+`extract` isolated a vocal track from the original, and Base `complete`
+requested drums, bass, guitar and synth around that context. Those track-level
+outputs are awaiting listening and are not yet a public Sunofriend command or a
+provider-quality claim.
 
 ## MiniMax routes under evaluation
 

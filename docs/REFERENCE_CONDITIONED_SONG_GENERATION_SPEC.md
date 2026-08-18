@@ -1,8 +1,8 @@
 # Reference-conditioned song generation
 
 Status: iterative product goal agreed; reference-conditioned and native-remix
-ACE-Step modes implemented on Windows; native-remix pair awaiting owner
-listening
+ACE-Step modes implemented on Windows; both whole-song ACE approaches rejected
+for the current fixture; track-level preservation experiment active
 
 Discovery completed: 16 August 2026
 
@@ -34,9 +34,12 @@ Implemented on the current feature branch:
 
 Still to validate or implement:
 
-- subjective listening acceptance of the retained RTX 4080 Laptop GPU
-  native-remix pair, including tuning, performed-lyric coverage and usefulness
-  of its drums, bass, synths and other accompaniment;
+- a whole-song method that meets the Suno benchmark: the retained native-remix
+  pair was in tune but rejected for monotonic talk-singing, unmusical
+  accompaniment and lack of enjoyment or creativity;
+- subjective listening acceptance of the first track-level
+  extract-and-complete accompaniment pair before any public track-task command
+  is claimed;
 - the bounded, successive-gate comparison in
   [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;

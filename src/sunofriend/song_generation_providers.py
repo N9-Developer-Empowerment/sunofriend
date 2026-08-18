@@ -91,6 +91,10 @@ def _ace_step_capability() -> dict[str, Any]:
             "native_audio_remix_duration_policy": "source_locked",
             "native_audio_remix_replacement_lyrics": True,
             "native_audio_remix_quality_verified": False,
+            "native_audio_remix_human_evaluation": (
+                "rejected_flat_monotonic_vocals_and_unmusical_accompaniment"
+            ),
+            "native_audio_remix_advances": False,
             "independent_reference_strength": True,
             "independent_style_description_strength": True,
             "candidate_count_per_request": 2,

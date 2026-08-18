@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-18.1"
+INTERFACE_CONTRACT_VERSION = "2026-08-18.2"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -193,6 +193,10 @@ def render_skill_interface_reference() -> str:
         "Native remix uses the reference as editable source audio, accepts",
         "replacement lyrics and locks duration to the source; it does not claim",
         "independent BPM, key, meter or duration overrides. Planning is read-only.",
+        "Its first private pair executed correctly but was rejected for flat,",
+        "talk-sung vocals, unmusical accompaniment and lack of enjoyment; it is",
+        "not a qualified Suno replacement. Track-level extraction/completion is",
+        "the next private experiment and is not yet a public command.",
         "Execution requires both `--execute` and `--confirm-rights`, writes only",
         "to a fresh destination and retains a hash-bound request plus success or",
         "failure receipt. The adapter streams the role-correct audio as multipart",

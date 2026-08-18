@@ -178,10 +178,13 @@ export default function ForAgents() {
             Provider eligibility is capability-based. ACE-Step is registered
             for both creative-reference generation and the distinct native
             cover/remix operation. Native remix uses source-locked duration;
-            its musical quality is not yet verified. TREBLO v3 is visible as
-            an optional proprietary BYO-key cloud provider, but its documented
-            source-audio operation is continuation rather than general
-            reference conditioning. Read the{" "}
+            the first private pair executed correctly but was rejected for
+            monotonic talk-singing, unmusical backing and lack of enjoyment.
+            Track-level extraction/completion is the next private experiment,
+            not a public capability yet. TREBLO v3 is visible as an optional
+            proprietary BYO-key cloud provider, but its documented source-audio
+            operation is continuation rather than general reference
+            conditioning. Read the{" "}
             <a href="https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SONG_GENERATION_PROVIDERS.md">
               song-generation provider policy
             </a>

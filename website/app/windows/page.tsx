@@ -299,8 +299,17 @@ export default function WindowsSetup() {
             Keep production prose in the style description and only concise
             section or performance tags in the lyric file. Exact lyric-text
             transport does not prove that every word was sung. The retained
-            native-remix pair still needs musician review for vocal tuning,
-            lyric coverage, enjoyment and stem/MIDI usefulness.
+            native-remix pair was subsequently rejected by the musician: its
+            vocals were in tune but flat and talk-sung, its accompaniment was
+            unmusical, and neither candidate was enjoyable or creative. Do not
+            interpret successful execution as a qualified Suno replacement.
+          </p>
+          <p className="guide-note">
+            The next private Windows experiment is track-level rather than
+            another whole-mix strength sweep. ACE-Step Base has extracted a
+            vocal-role track and completed two possible drum, bass, guitar and
+            synth accompaniments around it. They still require musician review
+            and are not yet exposed as a public Sunofriend command.
           </p>
         </section>
 

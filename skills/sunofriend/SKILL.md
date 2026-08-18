@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide Sunofriend setup and use for reference-conditioned two-song generation through registered local or self-hosted providers, secret-free inspection of optional BYO-key cloud providers, authorised experimental separation, existing-stem preparation, editable MIDI, listening WAVs, GarageBand handoff, vocal comping, melody review, instruments, key/BPM/tuning/alignment transforms, mashups and Clip reuse. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for comparison and feedback. Use for Sunofriend, AI music generation providers, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Never silently upload audio, incur cloud charges, expose API keys, download music, use unpinned models, write lyrics, edit a DAW GUI, claim human-approved mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-18.1 -->
+<!-- sunofriend-interface-contract: 2026-08-18.2 -->
 
 # Sunofriend
 
@@ -276,6 +276,12 @@ on.
   or start that service implicitly, never claim the command supports an
   unregistered backend, and never select or send a candidate to MIDI
   automatically.
+- The first private native-remix pair was technically valid and in tune but the
+  owner rejected both for flat, monotonic talk-singing, unmusical backing and
+  lack of enjoyment or creativity. Do not present native remix as qualified or
+  automatically run a strength sweep. The current next gate is a private
+  track-level preservation experiment using Base `extract` and `complete`;
+  those tasks are not yet a public CLI claim.
 - Treat that command as the implemented whole-song vertical slice, not the
   complete creative workflow. The agreed destination is an immutable
   song-project version graph: retain both initial candidates, branch instead of

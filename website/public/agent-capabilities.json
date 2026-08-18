@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-18.1",
+  "interface_contract_version": "2026-08-18.2",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -189,7 +189,7 @@
     "rights_check_required": true
   },
   "song_generation": {
-    "status": "ace_step_reference_and_native_remix_modes_executed",
+    "status": "ace_step_whole_song_modes_rejected_track_level_experiment_active",
     "public_command_available": true,
     "provider_inventory_command": "sunofriend song-providers",
     "provider_inventory_is_read_only": true,
@@ -208,7 +208,9 @@
         "replacement_lyrics": true,
         "duration_policy": "source_locked",
         "independent_bpm_key_meter_duration_locks": false,
-        "quality_verified": false
+        "quality_verified": false,
+        "human_evaluation": "rejected_flat_monotonic_talk_singing_unmusical_accompaniment_not_enjoyable",
+        "advances": false
       }
     },
     "execute_suffix": "--execute --confirm-rights",
@@ -228,7 +230,8 @@
         "id": "ace-step-api",
         "type": "open_weights_local_or_self_hosted",
         "reference_conditioned_full_song_registered": true,
-        "native_audio_remix_registered": true
+        "native_audio_remix_registered": true,
+        "native_audio_remix_quality_verified": false
       },
       {
         "id": "treblo-v3-api",

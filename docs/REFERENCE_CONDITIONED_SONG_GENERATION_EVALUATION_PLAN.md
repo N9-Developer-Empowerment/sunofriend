@@ -1,7 +1,7 @@
 # Empirical reference-conditioned song evaluation
 
-Status: ACE-Step joint-generation candidates rejected for vocal tuning; local
-Suno quality benchmark admitted; native ACE-Step cover/remix pair awaiting
+Status: ACE-Step joint generation and native cover/remix rejected musically;
+local Suno benchmark retained; track-level preservation experiment awaiting
 owner listening
 
 Plan agreed: 17 August 2026
@@ -98,16 +98,23 @@ stereo, 48 kHz float WAVs. Request
 `3d5799c637fcc44392faed91852aba8e5a68549e0e28f082cdb75594a2d55205` and
 receipt `b7b83696b338610377b23c1b608162655e43bf6ef0eeea2f44ca7400079417b9`
 retain the exact settings. Candidate hashes begin `5d7dcbd8` and `6a2acc74`.
-They await owner listening for tuning, performed-lyric coverage, creative remix
-value and MIDI-oriented accompaniment quality; transport of the complete lyric
-text does not establish those musical outcomes.
+The owner rejected both. Their vocals were in tune but flat, monotonic and
+talk-sung rather than melodically performed. Neither song was enjoyable or
+creative, and both replaced the tuneful source backing with unmusical
+accompaniment. This is a whole-mix method failure: pitch accuracy and technical
+validity did not rescue phrasing, melody, arrangement or enjoyment. Do not run
+another cover-strength sweep on this fixture.
 
-If neither native-remix candidate passes, the next experiment separates
-responsibilities: retain or generate an instrumental arrangement, create the
-vocal as an independent track, evaluate pitch and lyric delivery against that
-arrangement, and regenerate only the failed role. ACE-Step Base `complete` and
-named `lego` tasks are the first local accompaniment candidates; a correctly
-identified Turbo checkpoint may be a separate vocal-quality challenger.
+The next experiment now separates responsibilities. ACE-Step Base `extract`
+produced one vocal-role track from the original draft, then Base `complete`
+used that exact track as context and requested drums, bass, guitar and synth in
+two accompaniment candidates. No target lyrics were supplied because this gate
+tests preservation and arrangement rather than a finished target song. The
+237.56-second outputs completed in 56.313 seconds. Candidate 01 correlates 0.970
+with the vocal source and may have added too little; candidate 02 correlates
+-0.001 and may have regenerated instead of preserving it. These are waveform
+diagnostics, not quality scores. Both await owner listening before any stem,
+MIDI or separate-vocal experiment advances.
 
 ## Decision to make
 
