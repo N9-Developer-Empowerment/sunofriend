@@ -2,8 +2,8 @@
 
 Status: iterative product goal agreed; reference-conditioned and native-remix
 ACE-Step modes implemented on Windows; all tested ACE-Step full-song and
-track-level routes rejected for the current fixture; the first source-derived
-identity scaffold is rendered and awaiting owner recognition review
+track-level routes rejected for the current fixture; the vocal-derived source
+scaffold was rejected; accompaniment-first analysis is now required
 
 Discovery completed: 16 August 2026
 
@@ -38,10 +38,11 @@ Still to validate or implement:
 - a whole-song method that meets the Suno benchmark: the retained native-remix
   pair was in tune but rejected for monotonic talk-singing, unmusical
   accompaniment and lack of enjoyment or creativity;
-- a reviewed analysis/MIDI-first scaffold containing at least section timing,
-  lead or vocal melody and rhythm/phrasing before another generator is tested.
-  The new `sunofriend source-scaffold` command now builds the automatic,
-  unreviewed control; owner recognition and correction remain outstanding;
+- a reviewed accompaniment-first scaffold containing recognised instrumental
+  motifs, harmonic rhythm, bass movement, groove and section form before
+  another generator is tested. The existing `source-scaffold` command can
+  render supplied melody evidence, but its first vocal-derived private control
+  was rejected and must not be treated as the song's intended melody;
 - the bounded, successive-gate comparison in
   [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;
@@ -83,6 +84,13 @@ musical relationship. That relationship may be a transformed melodic contour
 or motif, rhythmic phrasing or groove, harmonic motion, section-energy shape,
 vocal range/delivery, or a combination. The result should transform rather
 than merely duplicate the source, but novelty is not permission to erase it.
+
+A rough guide vocal is not automatically the carrier of the reference melody.
+When the owner identifies the singing as out of tune or non-definitive, its F0
+must not define source identity. It may still contribute words, approximate
+phrase placement, range, energy and delivery. The accompaniment then supplies
+the musical anchors, and a generator may create a new tuneful vocal melody that
+fits those anchors and the replacement lyrics.
 
 The first success criterion is deliberately subjective: the project owner
 hears two enjoyable full songs and considers at least one of them good enough
@@ -144,10 +152,13 @@ mutable linear checklist.
 
 ## Current implemented vertical slice
 
-The current CLI implements steps 1 and 4-8 for whole-song generation plus a
-pre-generation source-identity gate. `sunofriend vocal-melody` can publish
-reviewable lead-melody evidence, and `sunofriend source-scaffold` combines one
-chosen provenance file with source-measured beat accents. It writes separate
+The current CLI implements steps 1 and 4-8 for whole-song generation plus an
+experimental pre-generation source-identity gate. `sunofriend vocal-melody`
+can publish reviewable evidence when a suitable vocal stem genuinely carries
+the intended line, and `sunofriend source-scaffold` can combine one chosen
+provenance file with source-measured beat accents. The first private use on a
+rough guide vocal failed owner listening and demonstrated that this is not a
+general full-mix or accompaniment-identity solution. It writes separate
 automatic harmony and section diagnostics but never admits harmony to the
 primary recognition MIDI or marks the source recognised. If neither generated
 candidate is useful, the current whole-song route still changes the lyrics,

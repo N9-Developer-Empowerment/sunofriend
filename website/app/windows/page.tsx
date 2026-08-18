@@ -59,8 +59,12 @@ $remixArgs = @(
 )
 & .\\.venv-windows\\Scripts\\sunofriend.exe @remixArgs`;
 
-const scaffoldCommands = `.\\.venv-windows\\Scripts\\sunofriend.exe source-scaffold "C:\\Music\\reference.wav" --melody-provenance "C:\\Music\\lead_vocal-contour-clean.provenance.json" --bpm 123 --out-dir "C:\\Music\\source-scaffold-01"
-.\\.venv-windows\\Scripts\\sunofriend.exe preview "C:\\Music\\source-scaffold-01\\source-identity-scaffold.mid" --out "C:\\Music\\source-scaffold-01\\source-identity-scaffold.wav"`;
+const demucsCommands = `uv venv --python 3.11 .venv-demucs-windows
+uv pip install --link-mode copy --python .venv-demucs-windows\\Scripts\\python.exe torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu128
+uv pip install --link-mode copy --python .venv-demucs-windows\\Scripts\\python.exe demucs==4.0.1 SoundFile==0.13.1
+$env:TORCH_HOME = "C:\\Tools\\models\\demucs"
+$env:PYTORCH_NO_CUDA_MEMORY_CACHING = "1"
+& .\\.venv-demucs-windows\\Scripts\\python.exe -m demucs.separate -n htdemucs_ft --two-stems vocals --float32 -d cuda --shifts 1 --overlap 0.25 --segment 7 -o "C:\\Music\\demucs-review" "C:\\Music\\reference.wav"`;
 
 function CommandBox({ label, value, rows }: { label: string; value: string; rows: number }) {
   return (
@@ -270,7 +274,7 @@ export default function WindowsSetup() {
             <CommandBox label="POWERSHELL · INSTALL AND START ACE-STEP API" value={aceStepCommands} rows={9} />
             <CommandBox label="POWERSHELL · CREATIVE-REFERENCE MODE" value={generationCommands} rows={11} />
             <CommandBox label="POWERSHELL · NATIVE COVER/REMIX MODE" value={remixCommands} rows={11} />
-            <CommandBox label="POWERSHELL · SOURCE-IDENTITY SCAFFOLD" value={scaffoldCommands} rows={6} />
+            <CommandBox label="POWERSHELL · OPTIONAL ISOLATED DEMUCS RESEARCH" value={demucsCommands} rows={10} />
           </div>
           <div className="agent-grid">
             <article className="agent-card">
@@ -341,10 +345,22 @@ export default function WindowsSetup() {
             result retained an audible connection to the original melody or
             rhythm. Turbo also ignores the independent style-strength guidance.
             ACE-Step is therefore executable but rejected as the full-song remix
-            provider for this fixture. Sunofriend now builds an explicitly
-            unreviewed melody-plus-source-accent MIDI scaffold before generation.
-            Automatic harmony stays separate. The next private gate is owner
-            recognition of its rendered audio.
+            provider for this fixture. A later vocal-derived MIDI scaffold was
+            also rejected: the rough singing did not carry the intended melody,
+            so literal F0 became fragmented random notes and detected accents did
+            not form a musical beat. Do not use that scaffold for generation.
+            The corrected private route starts from vocal-suppressed accompaniment
+            and validates the retained instrumental music before any MIDI step.
+          </p>
+          <p className="guide-note">
+            The optional Demucs commands above reproduce one separate research
+            environment; they do not add a supported Windows separator to
+            Sunofriend. The tested RTX 4080 run used PyTorch 2.7.1 CUDA 12.8,
+            Demucs 4.0.1 and the four-model <code>htdemucs_ft</code> ensemble.
+            OneDrive required <code>--link-mode copy</code>, and Demucs required
+            the integer <code>--segment 7</code>. Listen to the source,
+            <code> vocals.wav</code> and <code> no_vocals.wav</code> before
+            analysing motifs, chords, bass, groove or structure.
           </p>
         </section>
 

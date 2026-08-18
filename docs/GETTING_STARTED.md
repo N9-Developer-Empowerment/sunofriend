@@ -61,6 +61,18 @@ instead of crashing the public diagnostic at import time. This is diagnostic
 portability, not Windows separation support. Every released separator profile
 still requires its documented Apple-silicon macOS runtime.
 
+One isolated Windows research experiment used upstream Demucs outside
+Sunofriend's separator command. On the tested RTX 4080 Laptop GPU, a dedicated
+Python 3.11 environment with PyTorch/torchaudio 2.7.1 CUDA 12.8, Demucs 4.0.1
+and SoundFile 0.13.1 completed `htdemucs_ft` two-stem vocal suppression. Keep
+this environment separate from both Sunofriend and ACE-Step. A OneDrive
+checkout required `uv pip --link-mode copy`; the default hardlink attempt
+failed with Windows cloud-file error 396. Demucs 4.0.1 also requires an integer
+`--segment`, so the tested Hybrid Transformer value was `7`, not `7.8`.
+This is a private compatibility observation, not a new supported Sunofriend
+backend or a claim that its estimates are clean stems. Listen to the exact
+source excerpt, `vocals.wav` and `no_vocals.wav` before any MIDI analysis.
+
 The maintained [Windows setup notes](https://sunofriend.com/windows/) record
 the successful uv, audio-tool and SoundFont steps, the exact PowerShell
 environment variables and how to interpret the doctor output. Use them for

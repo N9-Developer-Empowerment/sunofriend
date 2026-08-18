@@ -281,8 +281,11 @@ test("publishes reproducible and bounded native Windows setup notes", async () =
   assert.match(html, /\.venv-windows/);
   assert.match(html, /Basic Pitch 0\.4/);
   assert.match(html, /TensorFlow 2\.14/);
-  assert.match(html, /source-scaffold/);
-  assert.match(html, /Automatic harmony stays separate/);
+  assert.match(html, /OPTIONAL ISOLATED DEMUCS RESEARCH/);
+  assert.match(html, /Demucs 4\.0\.1/);
+  assert.match(html, /--link-mode copy/);
+  assert.match(html, /--segment 7/);
+  assert.match(html, /literal F0 became fragmented random notes/);
   assert.match(html, /SUNOFRIEND_FLUIDSYNTH/);
   assert.match(html, /SUNOFRIEND_SF2/);
   assert.match(html, /SUNOFRIEND_FFMPEG/);
@@ -1091,7 +1094,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-18.5");
+  assert.equal(data.interface_contract_version, "2026-08-18.6");
   assert.equal(data.song_generation.generation_modes.remix.backend_task, "cover");
   assert.equal(data.song_generation.generation_modes.remix.quality_verified, false);
   assert.equal(data.song_generation.generation_modes.remix.advances, false);
@@ -1106,11 +1109,19 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.song_generation.status,
-    "ace_step_rejected_for_full_song_remix_source_scaffold_awaiting_owner_review",
+    "ace_step_and_vocal_scaffold_rejected_accompaniment_separator_awaiting_owner_review",
   );
   assert.equal(
     data.song_generation.source_scaffold_status,
-    "implemented_automatic_unreviewed_awaiting_owner_recognition",
+    "implemented_but_first_private_vocal_derived_control_rejected",
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.status,
+    "technical_separation_complete_awaiting_owner_listening",
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.source_sum_correlation,
+    0.993192,
   );
   assert.deepEqual(data.song_generation.source_scaffold_primary_roles, [
     "lead_melody",

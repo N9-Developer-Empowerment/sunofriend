@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-18.5"
+INTERFACE_CONTRACT_VERSION = "2026-08-18.6"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -175,6 +175,9 @@ def render_skill_interface_reference() -> str:
         "measured from the source. Its primary scaffold contains melody and",
         "source-timed accents. Automatic harmony remains a separate diagnostic",
         "and cannot pass the owner-recognition gate or start generation.",
+        "It is not evidence that a rough guide vocal carries the intended composition;",
+        "when the owner identifies the accompaniment as the musical source, validate a",
+        "vocal-suppressed accompaniment before constructing any identity scaffold.",
         "",
         "`sunofriend source-import` preserves exactly one authorised local",
         "audio asset as immutable original evidence plus canonical PCM24 WAV.",

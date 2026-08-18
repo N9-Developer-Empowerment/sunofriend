@@ -1,8 +1,8 @@
 # Empirical reference-conditioned song evaluation
 
 Status: all tested ACE-Step full-song and track-level routes rejected for the
-current fixture; local Suno benchmark retained; the first automatic
-melody/rhythm scaffold is rendered and awaiting owner recognition review
+current fixture; local Suno benchmark retained; the vocal-derived scaffold was
+rejected; accompaniment-first source analysis is at a separator listening gate
 
 Plan agreed: 17 August 2026
 
@@ -134,31 +134,38 @@ original melody or rhythm. Better surface quality did not make them remixes.
 Neither advances to stems or MIDI, and ACE-Step is rejected as the full-song
 remix provider for this fixture.
 
-The analysis/MIDI-first gate is now in progress. A local ACE extraction of the
-source vocal was used only as an analysis aid. After removing incompatible
-TensorFlow 2.14 packages from the isolated Windows environment, Basic Pitch
-used its intended ONNX model and fused with pYIN without fallback. The retained
-`contour_clean` provenance has 379 monophonic notes spanning MIDI 49-70; its
-automatic report measures 87.1% of evaluated pitch frames within 50 cents of
-the extracted contour. Those figures measure agreement with an imperfect
-automatic stem and do not prove the intended tune.
+The first analysis/MIDI-first gate failed owner listening. It incorrectly
+treated the rough sung pitch as the carrier of the song's intended melody. The
+owner clarified that their scratch singing is deliberately only a guide and is
+not tuneful enough to carry the composition. The intended musical identity is
+in the accompaniment, including its instrumental motifs, harmonic motion,
+bass, groove, section form and energy.
 
-The implemented `sunofriend source-scaffold` command combined that melody with
-471 source-detected beat positions and rendered a primary melody-plus-accent
-control. It also wrote editable MIDI and provisional section/chord evidence.
-The automatic harmony was quarantined from the primary control because its
-median winning chord margin was only 0.006797 and it produced 116 regions over
-the 237.769-second source. The primary scaffold therefore cannot be made worse
-by pretending weak harmony is known. All artifacts remain private,
-`complete_unreviewed`, and hash-bound to the exact source and melody evidence.
+The failure was measurable as well as audible. A local ACE `extract` result
+was treated as if it were a clean vocal stem, then `vocal-melody` emitted 379
+notes. Of those, 219 were shorter than 200 ms and 128 were shorter than 120 ms.
+The reported 87.1% within-50-cent value compared the MIDI with the same derived
+F0 contour; it was not an independent melody-accuracy score. The owner heard
+random notes without form, melody or rhythm, and heard non-musical detected
+accents over the same random notes in the combined control. Both controls are
+rejected. They must not be used for accompaniment generation or presented as
+progress toward source identity.
 
-The immediate gate is owner listening: verify that the melody-only and
-melody-plus-source-accent renders are recognisably this song. If not, correct
-the melody evidence before generation. If recognition passes, subsequent
-experiments may replace or add one bounded accompaniment role around the
-locked scaffold, or test another provider that demonstrably accepts source
-audio. A candidate cannot pass merely by sounding polished; it must retain an
-owner-recognisable melodic or rhythmic relationship.
+The corrected route begins by suppressing the scratch vocal and auditing the
+retained accompaniment before extracting any MIDI. A separate Windows CUDA
+environment using PyTorch 2.7.1+cu128 and Demucs 4.0.1 `htdemucs_ft` processed
+an 18-second source excerpt from 47-65 seconds. It produced float32 `vocals`
+and `no_vocals` controls at 44.1 kHz. Their sum has 0.993192 waveform
+correlation with the exact excerpt and 18.573 dB reconstruction SNR. Those are
+technical preservation checks, not proof of perceptual separation quality.
+
+The immediate gate is owner listening to the exact excerpt, its vocal estimate
+and its vocal-suppressed accompaniment. MIDI, harmony, motif extraction and
+generation remain stopped until the owner confirms that the accompaniment
+keeps the recognisable music while sufficiently reducing the scratch vocal.
+After that, analyse one short accompaniment passage for instrumental motifs,
+harmonic rhythm, bass contour, groove and section role; do not infer source
+identity from vocal F0.
 
 ## Decision to make
 
