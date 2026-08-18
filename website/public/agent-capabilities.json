@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-18.3",
+  "interface_contract_version": "2026-08-18.4",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -189,7 +189,7 @@
     "rights_check_required": true
   },
   "song_generation": {
-    "status": "ace_step_base_routes_rejected_turbo_pair_awaiting_owner_review",
+    "status": "ace_step_rejected_for_full_song_remix_scaffold_preservation_next",
     "public_command_available": true,
     "provider_inventory_command": "sunofriend song-providers",
     "provider_inventory_is_read_only": true,
@@ -209,7 +209,7 @@
         "duration_policy": "source_locked",
         "independent_bpm_key_meter_duration_locks": false,
         "quality_verified": false,
-        "human_evaluation": "rejected_flat_monotonic_talk_singing_unmusical_accompaniment_not_enjoyable",
+        "human_evaluation": "rejected_base_for_flat_monotonic_talk_singing_and_turbo_for_no_source_melody_or_rhythm_connection",
         "advances": false
       }
     },
@@ -218,6 +218,17 @@
     "candidate_count": 2,
     "output": "complete listener-ready mixed tracks",
     "model_selects_duration": true,
+    "input_precedence": "reference_primary_lyrics_and_style_secondary",
+    "nonzero_reference_requires_owner_recognisable_musical_relationship": true,
+    "reference_relationship_examples": [
+      "transformed_melodic_contour_or_motif",
+      "rhythmic_phrasing_or_groove",
+      "harmonic_motion",
+      "section_energy_shape",
+      "vocal_range_or_delivery"
+    ],
+    "zero_reference_is_only_prompt_only_mode": true,
+    "matched_no_reference_counterfactual_required_for_provider_qualification": true,
     "independent_strength_controls": [
       "reference_strength",
       "style_description_strength"
@@ -230,16 +241,21 @@
         "id": "ace-step-api",
         "type": "open_weights_local_or_self_hosted",
         "reference_conditioned_full_song_registered": true,
+        "input_precedence": "reference_primary_lyrics_and_style_secondary",
+        "no_reference_counterfactual_required_for_qualification": true,
         "native_audio_remix_registered": true,
         "native_audio_remix_quality_verified": false,
         "base_track_level_completion_quality_verified": false,
         "base_track_level_human_evaluation": "rejected_out_of_tune_preserved_vocal_or_unrelated_instrumental_without_melody_or_likeness",
         "base_track_level_advances": false,
         "turbo_native_remix_candidates_generated": 2,
-        "turbo_native_remix_human_evaluation": "awaiting_owner_review",
+        "turbo_native_remix_human_evaluation": "rejected_in_tune_and_more_musical_but_no_source_melody_or_rhythm_connection",
+        "turbo_native_remix_advances": false,
         "turbo_reference_strength_effective": true,
         "turbo_style_strength_effective": false,
-        "turbo_style_strength_limitation": "guidance_scale_is_base_only"
+        "turbo_style_strength_limitation": "guidance_scale_is_base_only",
+        "full_song_remix_provider_for_fixture": false,
+        "next_private_gate": "reviewed_audible_melody_rhythm_section_scaffold"
       },
       {
         "id": "treblo-v3-api",

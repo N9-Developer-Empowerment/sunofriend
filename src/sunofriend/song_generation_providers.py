@@ -86,13 +86,17 @@ def _ace_step_capability() -> dict[str, Any]:
             "annotated_lyrics_text_preserved": True,
             "annotated_lyrics_semantics_verified": False,
             "reference_audio_conditioning": True,
+            "input_precedence": "reference_primary_lyrics_and_style_secondary",
+            "nonzero_reference_requires_audible_source_relationship": True,
+            "no_reference_counterfactual_required_for_qualification": True,
             "native_audio_remix": True,
             "native_audio_remix_backend_task": "cover",
             "native_audio_remix_duration_policy": "source_locked",
             "native_audio_remix_replacement_lyrics": True,
             "native_audio_remix_quality_verified": False,
             "native_audio_remix_human_evaluation": (
-                "rejected_flat_monotonic_vocals_and_unmusical_accompaniment"
+                "rejected_base_for_flat_monotonic_vocals_and_unmusical_"
+                "accompaniment_then_turbo_for_no_source_melody_or_rhythm_connection"
             ),
             "native_audio_remix_advances": False,
             "independent_reference_strength": True,

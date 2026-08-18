@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide Sunofriend setup and use for reference-conditioned two-song generation through registered local or self-hosted providers, secret-free inspection of optional BYO-key cloud providers, authorised experimental separation, existing-stem preparation, editable MIDI, listening WAVs, GarageBand handoff, vocal comping, melody review, instruments, key/BPM/tuning/alignment transforms, mashups and Clip reuse. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for comparison and feedback. Use for Sunofriend, AI music generation providers, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Never silently upload audio, incur cloud charges, expose API keys, download music, use unpinned models, write lyrics, edit a DAW GUI, claim human-approved mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-18.3 -->
+<!-- sunofriend-interface-contract: 2026-08-18.4 -->
 
 # Sunofriend
 
@@ -262,8 +262,13 @@ on.
   stays `not_reviewed` until the musician checks it.
 - `song-generate` plans a new full-song request from one authorised reference,
   a separate UTF-8 annotated lyric sheet and descriptive style text. Keep
-  reference strength and style-description strength independent. A normal run
-  requests two complete candidates and lets the model determine duration. The
+  reference strength and style-description strength independent, but treat the
+  original track as the primary musical input: lyrics supply words and style
+  modifies production without erasing source identity. At any non-zero
+  reference strength, reject a result with no owner-recognisable melodic,
+  rhythmic, harmonic, structural or performance relationship to the source.
+  Zero is the only prompt-only mode. A normal run requests two complete
+  candidates and lets the model determine duration. The
   default is a read-only JSON plan; require both `--execute` and
   `--confirm-rights` before contacting a configured backend. Default
   `--generation-mode reference` maps to ACE-Step `text2music`, with optional
@@ -283,10 +288,14 @@ on.
   preservation experiment using `extract` and `complete` also failed: one
   output retained the out-of-tune draft vocal and the other lost the input's
   melody and likeness. Neither advances to stems or MIDI, and those tasks are
-  not a public CLI claim. One intentionally configured Turbo native-remix pair
-  now awaits owner review as the final bounded ACE quality check for this
-  fixture. It can test audio quality and reference similarity, but not the
-  independent style-strength control because Turbo ignores guidance scale.
+  not a public CLI claim. A final intentional Turbo pair improved vocal tuning
+  and backing musicality but also failed: neither candidate retained an audible
+  connection to the source melody or rhythm. Turbo additionally cannot honour
+  independent style strength because it ignores guidance scale. ACE-Step is
+  executable but rejected as the full-song remix provider for this fixture.
+  Do not run more ACE candidates or advance any to stems/MIDI. The next private
+  gate is a reviewed, audible melody/rhythm/section scaffold before bounded
+  role generation or evaluation of another source-audio provider.
 - Treat that command as the implemented whole-song vertical slice, not the
   complete creative workflow. The agreed destination is an immutable
   song-project version graph: retain both initial candidates, branch instead of

@@ -40,8 +40,17 @@ class SongGenerationProviderTests(unittest.TestCase):
             ace_step["capabilities"]["native_audio_remix_quality_verified"]
         )
         self.assertFalse(ace_step["capabilities"]["native_audio_remix_advances"])
+        self.assertEqual(
+            ace_step["capabilities"]["input_precedence"],
+            "reference_primary_lyrics_and_style_secondary",
+        )
+        self.assertTrue(
+            ace_step["capabilities"][
+                "no_reference_counterfactual_required_for_qualification"
+            ]
+        )
         self.assertIn(
-            "flat_monotonic_vocals",
+            "no_source_melody_or_rhythm_connection",
             ace_step["capabilities"]["native_audio_remix_human_evaluation"],
         )
         self.assertEqual(

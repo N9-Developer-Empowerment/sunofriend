@@ -1,8 +1,8 @@
 # Reference-conditioned song generation
 
 Status: iterative product goal agreed; reference-conditioned and native-remix
-ACE-Step modes implemented on Windows; whole-song and track-level ACE Base
-approaches rejected for the current fixture; final Turbo pair awaiting review
+ACE-Step modes implemented on Windows; all tested ACE-Step full-song and
+track-level routes rejected for the current fixture; scaffold-first route next
 
 Discovery completed: 16 August 2026
 
@@ -37,10 +37,10 @@ Still to validate or implement:
 - a whole-song method that meets the Suno benchmark: the retained native-remix
   pair was in tune but rejected for monotonic talk-singing, unmusical
   accompaniment and lack of enjoyment or creativity;
-- owner listening review of one intentionally configured Turbo native-remix
-  pair, the last bounded ACE model-quality check; it produced two valid audio
-  candidates, but Turbo cannot honour the independent style-strength control
-  because ACE documents guidance scale as Base-only;
+- a reviewed analysis/MIDI-first scaffold containing at least section timing,
+  lead or vocal melody and rhythm/phrasing before another generator is tested;
+  the final Turbo pair improved tuning and backing musicality but lost the
+  original melody and rhythm, so it was rejected as a remix;
 - the bounded, successive-gate comparison in
   [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;
@@ -55,9 +55,11 @@ Still to validate or implement:
 
 Sunofriend should turn one authorised reference recording, a separately
 annotated lyric sheet and a written style description into **two new,
-complete, enjoyable songs**. Each result should be ready to listen to as a
-finished track and useful as source material for further human production in
-Sunofriend.
+complete, enjoyable remixes of that recording**. The original track is the
+primary musical input. Lyrics supply or replace words, and style modifies the
+production and performance; neither may displace the source's musical identity.
+Each result should be ready to listen to as a finished track and useful as
+source material for further human production in Sunofriend.
 
 Generation is the beginning of an iterative production process, not the final
 operation. The musician must be able to keep, compare, branch, revise and
@@ -72,11 +74,14 @@ result as **AI-assisted composition and arrangement with no generated audio in
 the final master** when that audit passes. It would be inaccurate to claim
 that no part of the musical composition or arrangement was AI-assisted.
 
-The reference is creative guidance, not a template. A result may be generally
-similar in musical character while changing the structure, melody, chords,
-tempo, key, rhythm, instrumentation and vocal phrasing. The generator should
-infer useful high-level traits automatically and must not deliberately copy an
-identifiable melody, riff, lyric or arrangement passage from the reference.
+The reference is not optional inspiration or merely another prompt. It is the
+source composition being transformed. A result may change structure, melody,
+chords, tempo, key, rhythm, instrumentation and vocal phrasing, but at every
+non-zero reference strength the owner must still recognise a non-accidental
+musical relationship. That relationship may be a transformed melodic contour
+or motif, rhythmic phrasing or groove, harmonic motion, section-energy shape,
+vocal range/delivery, or a combination. The result should transform rather
+than merely duplicate the source, but novelty is not permission to erase it.
 
 The first success criterion is deliberately subjective: the project owner
 hears two enjoyable full songs and considers at least one of them good enough
@@ -151,10 +156,13 @@ about the present command.
 
 - The normal input is a complete reference song.
 - An excerpt is also valid.
+- It is the primary musical input; lyrics and style are subordinate controls.
 - Reference duration does not determine output duration.
 - The model automatically infers which abstract characteristics are useful.
 - The user is not asked to select separate reference dimensions such as key,
   groove, range, energy or instrumentation.
+- At non-zero reference strength, a candidate fails if the owner cannot hear
+  any musical connection to the input.
 
 ### Annotated lyrics
 
@@ -204,9 +212,11 @@ proper name.
 The request has two independent controls:
 
 - **Reference strength** controls how strongly the output is influenced by the
-  reference recording's automatically inferred, generalised musical traits.
+  primary reference recording's musical identity. A non-zero value may vary
+  closeness but must not collapse to an unrelated prompt-only song; zero is the
+  only explicit no-reference mode.
 - **Style-description strength** controls how strongly the output follows the
-  written style description.
+  written style description while the reference remains primary.
 
 Neither control grants permission to copy material. Their ranges and exact
 backend mappings must be calibrated empirically rather than pretending that
@@ -216,9 +226,10 @@ different models expose identical scales.
 
 The generator should:
 
-- create a new song rather than preserve the reference composition;
-- use some automatically inferred reference characteristics as a starting
-  point;
+- create a transformed arrangement/remix rather than an unrelated song or a
+  simple duplicate of the reference;
+- preserve an owner-recognisable relationship to the primary reference through
+  transformed melodic, rhythmic, harmonic, structural or performance anchors;
 - follow the annotated lyrics and production cues;
 - choose an appropriate song structure, tempo and duration;
 - add an intro, breaks, instrumental passages or an outro when musically useful;
@@ -300,8 +311,10 @@ permanent priority in the product design.
 Interchangeability is capability-gated. A provider may be documented without
 being registered for this operation. Registration requires genuine support for
 the authorised reference audio, annotated lyrics, two independent strength
-controls and two retained candidates; Sunofriend must not silently discard an
-input or simulate support with an unrelated endpoint.
+controls and two retained candidates. Qualification additionally requires
+evidence that the reference causes an audible, owner-recognisable musical
+difference. Sunofriend must not silently discard an input, treat it as weaker
+than lyrics/style or simulate support with an unrelated endpoint.
 
 Cloud providers are optional and bring-your-own-key. They require explicit
 selection plus terms, privacy and possible-cost acknowledgement before any
@@ -352,10 +365,13 @@ The first end-to-end demonstration passes when:
 3. a descriptive style prompt is supplied;
 4. reference strength and style-description strength can be changed
    independently and are recorded accurately;
-5. the system generates two distinct, complete, listenable songs;
-6. generated lead vocals are acceptably in tune and deliver the supplied words;
-7. the user subjectively considers the results enjoyable; and
-8. at least one result is good enough to continue through Sunofriend's
+5. at non-zero reference strength, the owner hears a recognisable musical
+   relationship to the original in each candidate, and a controlled
+   no-reference comparison demonstrates that the original changes the music;
+6. the system generates two distinct, complete, listenable remixes;
+7. generated lead vocals are acceptably in tune and deliver the supplied words;
+8. the user subjectively considers the results enjoyable; and
+9. at least one result is good enough to continue through Sunofriend's
    separation, MIDI reconstruction and human-vocal production workflow.
 
 Automated audio validity, provenance and reproducibility checks support this

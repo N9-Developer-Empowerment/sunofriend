@@ -1,8 +1,8 @@
 # Empirical reference-conditioned song evaluation
 
-Status: ACE-Step Base joint generation, native cover/remix and track-level
-completion rejected musically; local Suno benchmark retained; intentional
-Turbo reference-remix pair awaiting owner review
+Status: all tested ACE-Step full-song and track-level routes rejected for the
+current fixture; local Suno benchmark retained; explicit melody/rhythm scaffold
+preservation is the next empirical gate
 
 Plan agreed: 17 August 2026
 
@@ -120,19 +120,28 @@ related melody, likeness or musical connection to the input. Neither advances
 to stems or MIDI. Do not run another Base `complete` or `lego` attempt on this
 fixture.
 
-One deliberately configured Turbo native-remix pair is the final bounded ACE
+One deliberately configured Turbo native-remix pair was the final bounded ACE
 model-quality check. It reports `acestep-v15-turbo`, the hardware-supported
 `acestep-5Hz-lm-0.6B`, eight Turbo steps, native reference strength `0.2` and
 two technically valid 237.76-second outputs in 41.219 seconds. Candidate hashes
 begin `13cc46cf` and `8014f1e3`. An attempted 1.7B planner start produced no
 audio because ACE detects 11.99 GB VRAM and exposes only 0.6B at that tier.
 Turbo has no classifier-free guidance, so the requested style strength `0.8`
-is recorded but its `guidance_scale` mapping is ineffective; this pair tests
-audio quality and reference similarity, not both required product controls.
-If it also fails the owner's enjoyment, melody, lyric, reference-identity or
-downstream-usefulness gates, ACE-Step is rejected as the full-song remix
-provider for this fixture and work moves to a different provider or an
-analysis/MIDI-first route.
+is recorded but its `guidance_scale` mapping is ineffective. The owner found
+both voices in tune and both accompaniments more musical than the Base results,
+but rejected both because neither preserved an audible connection to the
+original melody or rhythm. Better surface quality did not make them remixes.
+Neither advances to stems or MIDI, and ACE-Step is rejected as the full-song
+remix provider for this fixture.
+
+The next empirical gate is analysis/MIDI-first. Extract a canonical, reviewed
+section map, vocal or lead melody, rhythm/phrasing timeline, chord evidence and
+tempo-relative event grid from the authorised reference. Render that scaffold
+as an audible control and verify that the owner recognises the song before any
+generative model runs. Subsequent experiments may replace or add one bounded
+role around the locked scaffold, or test another provider that demonstrably
+accepts source audio. A candidate cannot pass merely by sounding polished; it
+must retain an owner-recognisable melodic or rhythmic relationship.
 
 ## Decision to make
 
@@ -269,6 +278,10 @@ No model generation occurs at this gate.
   candidate labels so provider reputation does not dominate the first review.
 - Treat BPM, key and duration as model-selected unless a particular experiment
   explicitly requires a musical lock.
+- Apply a hard source-identity gate before general quality scoring: with
+  non-zero reference strength, the owner must hear at least one non-accidental
+  melodic, rhythmic, harmonic, structural or performance relationship to the
+  original. Lyrics and style cannot substitute for that relationship.
 - Advance only methods with at least one candidate worth further production.
 
 ### Gate 3 — independent strength calibration
@@ -277,6 +290,12 @@ For the shortlisted native-reference methods, vary one public control at a time
 around the centre while holding lyrics, the other control and all possible
 settings fixed. Begin with low/centre/high values (`0.25`, `0.5`, `0.75`) and
 stop early if the control is ineffective, reverses meaning or damages quality.
+
+Include a zero-reference counterfactual with the same lyrics, style, seed and
+other available settings. The owner should be able to distinguish the
+reference-conditioned result through musical evidence, not filenames or model
+metadata. If the non-zero result is no more connected to the source than the
+zero-reference control, the backend ignored or failed to use its primary input.
 
 The question is whether increasing reference strength produces a useful,
 generalised increase in reference influence without direct copying, and whether
@@ -328,7 +347,9 @@ with a short reason, on:
 - lyric accuracy, intelligibility and annotation/section behaviour;
 - vocal tuning against the accompaniment, with out-of-tune lead vocals treated
   as a rejection rather than an acceptable guide-track defect;
-- useful abstract influence from the reference;
+- an owner-recognisable musical relationship to the primary reference,
+  identifying the heard melodic, rhythmic, harmonic, structural or performance
+  anchor rather than awarding credit for generic genre similarity;
 - novelty and absence of concerning direct copying;
 - adherence to the written style brief;
 - arrangement and full-song coherence;
@@ -345,8 +366,9 @@ A method advances from Gate 2 when at least one of its two candidates scores at
 least 3 for both enjoyment and expected downstream usefulness and raises no
 copying or technical-integrity concern. For vocal songs, an out-of-tune lead or
 material lyric omission is an independent stop condition even if the numeric
-threshold is otherwise met. The threshold is a triage rule, not a claim of
-scientific model ranking.
+threshold is otherwise met. No recognisable source relationship at non-zero
+reference strength is also an independent stop condition. The threshold is a
+triage rule, not a claim of scientific model ranking.
 
 ## Experiment discipline and receipts
 
@@ -368,6 +390,8 @@ scientific model ranking.
 Stop the affected route, retain evidence and replan when:
 
 - a backend would ignore the reference, supplied lyrics or a requested lock;
+- a non-zero reference run is not musically distinguishable from a matched
+  no-reference control or has no owner-recognisable source relationship;
 - the required cloud acknowledgement has not been given;
 - a local runtime cannot complete its smoke test within safe memory/thermal
   bounds;

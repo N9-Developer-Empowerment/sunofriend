@@ -1086,13 +1086,22 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-18.3");
+  assert.equal(data.interface_contract_version, "2026-08-18.4");
   assert.equal(data.song_generation.generation_modes.remix.backend_task, "cover");
   assert.equal(data.song_generation.generation_modes.remix.quality_verified, false);
   assert.equal(data.song_generation.generation_modes.remix.advances, false);
   assert.equal(
+    data.song_generation.input_precedence,
+    "reference_primary_lyrics_and_style_secondary",
+  );
+  assert.equal(
+    data.song_generation
+      .matched_no_reference_counterfactual_required_for_provider_qualification,
+    true,
+  );
+  assert.equal(
     data.song_generation.status,
-    "ace_step_base_routes_rejected_turbo_pair_awaiting_owner_review",
+    "ace_step_rejected_for_full_song_remix_scaffold_preservation_next",
   );
   assert.equal(
     data.song_generation.evaluated_providers[0]
@@ -1102,7 +1111,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(
     data.song_generation.evaluated_providers[0]
       .turbo_native_remix_human_evaluation,
-    "awaiting_owner_review",
+    "rejected_in_tune_and_more_musical_but_no_source_melody_or_rhythm_connection",
   );
   assert.equal(
     data.song_generation.evaluated_providers[0].turbo_style_strength_effective,

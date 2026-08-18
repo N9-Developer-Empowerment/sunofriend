@@ -80,12 +80,20 @@ requested drums, bass, guitar and synth around that context. Those track-level
 outputs also failed: one retained the original out-of-tune vocal and the other
 was an unrelated instrumental with no audible melody or likeness from the
 input. Neither advances to stems or MIDI, and track tasks remain outside the
-public Sunofriend command surface. One intentional Turbo native-remix pair now
-awaits owner review as the final bounded ACE quality check. It used the
+public Sunofriend command surface. One intentional Turbo native-remix pair was
+the final bounded ACE quality check. It used the
 hardware-supported 0.6B planner and produced two technically valid outputs,
 but cannot validate the independent style-strength requirement because Turbo
-does not use classifier-free guidance. If neither candidate passes, evaluate a
-different provider or an analysis/MIDI-first route.
+does not use classifier-free guidance. The owner found both vocals in tune and
+both backings more musical than Base, but rejected both because neither retained
+an audible connection to the source melody or rhythm. ACE-Step is therefore
+executable but rejected as the full-song remix provider for this fixture.
+
+The next gate is an analysis/MIDI-first route: extract and review the melody,
+rhythm/phrasing and section timing as an audible scaffold before generation,
+then add or replace one bounded role without regenerating the scaffold. A
+different provider may also be evaluated if it demonstrably consumes source
+audio; technical support alone does not qualify it.
 
 ## MiniMax routes under evaluation
 

@@ -296,6 +296,14 @@ export default function WindowsSetup() {
             and receipt files to a fresh output folder.
           </p>
           <p className="guide-note">
+            The original track is the primary musical input. Lyrics supply the
+            words and style changes production; neither is allowed to erase the
+            source identity. At non-zero reference strength, a result with no
+            recognisable melodic, rhythmic, harmonic, structural or performance
+            connection fails as a remix. Provider qualification also requires a
+            matched no-reference comparison to prove the upload changed the music.
+          </p>
+          <p className="guide-note">
             Keep production prose in the style description and only concise
             section or performance tags in the lyric file. Exact lyric-text
             transport does not prove that every word was sung. The retained
@@ -309,12 +317,13 @@ export default function WindowsSetup() {
             completion retained the original out-of-tune vocal; the other was
             an unrelated instrumental with no audible melody or likeness from
             the input. Neither advances to stems or MIDI, and track tasks are
-            not exposed as a public Sunofriend command. One intentionally
-            configured Turbo native-remix pair now awaits musician review as
-            the final ACE quality check for this fixture. Turbo can test audio
-            quality and reference similarity here, but it cannot validate the
-            independent style-strength control because it ignores guidance
-            scale.
+            not exposed as a public Sunofriend command. A final intentional
+            Turbo pair improved vocal tuning and backing musicality, but neither
+            result retained an audible connection to the original melody or
+            rhythm. Turbo also ignores the independent style-strength guidance.
+            ACE-Step is therefore executable but rejected as the full-song remix
+            provider for this fixture. The next private gate is an audible,
+            reviewed melody/rhythm/section scaffold before generation.
           </p>
         </section>
 
