@@ -74,11 +74,18 @@ talk-sung, while the accompaniment was unmusical and neither result was
 enjoyable or creative. Native remix therefore remains executable but does not
 advance on this fixture; its quality capability is false in the registry.
 
-The next private experiment uses ACE-Step only for bounded roles. Base
+The next private experiment used ACE-Step only for bounded roles. Base
 `extract` isolated a vocal track from the original, and Base `complete`
 requested drums, bass, guitar and synth around that context. Those track-level
-outputs are awaiting listening and are not yet a public Sunofriend command or a
-provider-quality claim.
+outputs also failed: one retained the original out-of-tune vocal and the other
+was an unrelated instrumental with no audible melody or likeness from the
+input. Neither advances to stems or MIDI, and track tasks remain outside the
+public Sunofriend command surface. One intentional Turbo native-remix pair now
+awaits owner review as the final bounded ACE quality check. It used the
+hardware-supported 0.6B planner and produced two technically valid outputs,
+but cannot validate the independent style-strength requirement because Turbo
+does not use classifier-free guidance. If neither candidate passes, evaluate a
+different provider or an analysis/MIDI-first route.
 
 ## MiniMax routes under evaluation
 

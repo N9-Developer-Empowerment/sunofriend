@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-18.2"
+INTERFACE_CONTRACT_VERSION = "2026-08-18.3"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -195,8 +195,13 @@ def render_skill_interface_reference() -> str:
         "independent BPM, key, meter or duration overrides. Planning is read-only.",
         "Its first private pair executed correctly but was rejected for flat,",
         "talk-sung vocals, unmusical accompaniment and lack of enjoyment; it is",
-        "not a qualified Suno replacement. Track-level extraction/completion is",
-        "the next private experiment and is not yet a public command.",
+        "not a qualified Suno replacement. A Base track-level extraction and",
+        "completion experiment also failed: one result retained the out-of-tune",
+        "draft vocal and the other lost the input's melody and likeness. Neither",
+        "advances to stems or MIDI, and track tasks are not a public command.",
+        "One intentional Turbo native-remix pair now awaits owner review as the",
+        "final bounded ACE check; Turbo cannot validate style strength because",
+        "it ignores guidance scale.",
         "Execution requires both `--execute` and `--confirm-rights`, writes only",
         "to a fresh destination and retains a hash-bound request plus success or",
         "failure receipt. The adapter streams the role-correct audio as multipart",

@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-18.2",
+  "interface_contract_version": "2026-08-18.3",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -189,7 +189,7 @@
     "rights_check_required": true
   },
   "song_generation": {
-    "status": "ace_step_whole_song_modes_rejected_track_level_experiment_active",
+    "status": "ace_step_base_routes_rejected_turbo_pair_awaiting_owner_review",
     "public_command_available": true,
     "provider_inventory_command": "sunofriend song-providers",
     "provider_inventory_is_read_only": true,
@@ -231,7 +231,15 @@
         "type": "open_weights_local_or_self_hosted",
         "reference_conditioned_full_song_registered": true,
         "native_audio_remix_registered": true,
-        "native_audio_remix_quality_verified": false
+        "native_audio_remix_quality_verified": false,
+        "base_track_level_completion_quality_verified": false,
+        "base_track_level_human_evaluation": "rejected_out_of_tune_preserved_vocal_or_unrelated_instrumental_without_melody_or_likeness",
+        "base_track_level_advances": false,
+        "turbo_native_remix_candidates_generated": 2,
+        "turbo_native_remix_human_evaluation": "awaiting_owner_review",
+        "turbo_reference_strength_effective": true,
+        "turbo_style_strength_effective": false,
+        "turbo_style_strength_limitation": "guidance_scale_is_base_only"
       },
       {
         "id": "treblo-v3-api",

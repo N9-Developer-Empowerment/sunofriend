@@ -305,11 +305,16 @@ export default function WindowsSetup() {
             interpret successful execution as a qualified Suno replacement.
           </p>
           <p className="guide-note">
-            The next private Windows experiment is track-level rather than
-            another whole-mix strength sweep. ACE-Step Base has extracted a
-            vocal-role track and completed two possible drum, bass, guitar and
-            synth accompaniments around it. They still require musician review
-            and are not yet exposed as a public Sunofriend command.
+            The bounded track-level experiment also failed. One ACE-Step Base
+            completion retained the original out-of-tune vocal; the other was
+            an unrelated instrumental with no audible melody or likeness from
+            the input. Neither advances to stems or MIDI, and track tasks are
+            not exposed as a public Sunofriend command. One intentionally
+            configured Turbo native-remix pair now awaits musician review as
+            the final ACE quality check for this fixture. Turbo can test audio
+            quality and reference similarity here, but it cannot validate the
+            independent style-strength control because it ignores guidance
+            scale.
           </p>
         </section>
 

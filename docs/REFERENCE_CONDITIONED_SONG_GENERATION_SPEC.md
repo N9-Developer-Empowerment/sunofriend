@@ -1,8 +1,8 @@
 # Reference-conditioned song generation
 
 Status: iterative product goal agreed; reference-conditioned and native-remix
-ACE-Step modes implemented on Windows; both whole-song ACE approaches rejected
-for the current fixture; track-level preservation experiment active
+ACE-Step modes implemented on Windows; whole-song and track-level ACE Base
+approaches rejected for the current fixture; final Turbo pair awaiting review
 
 Discovery completed: 16 August 2026
 
@@ -37,9 +37,10 @@ Still to validate or implement:
 - a whole-song method that meets the Suno benchmark: the retained native-remix
   pair was in tune but rejected for monotonic talk-singing, unmusical
   accompaniment and lack of enjoyment or creativity;
-- subjective listening acceptance of the first track-level
-  extract-and-complete accompaniment pair before any public track-task command
-  is claimed;
+- owner listening review of one intentionally configured Turbo native-remix
+  pair, the last bounded ACE model-quality check; it produced two valid audio
+  candidates, but Turbo cannot honour the independent style-strength control
+  because ACE documents guidance scale as Base-only;
 - the bounded, successive-gate comparison in
   [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;

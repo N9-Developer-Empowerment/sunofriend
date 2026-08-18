@@ -1,8 +1,8 @@
 # Empirical reference-conditioned song evaluation
 
-Status: ACE-Step joint generation and native cover/remix rejected musically;
-local Suno benchmark retained; track-level preservation experiment awaiting
-owner listening
+Status: ACE-Step Base joint generation, native cover/remix and track-level
+completion rejected musically; local Suno benchmark retained; intentional
+Turbo reference-remix pair awaiting owner review
 
 Plan agreed: 17 August 2026
 
@@ -105,7 +105,7 @@ accompaniment. This is a whole-mix method failure: pitch accuracy and technical
 validity did not rescue phrasing, melody, arrangement or enjoyment. Do not run
 another cover-strength sweep on this fixture.
 
-The next experiment now separates responsibilities. ACE-Step Base `extract`
+The next experiment separated responsibilities. ACE-Step Base `extract`
 produced one vocal-role track from the original draft, then Base `complete`
 used that exact track as context and requested drums, bass, guitar and synth in
 two accompaniment candidates. No target lyrics were supplied because this gate
@@ -113,8 +113,26 @@ tests preservation and arrangement rather than a finished target song. The
 237.56-second outputs completed in 56.313 seconds. Candidate 01 correlates 0.970
 with the vocal source and may have added too little; candidate 02 correlates
 -0.001 and may have regenerated instead of preserving it. These are waveform
-diagnostics, not quality scores. Both await owner listening before any stem,
-MIDI or separate-vocal experiment advances.
+diagnostics, not quality scores. The owner rejected both. Candidate 01 retained
+the out-of-tune draft vocal and was unusable despite its high correlation.
+Candidate 02 behaved like an unrelated instrumental: the owner heard no
+related melody, likeness or musical connection to the input. Neither advances
+to stems or MIDI. Do not run another Base `complete` or `lego` attempt on this
+fixture.
+
+One deliberately configured Turbo native-remix pair is the final bounded ACE
+model-quality check. It reports `acestep-v15-turbo`, the hardware-supported
+`acestep-5Hz-lm-0.6B`, eight Turbo steps, native reference strength `0.2` and
+two technically valid 237.76-second outputs in 41.219 seconds. Candidate hashes
+begin `13cc46cf` and `8014f1e3`. An attempted 1.7B planner start produced no
+audio because ACE detects 11.99 GB VRAM and exposes only 0.6B at that tier.
+Turbo has no classifier-free guidance, so the requested style strength `0.8`
+is recorded but its `guidance_scale` mapping is ineffective; this pair tests
+audio quality and reference similarity, not both required product controls.
+If it also fails the owner's enjoyment, melody, lyric, reference-identity or
+downstream-usefulness gates, ACE-Step is rejected as the full-song remix
+provider for this fixture and work moves to a different provider or an
+analysis/MIDI-first route.
 
 ## Decision to make
 
