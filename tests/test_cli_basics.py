@@ -12,6 +12,25 @@ from sunofriend.cli import build_parser, main
 
 
 class CliBasicsTests(unittest.TestCase):
+    def test_source_scaffold_requires_melody_evidence_and_working_tempo(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "source-scaffold",
+                "reference.wav",
+                "--melody-provenance",
+                "lead.provenance.json",
+                "--bpm",
+                "123",
+                "--out-dir",
+                "scaffold",
+            ]
+        )
+
+        self.assertEqual(args.source, "reference.wav")
+        self.assertEqual(args.melody_provenance, "lead.provenance.json")
+        self.assertEqual(args.bpm, 123.0)
+        self.assertEqual(args.out_dir, "scaffold")
+
     def test_version_uses_the_package_version(self) -> None:
         stdout = io.StringIO()
         with redirect_stdout(stdout), self.assertRaises(SystemExit) as raised:

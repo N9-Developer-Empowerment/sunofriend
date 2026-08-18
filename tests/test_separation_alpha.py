@@ -77,11 +77,15 @@ class SeparationAlphaTests(unittest.TestCase):
     def test_default_profile_is_public_data_root_not_private_work_evidence(
         self,
     ) -> None:
-        with patch.dict("os.environ", {}, clear=True):
+        home = Path.home()
+        with patch.dict("os.environ", {"USERPROFILE": str(home)}, clear=True):
             profile = resolve_profile(root="/repo")
 
         self.assertEqual(profile.repository_root, Path("/repo").absolute())
-        self.assertIn(".local/share/sunofriend/separation", str(profile.model_root))
+        self.assertEqual(
+            profile.model_root.parent,
+            (home / ".local/share/sunofriend/separation").absolute(),
+        )
         self.assertNotIn("separation-bakeoff", str(profile.model_root))
         self.assertEqual(profile.runtime_python.name, "python")
 

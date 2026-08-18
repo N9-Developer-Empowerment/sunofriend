@@ -272,12 +272,17 @@ test("publishes reproducible and bounded native Windows setup notes", async () =
   const html = await response.text();
 
   assert.match(html, /NATIVE WINDOWS TRIAL NOTES/);
-  assert.match(html, /PARTIALLY VERIFIED · 16 AUGUST 2026/);
+  assert.match(html, /PARTIALLY VERIFIED · 18 AUGUST 2026/);
   assert.match(html, /Windows 11 x64/);
-  assert.match(html, /Sunofriend 0\.4\.0 source at commit/);
+  assert.match(html, /Sunofriend 0\.4\.0 source/);
+  assert.match(html, /current Windows feature branch/);
   assert.match(html, /95ca8cf/);
   assert.match(html, /uv python install 3\.11/);
   assert.match(html, /\.venv-windows/);
+  assert.match(html, /Basic Pitch 0\.4/);
+  assert.match(html, /TensorFlow 2\.14/);
+  assert.match(html, /source-scaffold/);
+  assert.match(html, /Automatic harmony stays separate/);
   assert.match(html, /SUNOFRIEND_FLUIDSYNTH/);
   assert.match(html, /SUNOFRIEND_SF2/);
   assert.match(html, /SUNOFRIEND_FFMPEG/);
@@ -1086,7 +1091,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-18.4");
+  assert.equal(data.interface_contract_version, "2026-08-18.5");
   assert.equal(data.song_generation.generation_modes.remix.backend_task, "cover");
   assert.equal(data.song_generation.generation_modes.remix.quality_verified, false);
   assert.equal(data.song_generation.generation_modes.remix.advances, false);
@@ -1101,8 +1106,16 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.song_generation.status,
-    "ace_step_rejected_for_full_song_remix_scaffold_preservation_next",
+    "ace_step_rejected_for_full_song_remix_source_scaffold_awaiting_owner_review",
   );
+  assert.equal(
+    data.song_generation.source_scaffold_status,
+    "implemented_automatic_unreviewed_awaiting_owner_recognition",
+  );
+  assert.deepEqual(data.song_generation.source_scaffold_primary_roles, [
+    "lead_melody",
+    "source_timed_beat_accents",
+  ]);
   assert.equal(
     data.song_generation.evaluated_providers[0]
       .base_track_level_completion_quality_verified,

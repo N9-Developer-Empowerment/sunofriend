@@ -15,7 +15,8 @@ const installCommands = `git clone https://github.com/N9-Developer-Empowerment/s
 Set-Location sunofriend
 uv python install 3.11
 uv venv --python 3.11 .venv-windows
-uv pip install --python .venv-windows\\Scripts\\python.exe ".[all]"`;
+uv pip install --python .venv-windows\\Scripts\\python.exe ".[all]"
+uv pip uninstall --python .venv-windows\\Scripts\\python.exe tensorflow tensorflow-intel tensorflow-estimator tensorflow-io-gcs-filesystem`;
 
 const toolCommands = `$env:SUNOFRIEND_FLUIDSYNTH = "C:\\Tools\\fluidsynth\\bin\\fluidsynth.exe"
 $env:SUNOFRIEND_SF2 = "C:\\Tools\\soundfonts\\GeneralUser-GS.sf2"
@@ -26,7 +27,9 @@ $env:SUNOFRIEND_FFPROBE = "C:\\Tools\\ffmpeg\\bin\\ffprobe.exe"
 const checkCommands = `.\\.venv-windows\\Scripts\\sunofriend.exe --version
 .\\.venv-windows\\Scripts\\sunofriend.exe doctor --require convert
 .\\.venv-windows\\Scripts\\sunofriend.exe doctor --require preview
-.\\.venv-windows\\Scripts\\sunofriend.exe source-doctor`;
+.\\.venv-windows\\Scripts\\sunofriend.exe source-doctor
+.\\.venv-windows\\Scripts\\sunofriend-separate.exe profiles
+.\\.venv-windows\\Scripts\\sunofriend-separate.exe doctor`;
 
 const aceStepCommands = `git clone https://github.com/ACE-Step/ACE-Step-1.5.git
 Set-Location ACE-Step-1.5
@@ -55,6 +58,9 @@ $remixArgs = @(
   "--out-dir", "C:\\Music\\native-remix-01", "--execute", "--confirm-rights"
 )
 & .\\.venv-windows\\Scripts\\sunofriend.exe @remixArgs`;
+
+const scaffoldCommands = `.\\.venv-windows\\Scripts\\sunofriend.exe source-scaffold "C:\\Music\\reference.wav" --melody-provenance "C:\\Music\\lead_vocal-contour-clean.provenance.json" --bpm 123 --out-dir "C:\\Music\\source-scaffold-01"
+.\\.venv-windows\\Scripts\\sunofriend.exe preview "C:\\Music\\source-scaffold-01\\source-identity-scaffold.mid" --out "C:\\Music\\source-scaffold-01\\source-identity-scaffold.wav"`;
 
 function CommandBox({ label, value, rows }: { label: string; value: string; rows: number }) {
   return (
@@ -112,13 +118,16 @@ export default function WindowsSetup() {
         </header>
 
         <section id="status" className="status-panel" aria-labelledby="status-title">
-          <span className="card-number">PARTIALLY VERIFIED · 16 AUGUST 2026</span>
+          <span className="card-number">PARTIALLY VERIFIED · 18 AUGUST 2026</span>
           <h2 id="status-title">Diagnostics pass; demo and create do not.</h2>
           <p>
-            On Windows 11 x64, Sunofriend 0.4.0 source at commit
-            <code> 95ca8cf</code> installed in an isolated Python 3.11
+            The initial Windows 11 x64 trial installed Sunofriend 0.4.0 source
+            at commit <code>95ca8cf</code> in an isolated Python 3.11
             environment. Conversion, preview rendering and source-import
-            diagnostics passed with local audio tools.
+            diagnostics passed with local audio tools. A follow-up on the
+            current Windows feature branch made the public separation profile
+            and doctor commands load instead of crashing at their former
+            top-level <code>fcntl</code> import.
           </p>
           <p>
             The normal demo then stopped before conversion with
@@ -159,10 +168,17 @@ export default function WindowsSetup() {
                 not interpret that as proof that demo, create, Studio or the
                 terminal UI can complete on native Windows.
               </p>
+              <p>
+                Basic Pitch 0.4 otherwise installs TensorFlow 2.14 on Python
+                3.11 Windows, which is incompatible with this project&apos;s NumPy
+                2 runtime. The final uninstall line keeps the installed ONNX
+                Runtime path and removes only those incompatible TensorFlow
+                extras.
+              </p>
             </article>
           </div>
           <div className="prompt-stack">
-            <CommandBox label="POWERSHELL · FROM YOUR WORK FOLDER" value={installCommands} rows={7} />
+            <CommandBox label="POWERSHELL · FROM YOUR WORK FOLDER" value={installCommands} rows={8} />
           </div>
         </section>
 
@@ -208,7 +224,7 @@ export default function WindowsSetup() {
         <section id="check">
           <h2>3. Check only the capabilities you need</h2>
           <div className="prompt-stack">
-            <CommandBox label="POWERSHELL · READ-ONLY CHECKS" value={checkCommands} rows={6} />
+            <CommandBox label="POWERSHELL · READ-ONLY CHECKS" value={checkCommands} rows={8} />
           </div>
           <div className="agent-grid">
             <article className="agent-card">
@@ -219,7 +235,9 @@ export default function WindowsSetup() {
                 <code>preview_ready</code>, <code>render_ready</code> and
                 <code>requirement_ready</code> were true. The render smoke test
                 produced audio, and <code>source-doctor</code> found FFmpeg and
-                FFprobe without network access.
+                FFprobe without network access. With TensorFlow removed, the
+                Basic Pitch ONNX tracker also completed a full-song consensus
+                pass with pYIN.
               </p>
             </article>
             <article className="agent-card">
@@ -252,6 +270,7 @@ export default function WindowsSetup() {
             <CommandBox label="POWERSHELL · INSTALL AND START ACE-STEP API" value={aceStepCommands} rows={9} />
             <CommandBox label="POWERSHELL · CREATIVE-REFERENCE MODE" value={generationCommands} rows={11} />
             <CommandBox label="POWERSHELL · NATIVE COVER/REMIX MODE" value={remixCommands} rows={11} />
+            <CommandBox label="POWERSHELL · SOURCE-IDENTITY SCAFFOLD" value={scaffoldCommands} rows={6} />
           </div>
           <div className="agent-grid">
             <article className="agent-card">
@@ -322,8 +341,10 @@ export default function WindowsSetup() {
             result retained an audible connection to the original melody or
             rhythm. Turbo also ignores the independent style-strength guidance.
             ACE-Step is therefore executable but rejected as the full-song remix
-            provider for this fixture. The next private gate is an audible,
-            reviewed melody/rhythm/section scaffold before generation.
+            provider for this fixture. Sunofriend now builds an explicitly
+            unreviewed melody-plus-source-accent MIDI scaffold before generation.
+            Automatic harmony stays separate. The next private gate is owner
+            recognition of its rendered audio.
           </p>
         </section>
 

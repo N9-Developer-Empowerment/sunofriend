@@ -860,6 +860,28 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    source_scaffold = sub.add_parser(
+        "source-scaffold",
+        help=(
+            "Build an unreviewed melody, beat and harmony scaffold before "
+            "reference-conditioned generation"
+        ),
+    )
+    source_scaffold.add_argument(
+        "source", help="One authorised local source song or excerpt"
+    )
+    source_scaffold.add_argument(
+        "--melody-provenance",
+        required=True,
+        help="Sunofriend vocal-melody variant provenance JSON",
+    )
+    source_scaffold.add_argument(
+        "--bpm", type=float, required=True, help="Working MIDI tempo"
+    )
+    source_scaffold.add_argument(
+        "--out-dir", required=True, help="Fresh scaffold output directory"
+    )
+
     sub.add_parser(
         "song-providers",
         help=(
@@ -3112,6 +3134,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_source_doctor(args)
         if args.command == "musical-metadata":
             return _run_musical_metadata(args)
+        if args.command == "source-scaffold":
+            return _run_source_scaffold(args)
         if args.command == "song-providers":
             return _run_song_providers()
         if args.command == "song-generate":
@@ -4567,6 +4591,19 @@ def _run_musical_metadata(args) -> int:
         print(output)
     else:
         print(json.dumps(document, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_source_scaffold(args) -> int:
+    from .source_identity import build_source_identity_scaffold
+
+    document = build_source_identity_scaffold(
+        args.source,
+        args.melody_provenance,
+        args.out_dir,
+        bpm=args.bpm,
+    )
+    print(json.dumps(document, indent=2, sort_keys=True))
     return 0
 
 

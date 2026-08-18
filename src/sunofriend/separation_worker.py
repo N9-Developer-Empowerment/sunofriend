@@ -10,18 +10,14 @@ from pathlib import Path
 import time
 import wave
 
-from sunofriend._separation_melroformer_real_bridge import (
-    MAXIMUM_EXCERPT_FRAMES,
-    MINIMUM_PROBE_FRAMES,
-    _infer_private_melroformer_excerpt,
-    _load_private_melroformer_model,
-)
-
-
 SAMPLE_RATE = 44_100
 CHANNELS = 2
 TARGET_PEAK = 0.99
 MAXIMUM_PRE_ATTENUATION_PEAK = 4.0
+# Keep the platform-neutral chunk planner importable for diagnostics and tests.
+# The matching private bridge constants are verified when the worker actually runs.
+MINIMUM_PROBE_FRAMES = 4_096
+MAXIMUM_EXCERPT_FRAMES = 661_500
 
 
 def chunk_boundaries(frames: int) -> list[tuple[int, int]]:
@@ -111,6 +107,22 @@ def _write_wave(path: Path, values, *, np) -> dict[str, object]:
 
 def run(args: argparse.Namespace) -> dict[str, object]:
     import numpy as np
+    from sunofriend._separation_melroformer_real_bridge import (
+        MAXIMUM_EXCERPT_FRAMES as BRIDGE_MAXIMUM_EXCERPT_FRAMES,
+    )
+    from sunofriend._separation_melroformer_real_bridge import (
+        MINIMUM_PROBE_FRAMES as BRIDGE_MINIMUM_PROBE_FRAMES,
+    )
+    from sunofriend._separation_melroformer_real_bridge import (
+        _infer_private_melroformer_excerpt,
+        _load_private_melroformer_model,
+    )
+
+    if (
+        BRIDGE_MINIMUM_PROBE_FRAMES != MINIMUM_PROBE_FRAMES
+        or BRIDGE_MAXIMUM_EXCERPT_FRAMES != MAXIMUM_EXCERPT_FRAMES
+    ):
+        raise RuntimeError("worker and private bridge chunk limits differ")
 
     started = time.perf_counter()
     source_path = args.source.expanduser().absolute()

@@ -2,7 +2,8 @@
 
 Status: iterative product goal agreed; reference-conditioned and native-remix
 ACE-Step modes implemented on Windows; all tested ACE-Step full-song and
-track-level routes rejected for the current fixture; scaffold-first route next
+track-level routes rejected for the current fixture; the first source-derived
+identity scaffold is rendered and awaiting owner recognition review
 
 Discovery completed: 16 August 2026
 
@@ -38,9 +39,9 @@ Still to validate or implement:
   pair was in tune but rejected for monotonic talk-singing, unmusical
   accompaniment and lack of enjoyment or creativity;
 - a reviewed analysis/MIDI-first scaffold containing at least section timing,
-  lead or vocal melody and rhythm/phrasing before another generator is tested;
-  the final Turbo pair improved tuning and backing musicality but lost the
-  original melody and rhythm, so it was rejected as a remix;
+  lead or vocal melody and rhythm/phrasing before another generator is tested.
+  The new `sunofriend source-scaffold` command now builds the automatic,
+  unreviewed control; owner recognition and correction remain outstanding;
 - the bounded, successive-gate comparison in
   [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;
@@ -143,12 +144,17 @@ mutable linear checklist.
 
 ## Current implemented vertical slice
 
-The current CLI deliberately implements only steps 1 and 4-8 for whole-song
-generation. If neither candidate is useful, it changes the lyrics, prompt or
-strengths and generates two complete songs again. It does not yet create a
-project graph, inherit a project-level authorisation setting, lock regions,
-repair a section or replace a stem. Those are planned capabilities, not claims
-about the present command.
+The current CLI implements steps 1 and 4-8 for whole-song generation plus a
+pre-generation source-identity gate. `sunofriend vocal-melody` can publish
+reviewable lead-melody evidence, and `sunofriend source-scaffold` combines one
+chosen provenance file with source-measured beat accents. It writes separate
+automatic harmony and section diagnostics but never admits harmony to the
+primary recognition MIDI or marks the source recognised. If neither generated
+candidate is useful, the current whole-song route still changes the lyrics,
+prompt or strengths and generates two complete songs again. It does not yet
+create a project graph, inherit a project-level authorisation setting, lock
+regions, repair a section or replace a stem. Those are planned capabilities,
+not claims about the present command.
 
 ## Inputs
 

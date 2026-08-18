@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-18.4",
+  "interface_contract_version": "2026-08-18.5",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -19,14 +19,17 @@
     "partially_verified": [
       {
         "platform": "Windows 11 x64",
-        "observed_on": "2026-08-16",
+        "observed_on": "2026-08-18",
         "source_version": "0.4.0",
         "source_commit": "95ca8cf",
+        "followup_branch": "codex/windows-setup-notes",
         "passed": [
           "uv-managed CPython 3.11 environment and all runtime dependencies installed",
           "doctor --require convert",
           "doctor --require preview including a FluidSynth render smoke test",
-          "source-doctor with local FFmpeg and FFprobe"
+          "source-doctor with local FFmpeg and FFprobe",
+          "sunofriend-separate profiles and doctor load without the former top-level fcntl crash",
+          "Basic Pitch ONNX consensus after removing incompatible TensorFlow 2.14 extras"
         ],
         "blocked": "Native demo/create imports POSIX-only fcntl through source-lineage locking and stops with No module named 'fcntl'.",
         "supported": false,
@@ -189,13 +192,17 @@
     "rights_check_required": true
   },
   "song_generation": {
-    "status": "ace_step_rejected_for_full_song_remix_scaffold_preservation_next",
+    "status": "ace_step_rejected_for_full_song_remix_source_scaffold_awaiting_owner_review",
     "public_command_available": true,
     "provider_inventory_command": "sunofriend song-providers",
     "provider_inventory_is_read_only": true,
     "provider_inventory_uses_network": false,
     "plan_command": "sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.5 --style-strength 0.5 --out-dir FRESH",
     "native_remix_plan_command": "sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.2 --style-strength 0.8 --generation-mode remix --out-dir FRESH",
+    "source_scaffold_command": "sunofriend source-scaffold REFERENCE --melody-provenance LEAD_PROVENANCE --bpm BPM --out-dir FRESH",
+    "source_scaffold_status": "implemented_automatic_unreviewed_awaiting_owner_recognition",
+    "source_scaffold_primary_roles": ["lead_melody", "source_timed_beat_accents"],
+    "source_scaffold_harmony_policy": "separate_diagnostic_never_automatically_admitted_to_primary",
     "generation_modes": {
       "reference": {
         "backend_task": "text2music",
@@ -255,7 +262,7 @@
         "turbo_style_strength_effective": false,
         "turbo_style_strength_limitation": "guidance_scale_is_base_only",
         "full_song_remix_provider_for_fixture": false,
-        "next_private_gate": "reviewed_audible_melody_rhythm_section_scaffold"
+        "next_private_gate": "owner_review_of_rendered_source_identity_scaffold"
       },
       {
         "id": "treblo-v3-api",

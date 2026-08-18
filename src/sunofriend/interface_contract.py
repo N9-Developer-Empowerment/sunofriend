@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-18.4"
+INTERFACE_CONTRACT_VERSION = "2026-08-18.5"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -19,6 +19,7 @@ PUBLIC_COMMAND_GROUPS: dict[str, tuple[str, ...]] = {
         "doctor",
         "source-doctor",
         "musical-metadata",
+        "source-scaffold",
         "song-providers",
         "source-import",
         "source-import-folder",
@@ -167,6 +168,13 @@ def render_skill_interface_reference() -> str:
         "automatic, not reviewed, and retains half/double-time and key",
         "alternatives. High-confidence key/BPM values may fill missing import",
         "metadata but never replace explicit or filename/folder values.",
+        "",
+        "`sunofriend source-scaffold SOURCE --melody-provenance EVIDENCE`",
+        "builds an explicitly unreviewed pre-generation MIDI control from an",
+        "existing vocal-melody provenance file plus beat and harmony evidence",
+        "measured from the source. Its primary scaffold contains melody and",
+        "source-timed accents. Automatic harmony remains a separate diagnostic",
+        "and cannot pass the owner-recognition gate or start generation.",
         "",
         "`sunofriend source-import` preserves exactly one authorised local",
         "audio asset as immutable original evidence plus canonical PCM24 WAV.",

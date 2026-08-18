@@ -36,16 +36,30 @@ copyright-safe demo even when you have no stems.
 ## Native Windows trial status
 
 Native Windows is not a supported application route yet. A Windows 11 x64
-trial on 16 August 2026 installed Sunofriend 0.4.0 from commit `95ca8cf` with a
+trial updated through 18 August 2026 installed Sunofriend 0.4.0 with a
 uv-managed CPython 3.11 environment. `doctor --require convert`,
 `doctor --require preview` (including a FluidSynth render smoke test) and
 `source-doctor` with local FFmpeg/FFprobe all passed.
+
+On Python 3.11 Windows, Basic Pitch 0.4 installs TensorFlow 2.14 even though
+Sunofriend prefers its portable ONNX model. TensorFlow 2.14 cannot import with
+the pinned NumPy 2 runtime. After installing `.[all]`, remove only the
+`tensorflow`, `tensorflow-intel`, `tensorflow-estimator` and
+`tensorflow-io-gcs-filesystem` packages from the isolated environment. Keep
+`onnxruntime`; a full-song Basic Pitch plus pYIN consensus transcription then
+completed without fallback.
 
 The normal demo/create pipeline did not pass. It stopped with
 `No module named 'fcntl'` because source-lineage locking imports the POSIX-only
 `fcntl` module. Do not install an unrelated package merely named `fcntl` as a
 workaround. Sunofriend needs a tested cross-platform lock abstraction. Windows
 Subsystem for Linux was not tested.
+
+The separate `sunofriend-separate profiles` and `doctor` commands now load on
+Windows: POSIX-only private checkpoint inspection is lazy and fails closed
+instead of crashing the public diagnostic at import time. This is diagnostic
+portability, not Windows separation support. Every released separator profile
+still requires its documented Apple-silicon macOS runtime.
 
 The maintained [Windows setup notes](https://sunofriend.com/windows/) record
 the successful uv, audio-tool and SoundFont steps, the exact PowerShell

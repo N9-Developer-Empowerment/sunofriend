@@ -1,8 +1,8 @@
 # Empirical reference-conditioned song evaluation
 
 Status: all tested ACE-Step full-song and track-level routes rejected for the
-current fixture; local Suno benchmark retained; explicit melody/rhythm scaffold
-preservation is the next empirical gate
+current fixture; local Suno benchmark retained; the first automatic
+melody/rhythm scaffold is rendered and awaiting owner recognition review
 
 Plan agreed: 17 August 2026
 
@@ -134,14 +134,31 @@ original melody or rhythm. Better surface quality did not make them remixes.
 Neither advances to stems or MIDI, and ACE-Step is rejected as the full-song
 remix provider for this fixture.
 
-The next empirical gate is analysis/MIDI-first. Extract a canonical, reviewed
-section map, vocal or lead melody, rhythm/phrasing timeline, chord evidence and
-tempo-relative event grid from the authorised reference. Render that scaffold
-as an audible control and verify that the owner recognises the song before any
-generative model runs. Subsequent experiments may replace or add one bounded
-role around the locked scaffold, or test another provider that demonstrably
-accepts source audio. A candidate cannot pass merely by sounding polished; it
-must retain an owner-recognisable melodic or rhythmic relationship.
+The analysis/MIDI-first gate is now in progress. A local ACE extraction of the
+source vocal was used only as an analysis aid. After removing incompatible
+TensorFlow 2.14 packages from the isolated Windows environment, Basic Pitch
+used its intended ONNX model and fused with pYIN without fallback. The retained
+`contour_clean` provenance has 379 monophonic notes spanning MIDI 49-70; its
+automatic report measures 87.1% of evaluated pitch frames within 50 cents of
+the extracted contour. Those figures measure agreement with an imperfect
+automatic stem and do not prove the intended tune.
+
+The implemented `sunofriend source-scaffold` command combined that melody with
+471 source-detected beat positions and rendered a primary melody-plus-accent
+control. It also wrote editable MIDI and provisional section/chord evidence.
+The automatic harmony was quarantined from the primary control because its
+median winning chord margin was only 0.006797 and it produced 116 regions over
+the 237.769-second source. The primary scaffold therefore cannot be made worse
+by pretending weak harmony is known. All artifacts remain private,
+`complete_unreviewed`, and hash-bound to the exact source and melody evidence.
+
+The immediate gate is owner listening: verify that the melody-only and
+melody-plus-source-accent renders are recognisably this song. If not, correct
+the melody evidence before generation. If recognition passes, subsequent
+experiments may replace or add one bounded accompaniment role around the
+locked scaffold, or test another provider that demonstrably accepts source
+audio. A candidate cannot pass merely by sounding polished; it must retain an
+owner-recognisable melodic or rhythmic relationship.
 
 ## Decision to make
 

@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide Sunofriend setup and use for reference-conditioned two-song generation through registered local or self-hosted providers, secret-free inspection of optional BYO-key cloud providers, authorised experimental separation, existing-stem preparation, editable MIDI, listening WAVs, GarageBand handoff, vocal comping, melody review, instruments, key/BPM/tuning/alignment transforms, mashups and Clip reuse. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for comparison and feedback. Use for Sunofriend, AI music generation providers, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Never silently upload audio, incur cloud charges, expose API keys, download music, use unpinned models, write lyrics, edit a DAW GUI, claim human-approved mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-18.4 -->
+<!-- sunofriend-interface-contract: 2026-08-18.5 -->
 
 # Sunofriend
 
@@ -260,6 +260,12 @@ on.
   High-confidence automatic key/BPM may fill only missing metadata; explicit
   or filename/folder values win, alternatives remain visible and every result
   stays `not_reviewed` until the musician checks it.
+- `source-scaffold` builds a pre-generation MIDI recognition control from an
+  existing `vocal-melody` provenance file plus source-measured beat and harmony
+  evidence. Its primary MIDI contains melody and source-timed accents only;
+  automatic harmony is a separate diagnostic. Treat every part as unreviewed,
+  require the musician to recognise the source, and do not start generation
+  automatically.
 - `song-generate` plans a new full-song request from one authorised reference,
   a separate UTF-8 annotated lyric sheet and descriptive style text. Keep
   reference strength and style-description strength independent, but treat the
