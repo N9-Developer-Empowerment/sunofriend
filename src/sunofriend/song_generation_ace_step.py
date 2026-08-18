@@ -38,6 +38,13 @@ class AceStepApiBackend:
         """Map the neutral request onto documented ACE-Step parameters."""
 
         mapping = plan.backend_configuration["strength_mapping"]
+        task_type = str(plan.backend_configuration["task_type"])
+        audio_input_field = str(plan.backend_configuration["audio_input_field"])
+        audio_path_parameter = (
+            "src_audio_path"
+            if audio_input_field == "src_audio"
+            else "reference_audio_path"
+        )
         payload = {
             "prompt": plan.style_description,
             "lyrics": plan.lyrics,
@@ -47,8 +54,8 @@ class AceStepApiBackend:
             "model": plan.backend_configuration["model"],
             "inference_steps": plan.backend_configuration["inference_steps"],
             "batch_size": plan.candidate_count,
-            "task_type": "text2music",
-            "reference_audio_path": str(plan.reference),
+            "task_type": task_type,
+            audio_path_parameter: str(plan.reference),
             "audio_cover_strength": mapping["reference_strength"]["value"],
             "guidance_scale": mapping["style_description_strength"]["value"],
             "use_random_seed": plan.seed is None,
@@ -83,9 +90,9 @@ class AceStepApiBackend:
             fields={
                 key: value
                 for key, value in payload.items()
-                if key != "reference_audio_path"
+                if key not in {"reference_audio_path", "src_audio_path"}
             },
-            file_field="reference_audio",
+            file_field=str(plan.backend_configuration["audio_input_field"]),
             file_path=plan.reference,
         )
         submission_data = _response_data(submitted, "ACE-Step task submission")
@@ -134,9 +141,14 @@ class AceStepApiBackend:
                 for key, value in payload.items()
                 if key not in {"reference_audio_path", "lyrics", "prompt"}
             },
-            "reference": {
+            "audio_input": {
                 "name": plan.reference.name,
                 "sha256": plan.reference_sha256,
+                "role": (
+                    "editable_source_audio"
+                    if plan.generation_mode == "remix"
+                    else "creative_reference_audio"
+                ),
             },
             "prompt_source": "request.style_description",
             "lyrics_source": "request.annotated_lyrics.text",

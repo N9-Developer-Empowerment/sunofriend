@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-17.1",
+  "interface_contract_version": "2026-08-18.1",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -189,12 +189,28 @@
     "rights_check_required": true
   },
   "song_generation": {
-    "status": "backend_contract_and_first_ace_step_api_adapter",
+    "status": "ace_step_reference_and_native_remix_modes_executed",
     "public_command_available": true,
     "provider_inventory_command": "sunofriend song-providers",
     "provider_inventory_is_read_only": true,
     "provider_inventory_uses_network": false,
     "plan_command": "sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.5 --style-strength 0.5 --out-dir FRESH",
+    "native_remix_plan_command": "sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.2 --style-strength 0.8 --generation-mode remix --out-dir FRESH",
+    "generation_modes": {
+      "reference": {
+        "backend_task": "text2music",
+        "audio_role": "creative_reference_audio",
+        "duration_policy": "model_selected_unless_explicit"
+      },
+      "remix": {
+        "backend_task": "cover",
+        "audio_role": "editable_source_audio",
+        "replacement_lyrics": true,
+        "duration_policy": "source_locked",
+        "independent_bpm_key_meter_duration_locks": false,
+        "quality_verified": false
+      }
+    },
     "execute_suffix": "--execute --confirm-rights",
     "default_is_read_only_plan": true,
     "candidate_count": 2,
@@ -211,7 +227,8 @@
       {
         "id": "ace-step-api",
         "type": "open_weights_local_or_self_hosted",
-        "reference_conditioned_full_song_registered": true
+        "reference_conditioned_full_song_registered": true,
+        "native_audio_remix_registered": true
       },
       {
         "id": "treblo-v3-api",
@@ -232,7 +249,7 @@
     ],
     "backend_service_started_implicitly": false,
     "backend_service_installed_implicitly": false,
-    "reference_transport": "shared_filesystem_path",
+    "reference_transport": "multipart_audio_upload",
     "candidate_selected_automatically": false,
     "creates_stems": false,
     "creates_midi": false,

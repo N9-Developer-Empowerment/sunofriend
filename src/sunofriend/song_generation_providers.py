@@ -7,6 +7,10 @@ from typing import Any
 
 SONG_GENERATION_PROVIDERS_SCHEMA = "sunofriend.song-generation-providers.v1"
 REFERENCE_CONDITIONED_OPERATION = "reference_conditioned_full_song"
+NATIVE_AUDIO_REMIX_OPERATION = "native_audio_remix"
+SONG_GENERATION_OPERATIONS = frozenset(
+    {REFERENCE_CONDITIONED_OPERATION, NATIVE_AUDIO_REMIX_OPERATION}
+)
 
 
 def song_generation_providers_document() -> dict[str, Any]:
@@ -15,6 +19,7 @@ def song_generation_providers_document() -> dict[str, Any]:
     return {
         "schema": SONG_GENERATION_PROVIDERS_SCHEMA,
         "operation": REFERENCE_CONDITIONED_OPERATION,
+        "operations": sorted(SONG_GENERATION_OPERATIONS),
         "default_provider": "ace-step-api",
         "selection_policy": {
             "registered_only": True,
@@ -49,13 +54,19 @@ def provider_capability(provider_id: str) -> dict[str, Any]:
     raise ValueError(f"unknown song-generation provider {expected!r}: {available}")
 
 
-def registered_provider_ids() -> tuple[str, ...]:
-    """Return providers eligible for the reference-conditioned operation."""
+def registered_provider_ids(
+    operation: str = REFERENCE_CONDITIONED_OPERATION,
+) -> tuple[str, ...]:
+    """Return providers eligible for one song-generation operation."""
+
+    selected_operation = str(operation).strip()
+    if selected_operation not in SONG_GENERATION_OPERATIONS:
+        raise ValueError(f"unknown song-generation operation: {selected_operation}")
 
     return tuple(
         provider["id"]
         for provider in song_generation_providers_document()["providers"]
-        if provider["registration"]["reference_conditioned_full_song"]
+        if provider["registration"].get(selected_operation, False)
     )
 
 
@@ -67,6 +78,7 @@ def _ace_step_capability() -> dict[str, Any]:
         "registration": {
             "status": "registered",
             "reference_conditioned_full_song": True,
+            "native_audio_remix": True,
             "reason": None,
         },
         "capabilities": {
@@ -74,6 +86,11 @@ def _ace_step_capability() -> dict[str, Any]:
             "annotated_lyrics_text_preserved": True,
             "annotated_lyrics_semantics_verified": False,
             "reference_audio_conditioning": True,
+            "native_audio_remix": True,
+            "native_audio_remix_backend_task": "cover",
+            "native_audio_remix_duration_policy": "source_locked",
+            "native_audio_remix_replacement_lyrics": True,
+            "native_audio_remix_quality_verified": False,
             "independent_reference_strength": True,
             "independent_style_description_strength": True,
             "candidate_count_per_request": 2,
@@ -83,7 +100,7 @@ def _ace_step_capability() -> dict[str, Any]:
         "privacy_and_access": {
             "bring_your_own_key": "optional_for_configured_server",
             "api_key_environment": "SUNOFRIEND_MUSIC_API_TOKEN",
-            "reference_transport": "shared_filesystem_path",
+            "reference_transport": "multipart_file_upload",
             "audio_leaves_machine": "deployment_dependent",
             "possible_charges": "deployment_dependent",
             "attribution_required": False,
@@ -91,7 +108,7 @@ def _ace_step_capability() -> dict[str, Any]:
         },
         "evidence": {
             "documentation": "https://github.com/ace-step/ACE-Step-1.5",
-            "verified_on": "2026-08-17",
+            "verified_on": "2026-08-18",
         },
     }
 
@@ -104,6 +121,7 @@ def _treblo_capability() -> dict[str, Any]:
         "registration": {
             "status": "evaluated_not_registered",
             "reference_conditioned_full_song": False,
+            "native_audio_remix": False,
             "reason": (
                 "v3 generates from prompt/lyrics but exposes source audio only for "
                 "continuation; it cannot honour the required general reference-audio "

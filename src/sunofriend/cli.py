@@ -896,6 +896,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generalised reference influence from 0 to 1",
     )
     song_generate.add_argument(
+        "--generation-mode",
+        choices=["reference", "remix"],
+        default="reference",
+        help=(
+            "reference uses text-to-music reference conditioning; remix uses "
+            "ACE-Step native cover with source-locked duration"
+        ),
+    )
+    song_generate.add_argument(
         "--style-strength",
         type=float,
         required=True,
@@ -4587,6 +4596,7 @@ def _run_song_generate(args) -> int:
         key=args.key,
         time_signature=args.time_signature,
         duration_seconds=args.duration_seconds,
+        generation_mode=args.generation_mode,
         timeout_seconds=args.timeout_seconds,
         poll_seconds=args.poll_seconds,
     )

@@ -1,12 +1,14 @@
 # Reference-conditioned song generation
 
-Status: iterative product goal agreed; first backend-neutral whole-song slice
-and Windows ACE-Step adapter implemented; private diagnostic pairs awaiting
-owner listening
+Status: iterative product goal agreed; reference-conditioned and native-remix
+ACE-Step modes implemented on Windows; native-remix pair awaiting owner
+listening
 
 Discovery completed: 16 August 2026
 
 Iterative workflow refinement: 17 August 2026
+
+Native remix evidence: 18 August 2026
 
 Source: twenty-question product interview with the project owner
 
@@ -19,10 +21,12 @@ Implemented on the current feature branch:
 - a read-only-by-default `sunofriend song-generate` CLI operation with explicit
   execution and rights-confirmation gates;
 - exactly two candidate outputs, independent reference/style controls and
-  model-selected duration in the public interface contract;
+  model-selected duration in the default reference-conditioned contract;
 - a first adapter for an already running ACE-Step API using a Base model,
-  shared-filesystem reference transport, `audio_cover_strength` and
-  `guidance_scale`; and
+  multipart audio transport, `audio_cover_strength` and `guidance_scale`;
+- a distinct `--generation-mode remix` route that maps to ACE-Step's native
+  `cover` task and `src_audio`, truthfully records its source-locked duration,
+  and rejects unsupported independent BPM/key/meter/duration locks;
 - a secret-free `song-providers` capability registry that can describe local,
   self-hosted and BYO-key cloud providers without treating unlike operations as
   interchangeable; and
@@ -30,8 +34,9 @@ Implemented on the current feature branch:
 
 Still to validate or implement:
 
-- a real two-song generation run on the RTX 4080 Laptop GPU and subjective
-  listening acceptance;
+- subjective listening acceptance of the retained RTX 4080 Laptop GPU
+  native-remix pair, including tuning, performed-lyric coverage and usefulness
+  of its drums, bass, synths and other accompaniment;
 - the bounded, successive-gate comparison in
   [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;

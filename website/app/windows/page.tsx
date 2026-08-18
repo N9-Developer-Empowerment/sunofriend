@@ -46,6 +46,16 @@ $generationArgs = @(
 )
 & .\\.venv-windows\\Scripts\\sunofriend.exe @generationArgs`;
 
+const remixCommands = `$style = Get-Content -LiteralPath "C:\\Music\\style.txt" -Raw
+$remixArgs = @(
+  "song-generate", "C:\\Music\\reference.wav",
+  "--lyrics", "C:\\Music\\lyrics-clean.txt", "--style", $style,
+  "--reference-strength", "0.2", "--style-strength", "0.8",
+  "--generation-mode", "remix",
+  "--out-dir", "C:\\Music\\native-remix-01", "--execute", "--confirm-rights"
+)
+& .\\.venv-windows\\Scripts\\sunofriend.exe @remixArgs`;
+
 function CommandBox({ label, value, rows }: { label: string; value: string; rows: number }) {
   return (
     <div className="prompt-box">
@@ -232,13 +242,16 @@ export default function WindowsSetup() {
           <p className="lede">
             The separate <code>song-generate</code> path completed a native
             Windows test on an RTX 4080 Laptop GPU with 12 GB VRAM. ACE-Step
-            Base plus the 0.6B language model produced two 232-second WAV songs
-            in one request. The model reported about 116 seconds of generation
-            time; this is one machine&apos;s result, not a performance guarantee.
+            Base plus the 0.6B language model produced two 232-second
+            creative-reference songs in one request and two 237.56-second
+            native cover/remix candidates in another. The remix request took
+            about 112 seconds wall time. These are one machine&apos;s execution
+            results, not performance or musical-quality guarantees.
           </p>
           <div className="prompt-stack">
             <CommandBox label="POWERSHELL · INSTALL AND START ACE-STEP API" value={aceStepCommands} rows={9} />
-            <CommandBox label="POWERSHELL · FROM THE SUNOFRIEND REPOSITORY" value={generationCommands} rows={11} />
+            <CommandBox label="POWERSHELL · CREATIVE-REFERENCE MODE" value={generationCommands} rows={11} />
+            <CommandBox label="POWERSHELL · NATIVE COVER/REMIX MODE" value={remixCommands} rows={11} />
           </div>
           <div className="agent-grid">
             <article className="agent-card">
@@ -271,11 +284,23 @@ export default function WindowsSetup() {
           </p>
           <p className="guide-note">
             Planning is read-only. <code>--execute --confirm-rights</code> is
-            required before the local API receives audio. Omit BPM, key, time
-            signature or duration to let ACE-Step infer that value; supplied
-            values are recorded and sent as explicit API metadata. Every run
-            writes two candidates plus hash-bound request and receipt files to
-            a fresh output folder.
+            required before the local API receives audio. Default reference
+            mode uses ACE-Step <code>text2music</code>. In that mode, omit BPM,
+            key, time signature or duration to let ACE-Step infer the value;
+            supplied values are sent as explicit metadata. Native remix mode
+            uses ACE-Step <code>cover</code>, uploads the source as
+            <code> src_audio</code>, accepts replacement lyrics and locks the
+            result to the source duration. Sunofriend rejects BPM, key, meter
+            or duration locks in remix mode rather than claiming unsupported
+            controls. Every run writes two candidates plus hash-bound request
+            and receipt files to a fresh output folder.
+          </p>
+          <p className="guide-note">
+            Keep production prose in the style description and only concise
+            section or performance tags in the lyric file. Exact lyric-text
+            transport does not prove that every word was sung. The retained
+            native-remix pair still needs musician review for vocal tuning,
+            lyric coverage, enjoyment and stem/MIDI usefulness.
           </p>
         </section>
 

@@ -141,6 +141,10 @@ export default function ForAgents() {
                   full-song generation through an already configured backend;
                 </li>
                 <li>
+                  explicitly selecting ACE-Step native cover/remix mode when
+                  source-locked duration and replacement lyrics are intended;
+                </li>
+                <li>
                   inspecting local, self-hosted and BYO-key cloud provider
                   capabilities with the read-only <code>song-providers</code>
                   command;
@@ -172,10 +176,12 @@ export default function ForAgents() {
           </div>
           <p className="guide-note">
             Provider eligibility is capability-based. ACE-Step is registered
-            for the current reference-conditioned operation; TREBLO v3 is
-            visible as an optional proprietary BYO-key cloud provider, but its
-            documented source-audio operation is continuation rather than
-            general reference conditioning. Read the{" "}
+            for both creative-reference generation and the distinct native
+            cover/remix operation. Native remix uses source-locked duration;
+            its musical quality is not yet verified. TREBLO v3 is visible as
+            an optional proprietary BYO-key cloud provider, but its documented
+            source-audio operation is continuation rather than general
+            reference conditioning. Read the{" "}
             <a href="https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SONG_GENERATION_PROVIDERS.md">
               song-generation provider policy
             </a>

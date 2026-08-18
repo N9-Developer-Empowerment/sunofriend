@@ -1,10 +1,10 @@
 # Song-generation provider policy
 
-Status: provider capability registry implemented; ACE-Step registered; TREBLO
-evaluated but not registered; MiniMax candidate routes documented for empirical
-evaluation
+Status: provider capability registry implemented; ACE-Step reference and native
+remix routes registered; TREBLO evaluated but not registered; MiniMax candidate
+routes documented for empirical evaluation
 
-Last verified: 17 August 2026
+Last verified: 18 August 2026
 
 ## Purpose
 
@@ -20,9 +20,10 @@ sunofriend song-providers
 ```
 
 The inventory contains no API-key values and performs no network request.
-Evaluated providers may be listed without being executable. Only a provider
-registered for `reference_conditioned_full_song` may be selected by
-`song-generate --backend`.
+Evaluated providers may be listed without being executable. The selected
+provider must be registered for the requested operation; the current CLI
+exposes ACE-Step for both `reference_conditioned_full_song` and
+`native_audio_remix`.
 
 ## Current matrix
 
@@ -33,6 +34,7 @@ registered for `reference_conditioned_full_song` may be selected by
 | Exact supplied lyric-text transport | Adapter passes exact text | API accepts supplied text |
 | Agreed section/production annotation semantics | Not yet verified by listening test | Not yet verified |
 | General reference-audio conditioning | Yes | No documented v3 endpoint |
+| Native source-audio cover/remix with replacement lyrics | Yes; source-locked duration | No general remix endpoint documented |
 | Source-audio continuation | Yes | Yes |
 | Independent reference-strength control | Yes | No |
 | Style-strength control | Base-model guidance mapping | Native style scale, not yet calibrated to Sunofriend's 0–1 control |
@@ -54,13 +56,22 @@ the authorised reference and turn them into provider-neutral musical evidence.
 That would be a new, explicit workflow with its own tests; it would not be
 described as native TREBLO reference conditioning.
 
-The current ACE-Step adapter streams reference audio as multipart upload; the
-current server rejects client-supplied absolute audio paths. Optional explicit
-BPM, key, time signature and duration are transported as real API fields.
-Omitted metadata remains available for ACE-Step LM inference. A Windows RTX
-4080 Laptop GPU trial completed two 199-232 second candidates per request with
-Base plus the 0.6B LM and CPU offload. This verifies execution, not subjective
-quality or strict adherence to the requested key.
+The ACE-Step adapter has two explicitly different modes. Default `reference`
+mode maps to `text2music` and streams multipart `reference_audio`; optional
+explicit BPM, key, time signature and duration are real API fields, while
+omitted values remain available for LM inference. `--generation-mode remix`
+maps to native `cover` and streams multipart `src_audio` with replacement
+lyrics. Native cover locks duration to its source and the adapter rejects
+claimed independent BPM, key, meter or duration overrides. This is a remix
+operation, not a synonym for creative-reference generation.
+
+Windows RTX 4080 Laptop GPU trials completed two 199-232 second reference-mode
+candidates per request and a two-candidate 237.56-second native-remix request
+with Base plus the 0.6B LM and CPU offload. Execution, requested-checkpoint
+identity, exact lyric transport and audio validity are verified. The native
+pair still awaits the owner's judgement on tuning, actually performed lyric
+coverage, creative value and downstream stem/MIDI usefulness, so its quality
+capability remains false in the registry.
 
 ## MiniMax routes under evaluation
 

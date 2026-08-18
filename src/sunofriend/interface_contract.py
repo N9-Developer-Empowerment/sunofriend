@@ -7,7 +7,7 @@ from itertools import chain
 from .product_contract import product_contract_document
 
 
-INTERFACE_CONTRACT_VERSION = "2026-08-17.1"
+INTERFACE_CONTRACT_VERSION = "2026-08-18.1"
 
 # Categories describe discoverability only. They do not grant authority, merge
 # workflows or weaken the individual command contracts.
@@ -188,13 +188,17 @@ def render_skill_interface_reference() -> str:
         "`sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION`",
         "plans one reference-conditioned full-song request. It uses separate",
         "0-1 reference and style-description strength controls and requests two",
-        "complete candidates. Planning is read-only. Execution requires both",
-        "`--execute` and `--confirm-rights`, writes only to a fresh destination",
-        "and retains a hash-bound request plus success or failure receipt. The",
-        "first adapter uses an existing ACE-Step API and shared local reference",
-        "path; it neither installs nor starts the model service. No candidate is",
-        "selected, separated, converted to MIDI or admitted to a final mix",
-        "automatically.",
+        "complete candidates. Add `--generation-mode remix` to use ACE-Step's",
+        "native `cover` task instead of the default creative-reference mode.",
+        "Native remix uses the reference as editable source audio, accepts",
+        "replacement lyrics and locks duration to the source; it does not claim",
+        "independent BPM, key, meter or duration overrides. Planning is read-only.",
+        "Execution requires both `--execute` and `--confirm-rights`, writes only",
+        "to a fresh destination and retains a hash-bound request plus success or",
+        "failure receipt. The adapter streams the role-correct audio as multipart",
+        "upload to an existing ACE-Step API; it neither installs nor starts the",
+        "model service. No candidate is selected, separated, converted to MIDI or",
+        "admitted to a final mix automatically.",
         "",
         "`sunofriend song-providers` prints the secret-free provider capability",
         "registry without network access. Only providers registered for the full",

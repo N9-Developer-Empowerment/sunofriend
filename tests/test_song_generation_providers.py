@@ -7,6 +7,7 @@ from contextlib import redirect_stdout
 
 from sunofriend.cli import main
 from sunofriend.song_generation_providers import (
+    NATIVE_AUDIO_REMIX_OPERATION,
     SONG_GENERATION_PROVIDERS_SCHEMA,
     provider_capability,
     registered_provider_ids,
@@ -29,6 +30,23 @@ class SongGenerationProviderTests(unittest.TestCase):
         self.assertIn("SUNOFRIEND_TREBLO_API_KEY", encoded)
         self.assertNotIn("Bearer ", encoded)
         self.assertNotIn("api_key_value", encoded)
+        ace_step = provider_capability("ace-step-api")
+        self.assertTrue(ace_step["capabilities"]["native_audio_remix"])
+        self.assertEqual(
+            ace_step["capabilities"]["native_audio_remix_backend_task"],
+            "cover",
+        )
+        self.assertFalse(
+            ace_step["capabilities"]["native_audio_remix_quality_verified"]
+        )
+        self.assertEqual(
+            registered_provider_ids(NATIVE_AUDIO_REMIX_OPERATION),
+            ("ace-step-api",),
+        )
+        self.assertEqual(
+            ace_step["privacy_and_access"]["reference_transport"],
+            "multipart_file_upload",
+        )
 
     def test_treblo_is_visible_but_not_registered_for_reference_conditioning(self) -> None:
         provider = provider_capability("treblo-v3-api")

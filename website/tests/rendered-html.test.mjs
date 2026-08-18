@@ -1086,7 +1086,10 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-17.1");
+  assert.equal(data.interface_contract_version, "2026-08-18.1");
+  assert.equal(data.song_generation.generation_modes.remix.backend_task, "cover");
+  assert.equal(data.song_generation.generation_modes.remix.quality_verified, false);
+  assert.equal(data.song_generation.reference_transport, "multipart_audio_upload");
   assert.equal(data.song_generation.public_command_available, true);
   assert.equal(
     data.song_generation.provider_inventory_command,

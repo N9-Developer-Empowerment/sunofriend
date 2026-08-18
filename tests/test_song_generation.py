@@ -266,6 +266,54 @@ class SongGenerationTests(unittest.TestCase):
                 "model_selected_from_lyrics_style_and_arrangement",
             )
 
+    def test_native_remix_plan_maps_to_cover_and_source_locked_duration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reference, lyrics = _inputs(root)
+            plan = plan_song_generation(
+                reference,
+                lyrics,
+                root / "native-remix",
+                style_description="new folktronica arrangement",
+                reference_strength=0.2,
+                style_strength=0.8,
+                generation_mode="remix",
+            )
+
+            request = plan.request_document()
+            payload = AceStepApiBackend().request_payload(plan)
+
+            self.assertEqual(request["task"], "native_audio_remix")
+            self.assertEqual(request["controls"]["generation_mode"], "remix")
+            self.assertEqual(
+                request["controls"]["duration_policy"],
+                "source_locked_by_ace_step_cover",
+            )
+            self.assertEqual(
+                request["inputs"]["reference"]["role"],
+                "editable_source_audio",
+            )
+            self.assertEqual(payload["task_type"], "cover")
+            self.assertEqual(payload["src_audio_path"], str(reference))
+            self.assertNotIn("reference_audio_path", payload)
+
+    def test_native_remix_rejects_unverifiable_musical_locks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reference, lyrics = _inputs(root)
+
+            with self.assertRaisesRegex(ValueError, "locks duration to source"):
+                plan_song_generation(
+                    reference,
+                    lyrics,
+                    root / "locked-remix",
+                    style_description="new folktronica arrangement",
+                    reference_strength=0.2,
+                    style_strength=0.8,
+                    generation_mode="remix",
+                    bpm=120,
+                )
+
     def test_plan_rejects_invalid_explicit_musical_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -357,7 +405,7 @@ class SongGenerationTests(unittest.TestCase):
                 "acestep-v15-base",
             )
 
-    def test_ace_step_streams_reference_as_multipart_not_absolute_path(self) -> None:
+    def test_ace_step_streams_role_correct_audio_not_absolute_path(self) -> None:
         class RecordingBackend(AceStepApiBackend):
             def __init__(self) -> None:
                 super().__init__()
@@ -410,28 +458,38 @@ class SongGenerationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             reference, lyrics = _inputs(root)
-            plan = plan_song_generation(
-                reference,
-                lyrics,
-                root / "planned",
-                style_description="warm acoustic electronic pop",
-                reference_strength=0.35,
-                style_strength=0.75,
-            )
-            execution_root = root / "execution"
-            execution_root.mkdir()
-            backend = RecordingBackend()
+            for generation_mode, expected_field, expected_task in (
+                ("reference", "reference_audio", "text2music"),
+                ("remix", "src_audio", "cover"),
+            ):
+                with self.subTest(generation_mode=generation_mode):
+                    plan = plan_song_generation(
+                        reference,
+                        lyrics,
+                        root / f"planned-{generation_mode}",
+                        style_description="warm acoustic electronic pop",
+                        reference_strength=0.35,
+                        style_strength=0.75,
+                        generation_mode=generation_mode,
+                    )
+                    execution_root = root / f"execution-{generation_mode}"
+                    execution_root.mkdir()
+                    backend = RecordingBackend()
 
-            run = backend.generate(plan, execution_root)
+                    run = backend.generate(plan, execution_root)
 
-            path, fields, file_field, file_path = backend.submission
-            self.assertEqual(path, "/release_task")
-            self.assertEqual(file_field, "reference_audio")
-            self.assertEqual(file_path, reference)
-            self.assertNotIn("reference_audio_path", fields)
-            self.assertEqual(fields["batch_size"], 2)
-            self.assertEqual(run.request_mapping["transport"], "multipart_file_upload")
-            self.assertEqual(len(run.candidates), 2)
+                    path, fields, file_field, file_path = backend.submission
+                    self.assertEqual(path, "/release_task")
+                    self.assertEqual(file_field, expected_field)
+                    self.assertEqual(file_path, reference)
+                    self.assertNotIn("reference_audio_path", fields)
+                    self.assertNotIn("src_audio_path", fields)
+                    self.assertEqual(fields["task_type"], expected_task)
+                    self.assertEqual(fields["batch_size"], 2)
+                    self.assertEqual(
+                        run.request_mapping["transport"], "multipart_file_upload"
+                    )
+                    self.assertEqual(len(run.candidates), 2)
 
     def test_execution_retains_two_candidates_and_reproducibility_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

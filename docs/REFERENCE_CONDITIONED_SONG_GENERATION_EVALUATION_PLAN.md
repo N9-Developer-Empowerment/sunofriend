@@ -1,11 +1,12 @@
 # Empirical reference-conditioned song evaluation
 
 Status: ACE-Step joint-generation candidates rejected for vocal tuning; local
-Suno quality benchmark admitted; track-separated experiments are next
+Suno quality benchmark admitted; native ACE-Step cover/remix pair awaiting
+owner listening
 
 Plan agreed: 17 August 2026
 
-Evidence updated: 17 August 2026
+Evidence updated: 18 August 2026
 
 ## Current empirical evidence
 
@@ -86,12 +87,27 @@ with high confidence and a 117/123 BPM tempo family. Exact Suno model, seed and
 request settings are unavailable, so it is a human-approved quality benchmark,
 not a reproducible provider result.
 
-The next experiment separates responsibilities: retain or generate an
-instrumental arrangement, create the vocal as an independent track, evaluate
-pitch and lyric delivery against that arrangement, and regenerate only the
-failed role. ACE-Step Base `complete` and named `lego` tasks are the first local
-accompaniment candidates; a correctly identified Turbo checkpoint may be a
-separate vocal-quality challenger.
+Those earlier ACE-Step pairs all used `text2music` with creative-reference
+conditioning. They did not test ACE-Step's dedicated audio-remix operation. A
+new Pair D now uses native `cover`, streams the authorised draft through
+`src_audio`, supplies the clean replacement lyrics and requests two Base-model
+alternatives at reference strength `0.2` and style strength `0.8`. Native cover
+locks output duration to the source, so no independent BPM, key, meter or
+duration controls were claimed. Both candidates are technically valid 237.56 s
+stereo, 48 kHz float WAVs. Request
+`3d5799c637fcc44392faed91852aba8e5a68549e0e28f082cdb75594a2d55205` and
+receipt `b7b83696b338610377b23c1b608162655e43bf6ef0eeea2f44ca7400079417b9`
+retain the exact settings. Candidate hashes begin `5d7dcbd8` and `6a2acc74`.
+They await owner listening for tuning, performed-lyric coverage, creative remix
+value and MIDI-oriented accompaniment quality; transport of the complete lyric
+text does not establish those musical outcomes.
+
+If neither native-remix candidate passes, the next experiment separates
+responsibilities: retain or generate an instrumental arrangement, create the
+vocal as an independent track, evaluate pitch and lyric delivery against that
+arrangement, and regenerate only the failed role. ACE-Step Base `complete` and
+named `lego` tasks are the first local accompaniment candidates; a correctly
+identified Turbo checkpoint may be a separate vocal-quality challenger.
 
 ## Decision to make
 

@@ -25,6 +25,7 @@ SONG_GENERATION_REQUEST_SCHEMA = "sunofriend.song-generation-request.v1"
 SONG_GENERATION_RECEIPT_SCHEMA = "sunofriend.song-generation-receipt.v1"
 SONG_GENERATION_BACKEND = "ace-step-api"
 SONG_GENERATION_CANDIDATE_COUNT = 2
+SONG_GENERATION_MODES = frozenset({"reference", "remix"})
 
 _MAXIMUM_LYRICS_BYTES = 256 * 1024
 _MAXIMUM_STYLE_BYTES = 32 * 1024
@@ -59,18 +60,28 @@ class SongGenerationPlan:
     key: str | None
     time_signature: str | None
     duration_seconds: float | None
+    generation_mode: str = "reference"
     candidate_count: int = SONG_GENERATION_CANDIDATE_COUNT
 
     def request_document(self) -> dict[str, Any]:
         document: dict[str, Any] = {
             "schema": SONG_GENERATION_REQUEST_SCHEMA,
-            "task": "reference_conditioned_full_song",
+            "task": (
+                "native_audio_remix"
+                if self.generation_mode == "remix"
+                else "reference_conditioned_full_song"
+            ),
             "inputs": {
                 "reference": {
                     "name": self.reference.name,
                     "bytes": self.reference_bytes,
                     "sha256": self.reference_sha256,
                     "scope": "complete_song_or_excerpt",
+                    "role": (
+                        "editable_source_audio"
+                        if self.generation_mode == "remix"
+                        else "creative_reference_audio"
+                    ),
                 },
                 "annotated_lyrics": {
                     "name": self.lyrics_path.name,
@@ -81,6 +92,7 @@ class SongGenerationPlan:
                 "style_description": self.style_description,
             },
             "controls": {
+                "generation_mode": self.generation_mode,
                 "reference_strength": self.reference_strength,
                 "style_description_strength": self.style_strength,
                 "candidate_count": self.candidate_count,
@@ -89,12 +101,20 @@ class SongGenerationPlan:
                     "key": self.key,
                     "time_signature": self.time_signature,
                     "duration_seconds": self.duration_seconds,
-                    "policy": "explicit_values_override_backend_inference",
+                    "policy": (
+                        "source_conditioned_without_independent_locks"
+                        if self.generation_mode == "remix"
+                        else "explicit_values_override_backend_inference"
+                    ),
                 },
                 "duration_policy": (
-                    "explicit_seconds"
-                    if self.duration_seconds is not None
-                    else "model_selected_from_lyrics_style_and_arrangement"
+                    "source_locked_by_ace_step_cover"
+                    if self.generation_mode == "remix"
+                    else (
+                        "explicit_seconds"
+                        if self.duration_seconds is not None
+                        else "model_selected_from_lyrics_style_and_arrangement"
+                    )
                 ),
                 "seed": self.seed,
             },
@@ -207,6 +227,7 @@ def plan_song_generation(
     key: str | None = None,
     time_signature: str | None = None,
     duration_seconds: float | None = None,
+    generation_mode: str = "reference",
     timeout_seconds: float = 7200.0,
     poll_seconds: float = 5.0,
 ) -> SongGenerationPlan:
@@ -233,12 +254,23 @@ def plan_song_generation(
             "song generation currently requires rights_category="
             "authorised_private_use"
         )
+    selected_generation_mode = str(generation_mode).strip().casefold()
+    if selected_generation_mode not in SONG_GENERATION_MODES:
+        raise ValueError(
+            "generation_mode must be one of: "
+            + ", ".join(sorted(SONG_GENERATION_MODES))
+        )
+    requested_operation = (
+        "native_audio_remix"
+        if selected_generation_mode == "remix"
+        else "reference_conditioned_full_song"
+    )
     backend_id = str(backend).strip()
-    registered_backends = registered_provider_ids()
+    registered_backends = registered_provider_ids(requested_operation)
     if backend_id not in registered_backends:
         raise ValueError(
             f"unsupported song-generation backend {backend_id!r}; "
-            "available for reference-conditioned generation: "
+            f"available for {requested_operation}: "
             + ", ".join(registered_backends)
             + "; run `sunofriend song-providers` for evaluated providers and "
             "their capability limits"
@@ -287,6 +319,19 @@ def plan_song_generation(
     )
     if selected_duration is not None and selected_duration < 10.0:
         raise ValueError("duration_seconds must be at least 10")
+    if selected_generation_mode == "remix" and any(
+        value is not None
+        for value in (
+            selected_bpm,
+            selected_key,
+            selected_time_signature,
+            selected_duration,
+        )
+    ):
+        raise ValueError(
+            "ACE-Step native remix locks duration to source audio and does not "
+            "claim independent BPM, key, meter or duration overrides"
+        )
     timeout = _positive_number(timeout_seconds, "timeout_seconds", maximum=86400.0)
     polling = _positive_number(poll_seconds, "poll_seconds", maximum=60.0)
     if polling >= timeout:
@@ -298,6 +343,12 @@ def plan_song_generation(
         "transport": "multipart_file_upload",
         "model": selected_model,
         "inference_steps": int(inference_steps),
+        "task_type": (
+            "cover" if selected_generation_mode == "remix" else "text2music"
+        ),
+        "audio_input_field": (
+            "src_audio" if selected_generation_mode == "remix" else "reference_audio"
+        ),
         "timeout_seconds": timeout,
         "poll_seconds": polling,
         "strength_mapping": {
@@ -341,6 +392,7 @@ def plan_song_generation(
         key=selected_key,
         time_signature=selected_time_signature,
         duration_seconds=selected_duration,
+        generation_mode=selected_generation_mode,
     )
 
 
