@@ -299,7 +299,7 @@ test("publishes reproducible and bounded native Windows setup notes", async () =
   assert.match(html, /multipart file/);
   assert.match(html, /--bpm/);
   assert.match(html, /--time-signature/);
-  assert.match(html, /model-selected duration/);
+  assert.match(html, /omit BPM, key, time signature or duration/);
   assert.match(html, /requirement_ready/);
   assert.match(html, /ready: false/);
   assert.match(html, /No module named/);
