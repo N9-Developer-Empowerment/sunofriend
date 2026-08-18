@@ -113,7 +113,8 @@ test("server-renders an approachable skill-first musician page", async () => {
     /Example skills-aware agents\s*include Codex, Claude Code and Antigravity/,
   );
   assert.match(html, /macOS supported; Windows trial documented/);
-  assert.match(html, /demo\/create are blocked by POSIX-only locking/);
+  assert.match(html, /one conversion\/publication path now works/);
+  assert.match(html, /Complete app journeys remain unqualified/);
   assert.match(html, /Windows setup notes/);
   assert.match(html, /Feedback from every Sunofriend user is welcome/);
   assert.match(html, /make SKILL\.md and the setup path more portable/);
@@ -207,7 +208,8 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /plain-text operational guidance, not a Codex-only/);
   assert.match(html, /Codex, Claude Code, Antigravity/);
   assert.match(html, /macOS supported; native Windows partially verified/);
-  assert.match(html, /demo\/create stopped at the\s*POSIX-only/);
+  assert.match(html, /native source-lineage lock/);
+  assert.match(html, /complete demo\/create, Studio and TUI journeys remain unqualified/);
   assert.match(html, /Windows Subsystem for Linux remain unverified/);
   assert.match(html, /SKILL\.md and setup\s*guidance can improve/);
   assert.match(html, /Install and read the official skill/);
@@ -272,7 +274,7 @@ test("publishes reproducible and bounded native Windows setup notes", async () =
   const html = await response.text();
 
   assert.match(html, /NATIVE WINDOWS TRIAL NOTES/);
-  assert.match(html, /PARTIALLY VERIFIED · 18 AUGUST 2026/);
+  assert.match(html, /PARTIALLY VERIFIED · 19 AUGUST 2026/);
   assert.match(html, /Windows 11 x64/);
   assert.match(html, /Sunofriend 0\.4\.0 source/);
   assert.match(html, /current Windows feature branch/);
@@ -308,10 +310,12 @@ test("publishes reproducible and bounded native Windows setup notes", async () =
   assert.match(html, /No module named/);
   assert.match(html, /fcntl/);
   assert.match(html, /POSIX-only/);
+  assert.match(html, /msvcrt/);
+  assert.match(html, /Thirty applicable lineage\/input tests passed/);
+  assert.match(html, /previously failing.*listen.*published MIDI/s);
   assert.match(html, /resource/);
-  assert.match(html, /Do not install an unrelated package/);
   assert.match(html, /Windows Subsystem\s*for Linux has not been tested/);
-  assert.match(html, /not a working release route/);
+  assert.match(html, /supported release route/);
 });
 
 test("publishes four honest public and private separation lanes", async () => {
@@ -490,7 +494,8 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /Codex, Claude Code and Antigravity/);
   assert.match(text, /macOS remains supported/);
   assert.match(text, /native Windows 11 x64 trial verified/);
-  assert.match(text, /normal demo\/create stops on the POSIX-only `fcntl`/);
+  assert.match(text, /native source-lineage locking/);
+  assert.match(text, /complete demo\/create, Studio and TUI journeys remain unqualified/);
   assert.match(text, /Windows Subsystem for Linux are unverified/);
   assert.match(text, /sunofriend\.com\/windows/);
   assert.match(text, /feedback from every user is welcome/i);
@@ -586,7 +591,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     "Linux",
     "Windows Subsystem for Linux",
   ]);
-  assert.match(data.platform_testing.support_boundary, /demo\/create workflow is blocked/);
+  assert.match(data.platform_testing.support_boundary, /complete application journeys are not requalified/);
   assert.match(data.platform_testing.feedback_requested_from, /Every Sunofriend user/);
   assert.deepEqual(data.agent_entry.example_agents, [
     "Codex",
@@ -1094,7 +1099,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-18.6");
+  assert.equal(data.interface_contract_version, "2026-08-19.1");
   assert.equal(data.song_generation.generation_modes.remix.backend_task, "cover");
   assert.equal(data.song_generation.generation_modes.remix.quality_verified, false);
   assert.equal(data.song_generation.generation_modes.remix.advances, false);
@@ -1109,7 +1114,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.song_generation.status,
-    "ace_step_and_vocal_scaffold_rejected_accompaniment_separator_awaiting_owner_review",
+    "ace_step_and_vocal_scaffold_rejected_accompaniment_role_midi_awaiting_owner_review",
   );
   assert.equal(
     data.song_generation.source_scaffold_status,
@@ -1117,7 +1122,12 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.song_generation.accompaniment_first_experiment.status,
-    "technical_separation_complete_awaiting_owner_listening",
+    "vocal_suppression_owner_approved_role_midi_awaiting_owner_review",
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.role_midi_controls
+      .human_reviewed,
+    false,
   );
   assert.equal(
     data.song_generation.accompaniment_first_experiment.source_sum_correlation,

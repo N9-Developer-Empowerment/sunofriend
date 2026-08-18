@@ -141,7 +141,8 @@ export default function Home() {
         <span>
           The skill should work with any coding agent that understands skills
           and can use a local workspace. Windows installation and diagnostics
-          passed, but demo/create are blocked by POSIX-only locking. Read the{" "}
+          passed, and one conversion/publication path now works after a native
+          locking fix. Complete app journeys remain unqualified. Read the{" "}
           <Link href="/windows/">Windows setup notes</Link>. Linux is unverified.
         </span>
       </div>
@@ -437,8 +438,8 @@ export default function Home() {
             <strong>It is not an online converter.</strong> This website never
             receives your stems. Processing is local. macOS is the supported
             route; native Windows setup and diagnostics are partially verified,
-            but the normal demo/create path is currently blocked by POSIX-only
-            locking. <Link className="inline-link" href="/windows/">Read the
+            with one conversion/publication path now passing; complete
+            demo/create, Studio and TUI journeys remain unqualified. <Link className="inline-link" href="/windows/">Read the
             Windows trial notes</Link>. Linux remains unverified.
           </p>
           <p>

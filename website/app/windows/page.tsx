@@ -92,7 +92,7 @@ export default function WindowsSetup() {
           <a href="#tools">Audio tools</a>
           <a href="#check">Check</a>
           <a href="#local-ai">Local AI</a>
-          <a href="#blocker">Blocker</a>
+          <a href="#blocker">Limits</a>
         </nav>
         <a className="header-cta" href={links.compatibility}>
           Report a result
@@ -105,7 +105,7 @@ export default function WindowsSetup() {
             <span className="live-dot" aria-hidden="true" />
             NATIVE WINDOWS TRIAL NOTES
           </div>
-          <h1>Windows setup: what worked, and what stops next.</h1>
+          <h1>Windows setup: what worked, and what remains.</h1>
           <p className="lede">
             These notes record a real native Windows 11 x64 setup trial. They
             make dependency installation reproducible without claiming that
@@ -122,23 +122,25 @@ export default function WindowsSetup() {
         </header>
 
         <section id="status" className="status-panel" aria-labelledby="status-title">
-          <span className="card-number">PARTIALLY VERIFIED · 18 AUGUST 2026</span>
-          <h2 id="status-title">Diagnostics pass; demo and create do not.</h2>
+          <span className="card-number">PARTIALLY VERIFIED · 19 AUGUST 2026</span>
+          <h2 id="status-title">Diagnostics and one conversion path pass.</h2>
           <p>
             The initial Windows 11 x64 trial installed Sunofriend 0.4.0 source
             at commit <code>95ca8cf</code> in an isolated Python 3.11
             environment. Conversion, preview rendering and source-import
             diagnostics passed with local audio tools. A follow-up on the
             current Windows feature branch made the public separation profile
-            and doctor commands load instead of crashing at their former
-            top-level <code>fcntl</code> import.
+            and doctor commands load, then added a native source-lineage lock.
           </p>
           <p>
-            The normal demo then stopped before conversion with
-            <code> No module named &apos;fcntl&apos;</code>. The source-graph locking
-            code currently imports the POSIX-only <code>fcntl</code> module.
-            Native Windows should therefore be treated as a partially verified
-            development path, not a working release route.
+            The first normal demo had stopped at
+            <code> No module named &apos;fcntl&apos;</code>. The feature branch now uses
+            <code> fcntl.flock</code> on POSIX and an <code>msvcrt</code> lock
+            byte on Windows. Thirty applicable lineage/input tests passed, and
+            the previously failing <code>listen</code> path published MIDI,
+            variants, provenance and evaluation. Complete demo, create, Studio
+            and TUI journeys still need requalification, so native Windows
+            remains a development path rather than a supported release route.
           </p>
           <p className="guide-note">
             The experimental two-stem and core-four separators remain supported
@@ -166,11 +168,12 @@ export default function WindowsSetup() {
             </article>
             <article className="agent-card">
               <span className="card-number">CURRENT LIMIT</span>
-              <h3>This installs dependencies, not Windows support</h3>
+              <h3>This is still not a Windows support claim</h3>
               <p>
                 Package installation completed successfully in the trial. Do
                 not interpret that as proof that demo, create, Studio or the
-                terminal UI can complete on native Windows.
+                terminal UI can complete on native Windows. One conversion and
+                publication route has now passed after the locking fix.
               </p>
               <p>
                 Basic Pitch 0.4 otherwise installs TensorFlow 2.14 on Python
@@ -252,8 +255,8 @@ export default function WindowsSetup() {
                 <code>midi_ready: false</code> because Windows has no CoreMIDI
                 live-playback destination. For these checks, use
                 <code> requirement_ready</code> to judge the requested offline
-                capability. This does not clear the separate <code>fcntl</code>
-                blocker.
+                capability. It is not evidence that live playback or every
+                application journey works.
               </p>
             </article>
           </div>
@@ -360,30 +363,36 @@ export default function WindowsSetup() {
             OneDrive required <code>--link-mode copy</code>, and Demucs required
             the integer <code>--segment 7</code>. Listen to the source,
             <code> vocals.wav</code> and <code> no_vocals.wav</code> before
-            analysing motifs, chords, bass, groove or structure.
+            analysing motifs, chords, bass, groove or structure. In this
+            fixture the owner passed the vocal-suppression control, then heard
+            the strongest identity in grouped other, some identity in bass and
+            a cheerful drum groove that conflicts with the target lyrics.
+            Those are fixture-specific listening decisions, not separator
+            quality guarantees.
           </p>
         </section>
 
         <section id="blocker">
-          <h2>5. Stop at the current full-workflow blocker</h2>
+          <h2>5. Continue at the current verification boundary</h2>
           <div className="agent-grid">
             <article className="agent-card">
-              <span className="card-number">FIRST REPRODUCIBLE FAILURE</span>
-              <h3><code>sunofriend: No module named &apos;fcntl&apos;</code></h3>
+              <span className="card-number">FORMER BLOCKER FIXED</span>
+              <h3>Source-lineage publication now runs on Windows</h3>
               <p>
-                The demo creates its synthetic-stem staging folder, then fails
-                while importing the source-lineage lock. Treat any partial
-                folder from this failure as incomplete output.
+                The feature branch now selects the operating system&apos;s native
+                file-locking mechanism and avoids POSIX-only file operations.
+                The role-specific <code>listen</code> experiment completed after
+                this change.
               </p>
             </article>
             <article className="agent-card">
-              <span className="card-number">DO NOT PAPER OVER IT</span>
-              <h3>The fix belongs in Sunofriend</h3>
+              <span className="card-number">REMAINING WORK</span>
+              <h3>Requalify complete application journeys</h3>
               <p>
-                Do not install an unrelated package merely named
-                <code> fcntl</code>. Sunofriend needs a tested cross-platform
-                exclusive-lock abstraction and Windows tests. Until that lands,
-                use the supported macOS route for complete production work.
+                Do not infer full Windows support from one successful path.
+                Demo, create, Studio, the TUI and broader AI-session operations
+                need bounded native-Windows runs and their own regression tests.
+                Use the supported macOS route for established production work.
               </p>
             </article>
           </div>
@@ -391,9 +400,9 @@ export default function WindowsSetup() {
             If you repeat the trial, report the Sunofriend commit, Windows
             edition, architecture, Python version, exact command and first
             error. Do not attach stems, private music, filenames or metadata.
-            The working local song-generation path does not clear the separate
-            source-lineage locking blocker used by demo, create and Studio.
-            Broader AI-session tests also encounter the POSIX-only
+            The working local song-generation and <code>listen</code> paths do
+            not qualify demo, create or Studio automatically. Broader
+            AI-session tests also encounter the POSIX-only
             <code> resource</code> module, so passing <code>song-generate</code>
             must not be generalised into full native-Windows support.
           </p>

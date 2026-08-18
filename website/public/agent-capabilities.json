@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-18.6",
+  "interface_contract_version": "2026-08-19.1",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -19,7 +19,7 @@
     "partially_verified": [
       {
         "platform": "Windows 11 x64",
-        "observed_on": "2026-08-18",
+        "observed_on": "2026-08-19",
         "source_version": "0.4.0",
         "source_commit": "95ca8cf",
         "followup_branch": "codex/windows-setup-notes",
@@ -29,9 +29,11 @@
           "doctor --require preview including a FluidSynth render smoke test",
           "source-doctor with local FFmpeg and FFprobe",
           "sunofriend-separate profiles and doctor load without the former top-level fcntl crash",
-          "Basic Pitch ONNX consensus after removing incompatible TensorFlow 2.14 extras"
+          "Basic Pitch ONNX consensus after removing incompatible TensorFlow 2.14 extras",
+          "cross-platform source-lineage lock and 30 applicable native-Windows tests",
+          "listen MIDI, variant, provenance and evaluation publication after the lock fix"
         ],
-        "blocked": "Native demo/create imports POSIX-only fcntl through source-lineage locking and stops with No module named 'fcntl'.",
+        "blocked": "The former fcntl source-lineage blocker is fixed on the feature branch, but complete demo/create, Studio and TUI journeys have not been requalified and broader AI-session paths still contain POSIX-specific portability work.",
         "supported": false,
         "guide_url": "https://sunofriend.com/windows/"
       }
@@ -40,7 +42,7 @@
       "Linux",
       "Windows Subsystem for Linux"
     ],
-    "support_boundary": "macOS remains supported. Native Windows setup and offline diagnostics are partially verified, but the normal demo/create workflow is blocked; Linux and Windows Subsystem for Linux are unverified.",
+    "support_boundary": "macOS remains supported. Native Windows setup, offline diagnostics and one listen/publication path are partially verified, but complete application journeys are not requalified; Linux and Windows Subsystem for Linux are unverified.",
     "feedback_requested_from": "Every Sunofriend user, especially anyone trying another coding agent or repeating the Windows and Linux portability work.",
     "feedback_url": "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml"
   },
@@ -192,7 +194,7 @@
     "rights_check_required": true
   },
   "song_generation": {
-    "status": "ace_step_and_vocal_scaffold_rejected_accompaniment_separator_awaiting_owner_review",
+    "status": "ace_step_and_vocal_scaffold_rejected_accompaniment_role_midi_awaiting_owner_review",
     "public_command_available": true,
     "provider_inventory_command": "sunofriend song-providers",
     "provider_inventory_is_read_only": true,
@@ -205,15 +207,30 @@
     "source_scaffold_harmony_policy": "separate_diagnostic_never_automatically_admitted_to_primary",
     "rough_vocal_policy": "when_the_owner_says_the_guide_vocal_does_not_carry_the_tune_do_not_use_vocal_f0_as_source_identity",
     "accompaniment_first_experiment": {
-      "status": "technical_separation_complete_awaiting_owner_listening",
+      "status": "vocal_suppression_owner_approved_role_midi_awaiting_owner_review",
       "public_sunofriend_backend": false,
       "source_window_seconds": [47.0, 65.0],
       "runtime": "demucs-4.0.1-htdemucs_ft-pytorch-2.7.1+cu128",
-      "roles": ["vocals", "no_vocals"],
+      "roles": ["vocals", "no_vocals", "other", "bass", "drums"],
       "sample_rate_hz": 44100,
       "source_sum_correlation": 0.993192,
       "source_sum_reconstruction_snr_db": 18.573,
-      "next_gate": "owner_confirms_no_vocals_retains_recognisable_instrumental_music_and_suppresses_scratch_vocal"
+      "vocal_suppression_owner_review": "passed_recognisable_instrumental_music_retained_scratch_singing_sufficiently_removed",
+      "owner_role_hierarchy": [
+        "grouped_other_primary_musical_identity",
+        "bass_secondary_musical_identity",
+        "drums_groove_not_melody"
+      ],
+      "drum_affect_policy": "source_groove_is_evidence_but_upbeat_happy_affect_conflicts_with_lyrics_and_is_transformable",
+      "role_midi_controls": {
+        "grouped_other_keys_primary_notes": 82,
+        "grouped_other_accompaniment_notes": 55,
+        "grouped_other_melody_hypothesis_notes": 27,
+        "bass_notes": 20,
+        "drum_events": 55,
+        "human_reviewed": false
+      },
+      "next_gate": "owner_recognises_source_identity_in_grouped_other_and_bass_midi_controls_before_generation"
     },
     "generation_modes": {
       "reference": {

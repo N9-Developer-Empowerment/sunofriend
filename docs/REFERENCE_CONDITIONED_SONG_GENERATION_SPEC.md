@@ -3,7 +3,8 @@
 Status: iterative product goal agreed; reference-conditioned and native-remix
 ACE-Step modes implemented on Windows; all tested ACE-Step full-song and
 track-level routes rejected for the current fixture; the vocal-derived source
-scaffold was rejected; accompaniment-first analysis is now required
+scaffold was rejected; vocal suppression passed owner review; grouped-other,
+bass and groove interpretations are at the next listening gate
 
 Discovery completed: 16 August 2026
 
@@ -42,7 +43,10 @@ Still to validate or implement:
   motifs, harmonic rhythm, bass movement, groove and section form before
   another generator is tested. The existing `source-scaffold` command can
   render supplied melody evidence, but its first vocal-derived private control
-  was rejected and must not be treated as the song's intended melody;
+  was rejected and must not be treated as the song's intended melody. The
+  owner now identifies grouped other as the primary identity carrier, bass as
+  secondary, and drums as groove evidence whose overly happy affect may be
+  changed. Role-specific MIDI controls exist but remain unreviewed;
 - the bounded, successive-gate comparison in
   [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;
@@ -166,6 +170,14 @@ prompt or strengths and generates two complete songs again. It does not yet
 create a project graph, inherit a project-level authorisation setting, lock
 regions, repair a section or replace a stem. Those are planned capabilities,
 not claims about the present command.
+
+For the current private fixture, a local vocal-suppression control has passed
+owner listening. Its grouped-other, bass and drum estimates are now analysed
+independently: grouped other is not forced into one monophonic melody, bass is
+kept as separate harmonic/rhythmic evidence, and drums inform timing without
+requiring their cheerful emotional treatment to survive. A generative backend
+must not receive these automatic interpretations until the owner recognises
+the music in the rendered controls.
 
 ## Inputs
 

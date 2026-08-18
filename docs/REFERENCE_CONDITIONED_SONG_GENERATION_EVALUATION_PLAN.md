@@ -2,11 +2,12 @@
 
 Status: all tested ACE-Step full-song and track-level routes rejected for the
 current fixture; local Suno benchmark retained; the vocal-derived scaffold was
-rejected; accompaniment-first source analysis is at a separator listening gate
+rejected; vocal suppression passed owner listening; role-specific
+accompaniment MIDI controls are awaiting recognition review
 
 Plan agreed: 17 August 2026
 
-Evidence updated: 18 August 2026
+Evidence updated: 19 August 2026
 
 ## Current empirical evidence
 
@@ -159,13 +160,25 @@ and `no_vocals` controls at 44.1 kHz. Their sum has 0.993192 waveform
 correlation with the exact excerpt and 18.573 dB reconstruction SNR. Those are
 technical preservation checks, not proof of perceptual separation quality.
 
-The immediate gate is owner listening to the exact excerpt, its vocal estimate
-and its vocal-suppressed accompaniment. MIDI, harmony, motif extraction and
-generation remain stopped until the owner confirms that the accompaniment
-keeps the recognisable music while sufficiently reducing the scratch vocal.
-After that, analyse one short accompaniment passage for instrumental motifs,
-harmonic rhythm, bass contour, groove and section role; do not infer source
-identity from vocal F0.
+The owner passed that listening gate: `no_vocals.wav` retains recognisable
+instrumental music while sufficiently removing the scratch singing. A second
+four-stem pass over the identical excerpt then established the owner-reviewed
+role hierarchy: grouped `other.wav` is the primary musical-identity carrier,
+`bass.wav` carries identity to a lesser extent, and `drums.wav` contributes
+beat and rhythmic character rather than melody. The owner also identified the
+source drums as upbeat and happy in a way that conflicts with the target
+lyrics, so their timing is evidence but their affect is intentionally
+transformable.
+
+The next gate is role-specific rather than a forced monophonic melody. In
+`repair` mode Sunofriend produced an 82-note polyphonic keys interpretation of
+the grouped-other stem, separate 55-note accompaniment and 27-note melody
+hypotheses, a 20-note bass interpretation, and 55 drum events. Neutral review
+WAVs remain outside the repository. The owner must recognise source identity
+in at least one grouped-other interpretation and assess the bass control before
+the parts can become a generative scaffold. Automatic chroma/onset scores do
+not pass this listening gate, and the drum transcription must not be described
+as melody.
 
 ## Decision to make
 

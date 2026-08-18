@@ -104,11 +104,13 @@ export default function ForAgents() {
               <p>
                 Do not turn partial verification into a support claim. On
                 Windows 11 x64, dependency installation, offline doctors and
-                preview rendering passed, but demo/create stopped at the
-                POSIX-only <code>fcntl</code> source-lineage lock. Linux and
-                Windows Subsystem for Linux remain unverified. Report the agent,
-                operating system, architecture, exact command and first blocker
-                or successful path so SKILL.md and setup guidance can improve.
+                preview rendering passed. A native source-lineage lock and one
+                <code> listen</code> publication path now pass too, but complete
+                demo/create, Studio and TUI journeys remain unqualified. Linux
+                and Windows Subsystem for Linux remain unverified. Report the
+                agent, operating system, architecture, exact command and first
+                blocker or successful path so SKILL.md and setup guidance can
+                improve.
               </p>
               <div className="journey-links">
                 <Link className="text-link" href="/windows/">

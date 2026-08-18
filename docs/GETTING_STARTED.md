@@ -49,11 +49,18 @@ the pinned NumPy 2 runtime. After installing `.[all]`, remove only the
 `onnxruntime`; a full-song Basic Pitch plus pYIN consensus transcription then
 completed without fallback.
 
-The normal demo/create pipeline did not pass. It stopped with
-`No module named 'fcntl'` because source-lineage locking imports the POSIX-only
-`fcntl` module. Do not install an unrelated package merely named `fcntl` as a
-workaround. Sunofriend needs a tested cross-platform lock abstraction. Windows
-Subsystem for Linux was not tested.
+The first normal demo/create attempt stopped with `No module named 'fcntl'`.
+Do not install an unrelated package merely named `fcntl` as a workaround. On
+19 August the feature branch replaced that unconditional POSIX import with
+`fcntl.flock` on POSIX and an `msvcrt.locking` lock byte on Windows, guarded
+POSIX-only file-permission calls and avoided unsupported Windows directory
+`fsync`. Thirty applicable source-lineage/project-input tests passed natively;
+two symlink-hardening tests could not run because this account lacks the
+Windows symlink privilege. The original failing `listen` operation then
+published its MIDI, variants, provenance and evaluation. The complete demo,
+create, Studio and TUI journeys have not yet been requalified, so this fix is
+not a general Windows support claim. Windows Subsystem for Linux was not
+tested.
 
 The separate `sunofriend-separate profiles` and `doctor` commands now load on
 Windows: POSIX-only private checkpoint inspection is lazy and fails closed
@@ -70,14 +77,19 @@ checkout required `uv pip --link-mode copy`; the default hardlink attempt
 failed with Windows cloud-file error 396. Demucs 4.0.1 also requires an integer
 `--segment`, so the tested Hybrid Transformer value was `7`, not `7.8`.
 This is a private compatibility observation, not a new supported Sunofriend
-backend or a claim that its estimates are clean stems. Listen to the exact
-source excerpt, `vocals.wav` and `no_vocals.wav` before any MIDI analysis.
+backend or a claim that its estimates are clean stems. The fixture owner
+confirmed that the tested `no_vocals.wav` retained recognisable instrumental
+music while sufficiently removing the scratch singing. In its later four-stem
+view, grouped other carried the strongest musical identity, bass carried some,
+and drums supplied a cheerful groove that conflicted with the target lyrics.
+Treat those role judgements as fixture-specific listening evidence, not Demucs
+quality guarantees.
 
 The maintained [Windows setup notes](https://sunofriend.com/windows/) record
 the successful uv, audio-tool and SoundFont steps, the exact PowerShell
 environment variables and how to interpret the doctor output. Use them for
-portability work, not as a claim that native Windows demo, create, Studio or
-the TUI can complete.
+portability work, not as a claim that every native Windows demo, create, Studio
+or TUI journey can complete.
 
 ## Before you begin
 
