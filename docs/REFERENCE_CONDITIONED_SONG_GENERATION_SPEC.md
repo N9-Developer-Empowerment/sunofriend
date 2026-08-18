@@ -71,7 +71,9 @@ identifiable melody, riff, lyric or arrangement passage from the reference.
 
 The first success criterion is deliberately subjective: the project owner
 hears two enjoyable full songs and considers at least one of them good enough
-to continue producing in Sunofriend.
+to continue producing in Sunofriend. A vocal song is not listenable merely
+because it contains a voice: its lead must be acceptably in tune with the
+arrangement and deliver the intended lyrics without singing control metadata.
 
 ## Standing personal-use authorisation
 
@@ -342,8 +344,9 @@ The first end-to-end demonstration passes when:
 4. reference strength and style-description strength can be changed
    independently and are recorded accurately;
 5. the system generates two distinct, complete, listenable songs;
-6. the user subjectively considers the results enjoyable; and
-7. at least one result is good enough to continue through Sunofriend's
+6. generated lead vocals are acceptably in tune and deliver the supplied words;
+7. the user subjectively considers the results enjoyable; and
+8. at least one result is good enough to continue through Sunofriend's
    separation, MIDI reconstruction and human-vocal production workflow.
 
 Automated audio validity, provenance and reproducibility checks support this

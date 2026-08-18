@@ -1,7 +1,7 @@
 # Empirical reference-conditioned song evaluation
 
-Status: first owner listening decision recorded; one clean accompaniment pair
-retained and awaiting owner review before stem/MIDI advancement
+Status: ACE-Step joint-generation candidates rejected for vocal tuning; local
+Suno quality benchmark admitted; track-separated experiments are next
 
 Plan agreed: 17 August 2026
 
@@ -76,6 +76,22 @@ for the requested Base checkpoint. Those outputs are retained as invalid
 diagnostic evidence and excluded from comparison. Sunofriend now requires each
 candidate to report the requested `dit_model`; missing or mismatched checkpoint
 evidence fails the run before candidates are accepted.
+
+The owner then rejected both valid follow-up candidates because ACE-Step's
+generated vocals were out of tune. Neither advances to stem/MIDI processing.
+The owner supplied a private local Suno remix as a positive acceptance control
+and confirmed that its vocal is in tune and follows the lyrics. The 254.064 s,
+44.1 kHz, 24-bit WAV is technically valid; automatic analysis found A major
+with high confidence and a 117/123 BPM tempo family. Exact Suno model, seed and
+request settings are unavailable, so it is a human-approved quality benchmark,
+not a reproducible provider result.
+
+The next experiment separates responsibilities: retain or generate an
+instrumental arrangement, create the vocal as an independent track, evaluate
+pitch and lyric delivery against that arrangement, and regenerate only the
+failed role. ACE-Step Base `complete` and named `lego` tasks are the first local
+accompaniment candidates; a correctly identified Turbo checkpoint may be a
+separate vocal-quality challenger.
 
 ## Decision to make
 
@@ -269,6 +285,8 @@ with a short reason, on:
 
 - immediate enjoyment and emotional response;
 - lyric accuracy, intelligibility and annotation/section behaviour;
+- vocal tuning against the accompaniment, with out-of-tune lead vocals treated
+  as a rejection rather than an acceptable guide-track defect;
 - useful abstract influence from the reference;
 - novelty and absence of concerning direct copying;
 - adherence to the written style brief;
@@ -284,8 +302,10 @@ stability, stem reconstruction error, resource use and generation time.
 
 A method advances from Gate 2 when at least one of its two candidates scores at
 least 3 for both enjoyment and expected downstream usefulness and raises no
-copying or technical-integrity concern. The threshold is a triage rule, not a
-claim of scientific model ranking.
+copying or technical-integrity concern. For vocal songs, an out-of-tune lead or
+material lyric omission is an independent stop condition even if the numeric
+threshold is otherwise met. The threshold is a triage rule, not a claim of
+scientific model ranking.
 
 ## Experiment discipline and receipts
 
