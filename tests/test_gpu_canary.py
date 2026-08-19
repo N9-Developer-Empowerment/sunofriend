@@ -3,6 +3,7 @@ from __future__ import annotations
 from sunofriend.gpu_canary import (
     EXPERIMENT_ID,
     SYNTHETIC_FIXTURE_SCHEMA,
+    _resident_set_bytes,
     build_c0_canary_request,
     build_synthetic_fixture,
 )
@@ -46,3 +47,7 @@ def test_c0_request_binds_fixture_and_safe_rtx_ceilings() -> None:
     assert request["training"]["maximum_steps_per_arm"] == 200
     assert request["training"]["shuffled_label_control"] is True
     assert validate_gpu_worker_request(request) == request
+
+
+def test_canary_resource_receipt_reports_positive_process_memory() -> None:
+    assert _resident_set_bytes() > 0

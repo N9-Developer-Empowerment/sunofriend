@@ -435,15 +435,36 @@ def _resident_set_bytes() -> int:
                 ("PeakPagefileUsage", ctypes.c_size_t),
             ]
 
-        counters = ProcessMemoryCounters()
-        counters.cb = ctypes.sizeof(counters)
-        process = ctypes.windll.kernel32.GetCurrentProcess()
-        ok = ctypes.windll.psapi.GetProcessMemoryInfo(
-            process, ctypes.byref(counters), counters.cb
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetCurrentProcess.argtypes = []
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        process = kernel32.GetCurrentProcess()
+        failures: list[str] = []
+        for library_name, function_name in (
+            ("kernel32", "K32GetProcessMemoryInfo"),
+            ("psapi", "GetProcessMemoryInfo"),
+        ):
+            try:
+                library = ctypes.WinDLL(library_name, use_last_error=True)
+                function = getattr(library, function_name)
+            except (OSError, AttributeError) as exc:
+                failures.append(f"{function_name}:unavailable:{exc}")
+                continue
+            function.argtypes = [
+                wintypes.HANDLE,
+                ctypes.POINTER(ProcessMemoryCounters),
+                wintypes.DWORD,
+            ]
+            function.restype = wintypes.BOOL
+            counters = ProcessMemoryCounters()
+            counters.cb = ctypes.sizeof(counters)
+            ctypes.set_last_error(0)
+            if function(process, ctypes.byref(counters), counters.cb):
+                return int(counters.PeakWorkingSetSize)
+            failures.append(f"{function_name}:winerror:{ctypes.get_last_error()}")
+        raise RuntimeError(
+            "could not read Windows process memory (" + ", ".join(failures) + ")"
         )
-        if not ok:
-            raise RuntimeError("could not read Windows process memory")
-        return int(counters.PeakWorkingSetSize)
     import resource
 
     value = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
