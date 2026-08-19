@@ -136,6 +136,7 @@ def build_c0_canary_request(repository_commit: str) -> dict[str, Any]:
             "network_allowed": False,
             "downloads_allowed": False,
             "maximum_retries": 0,
+            "cublas_workspace_config": ":4096:8",
         },
         stop_rules=[
             "stop if CUDA is unavailable",
@@ -159,6 +160,16 @@ def run_c0_canary(
         raise ValueError(f"GPU canary output already exists: {destination}")
     destination.mkdir(parents=True)
     started = time.monotonic()
+
+    required_workspace = request_document["execution_policy"][
+        "cublas_workspace_config"
+    ]
+    existing_workspace = os.environ.get("CUBLAS_WORKSPACE_CONFIG")
+    if existing_workspace not in {None, required_workspace}:
+        raise RuntimeError(
+            "CUBLAS_WORKSPACE_CONFIG conflicts with the authorised request"
+        )
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = required_workspace
 
     import torch
 
@@ -289,6 +300,7 @@ def run_c0_canary(
             "cuda_runtime": str(torch.version.cuda),
             "gpu": str(torch.cuda.get_device_name(device)),
             "deterministic_algorithms": True,
+            "cublas_workspace_config": required_workspace,
             "network_used": False,
         },
         outputs=outputs,

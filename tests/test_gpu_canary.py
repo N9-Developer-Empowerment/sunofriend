@@ -40,6 +40,7 @@ def test_c0_request_binds_fixture_and_safe_rtx_ceilings() -> None:
         "network_allowed": False,
         "downloads_allowed": False,
         "maximum_retries": 0,
+        "cublas_workspace_config": ":4096:8",
     }
     assert request["resource_ceiling"]["maximum_gpu_bytes"] == 4_294_967_296
     assert request["training"]["maximum_steps_per_arm"] == 200
