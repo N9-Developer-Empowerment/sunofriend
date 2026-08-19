@@ -177,3 +177,31 @@ The programme can therefore deliver useful recording, comparison, source-map
 and bounded-remix artifacts while model research proceeds. Failure at a model
 gate narrows that research lane; it does not erase the deterministic product
 value already delivered.
+
+## Cycle 1 evidence — 19 August 2026
+
+The first foundation and training-pipeline gates are now exercised rather than
+only specified:
+
+- **D:** Musical State and GPU worker contracts reject path leakage, source
+  mutation, decision authority, render authority and request/result identity
+  drift.
+- **D+T:** the Windows RTX canary completed the clean and shuffled-control arms,
+  reproduced an interrupted/resumed run exactly and returned technical-only
+  evidence. This proves the bounded pipeline, not musical usefulness.
+- **D+H:** the existing explicit *The Heart Sees* phrase-2 choice was imported
+  as a hash-bound `human_take` decision for `take-001` and projected into an
+  unrendered vocal source map. No pairwise label, join, pitch correction or
+  comp was inferred from that choice.
+
+The next vocal increment is a dedicated loopback “Vocal Session” page with a
+whole-song phrase map, immutable pickups, owner-only resumable drafts and
+append-only explicit actions. It reuses the current listening and recorder
+evidence but does not extend the MIDI-oriented Workbench state.
+
+The next remix increment remains **D+H**. It first asks the musician to name and
+confirm an identity anchor for an authorised short excerpt, then creates a
+one-variable deterministic control/challenger. The first edit uses a declared
+stem-estimate delta against the exact source, so separation error cannot be
+mistaken for source identity preservation. Model inference and training are
+both off for that comparison.
