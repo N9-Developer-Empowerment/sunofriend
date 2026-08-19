@@ -6,6 +6,29 @@ Status: product and engineering design. The existing private pilot records and
 reviews one phrase at a time. It does not yet select, assemble, correct or
 render a complete vocal comp.
 
+## Implementation checkpoint — 19 August 2026
+
+The first reusable W1/W2 foundation is now implemented on the current research
+branch as a dedicated loopback Vocal Session, separate from the larger MIDI
+Workbench. It can reopen an exact Musical State, show its reviewed phrase
+roster, audition hash-bound human or authorised-AI sources, restore local draft
+notes and fold only explicit phrase decisions from an append-only owner-only
+store. Playback, dwell and drafts remain zero-authority. The page cannot yet
+assemble, tune, correct or train on audio.
+
+The first real session reopens the reviewed *The Heart Sees* phrase and its
+four common-zero human takes, including the previously recorded human choice.
+Its Musical State does not yet admit a backing or reference cue, so microphone
+recording is visibly unavailable instead of borrowing an adjacent unverified
+audio file.
+
+Before guided pickup recording is admitted, the data contract must distinguish
+the immutable bounded microphone capture from its placement on the song clock.
+The current source map assumes full-song/common-zero takes. Browser-created
+full-song files padded with silence will not become the canonical workaround;
+the preferred next increment retains the phrase capture plus guard frames and
+records an explicit source-local window and destination-song placement.
+
 Companion documents:
 
 - [Implementation and evaluation plan](VOCAL_COMPING_IMPLEMENTATION_PLAN.md)
