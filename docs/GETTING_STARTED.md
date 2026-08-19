@@ -82,6 +82,12 @@ confirmed that the tested `no_vocals.wav` retained recognisable instrumental
 music while sufficiently removing the scratch singing. In its later four-stem
 view, grouped other carried the strongest musical identity, bass carried some,
 and drums supplied a cheerful groove that conflicted with the target lyrics.
+The first grouped-other keys, accompaniment and upper-melody MIDI auditions
+were all rejected as unrecognisable, while the bass MIDI was usefully
+recognisable. Sunofriend therefore now publishes competing lowest-line,
+octave-shifted and low-plus-upper register hypotheses for keys-like material;
+the shifted notes are labelled inferred and every choice still requires human
+listening.
 Treat those role judgements as fixture-specific listening evidence, not Demucs
 quality guarantees.
 

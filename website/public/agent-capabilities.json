@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-19.1",
+  "interface_contract_version": "2026-08-19.2",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -194,7 +194,7 @@
     "rights_check_required": true
   },
   "song_generation": {
-    "status": "ace_step_and_vocal_scaffold_rejected_accompaniment_role_midi_awaiting_owner_review",
+    "status": "ace_step_and_vocal_scaffold_rejected_bass_midi_accepted_grouped_other_register_bank_awaiting_owner_review",
     "public_command_available": true,
     "provider_inventory_command": "sunofriend song-providers",
     "provider_inventory_is_read_only": true,
@@ -207,7 +207,7 @@
     "source_scaffold_harmony_policy": "separate_diagnostic_never_automatically_admitted_to_primary",
     "rough_vocal_policy": "when_the_owner_says_the_guide_vocal_does_not_carry_the_tune_do_not_use_vocal_f0_as_source_identity",
     "accompaniment_first_experiment": {
-      "status": "vocal_suppression_owner_approved_role_midi_awaiting_owner_review",
+      "status": "vocal_suppression_owner_approved_upper_grouped_other_midi_rejected_bass_midi_accepted_register_bank_awaiting_owner_review",
       "public_sunofriend_backend": false,
       "source_window_seconds": [47.0, 65.0],
       "runtime": "demucs-4.0.1-htdemucs_ft-pytorch-2.7.1+cu128",
@@ -228,9 +228,19 @@
         "grouped_other_melody_hypothesis_notes": 27,
         "bass_notes": 20,
         "drum_events": 55,
-        "human_reviewed": false
+        "human_reviewed": "partial",
+        "upper_grouped_other_controls": "rejected_unrecognisable",
+        "bass_control": "accepted_usefully_recognisable",
+        "register_bank": {
+          "lowest_line_observed_notes": 64,
+          "melody_down_12_inferred_notes": 27,
+          "melody_down_24_inferred_notes": 27,
+          "low_with_upper_additions_observed_notes": 75,
+          "hybrid_low_line_notes": 29,
+          "human_reviewed": false
+        }
       },
-      "next_gate": "owner_recognises_source_identity_in_grouped_other_and_bass_midi_controls_before_generation"
+      "next_gate": "owner_recognises_source_identity_in_one_grouped_other_register_or_cross_stem_control_before_generation"
     },
     "generation_modes": {
       "reference": {

@@ -1099,7 +1099,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-19.1");
+  assert.equal(data.interface_contract_version, "2026-08-19.2");
   assert.equal(data.song_generation.generation_modes.remix.backend_task, "cover");
   assert.equal(data.song_generation.generation_modes.remix.quality_verified, false);
   assert.equal(data.song_generation.generation_modes.remix.advances, false);
@@ -1114,7 +1114,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.song_generation.status,
-    "ace_step_and_vocal_scaffold_rejected_accompaniment_role_midi_awaiting_owner_review",
+    "ace_step_and_vocal_scaffold_rejected_bass_midi_accepted_grouped_other_register_bank_awaiting_owner_review",
   );
   assert.equal(
     data.song_generation.source_scaffold_status,
@@ -1122,11 +1122,21 @@ test("publishes a versioned machine-readable capability contract", async () => {
   );
   assert.equal(
     data.song_generation.accompaniment_first_experiment.status,
-    "vocal_suppression_owner_approved_role_midi_awaiting_owner_review",
+    "vocal_suppression_owner_approved_upper_grouped_other_midi_rejected_bass_midi_accepted_register_bank_awaiting_owner_review",
   );
   assert.equal(
     data.song_generation.accompaniment_first_experiment.role_midi_controls
       .human_reviewed,
+    "partial",
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.role_midi_controls
+      .register_bank.lowest_line_observed_notes,
+    64,
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.role_midi_controls
+      .register_bank.human_reviewed,
     false,
   );
   assert.equal(

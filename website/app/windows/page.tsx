@@ -370,6 +370,16 @@ export default function WindowsSetup() {
             Those are fixture-specific listening decisions, not separator
             quality guarantees.
           </p>
+          <p className="guide-note">
+            The first grouped-other keys, accompaniment and upper-melody MIDI
+            auditions were not recognisable, while the bass MIDI remained
+            usefully connected to its source. The owner heard a lower identity
+            line with higher additions. Sunofriend now emits a review bank with
+            an exact lowest line, the former upper contour shifted down one and
+            two octaves, and an exact low-plus-upper union. Shifted variants are
+            labelled inferred; none becomes the melody until a person recognises
+            it by listening.
+          </p>
         </section>
 
         <section id="blocker">

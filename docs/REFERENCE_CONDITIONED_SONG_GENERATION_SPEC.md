@@ -46,7 +46,9 @@ Still to validate or implement:
   was rejected and must not be treated as the song's intended melody. The
   owner now identifies grouped other as the primary identity carrier, bass as
   secondary, and drums as groove evidence whose overly happy affect may be
-  changed. Role-specific MIDI controls exist but remain unreviewed;
+  changed. The first upper-register grouped-other controls were rejected, the
+  bass MIDI was accepted as usefully recognisable, and a new multi-register
+  grouped-other bank remains under review;
 - the bounded, successive-gate comparison in
   [`REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md`](REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md);
 - empirical calibration of both strength mappings and lyric annotations;
@@ -177,7 +179,11 @@ independently: grouped other is not forced into one monophonic melody, bass is
 kept as separate harmonic/rhythmic evidence, and drums inform timing without
 requiring their cheerful emotional treatment to survive. A generative backend
 must not receive these automatic interpretations until the owner recognises
-the music in the rendered controls.
+the music in the rendered controls. The grouped-other audition now includes
+exact lowest-line and low-plus-upper variants plus clearly labelled one- and
+two-octave translations of the former upper contour. This register bank is a
+human-review mechanism, not an automatic claim that any variant is the song's
+melody.
 
 ## Inputs
 

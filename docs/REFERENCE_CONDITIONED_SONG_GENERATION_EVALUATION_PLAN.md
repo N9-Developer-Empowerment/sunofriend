@@ -2,8 +2,9 @@
 
 Status: all tested ACE-Step full-song and track-level routes rejected for the
 current fixture; local Suno benchmark retained; the vocal-derived scaffold was
-rejected; vocal suppression passed owner listening; role-specific
-accompaniment MIDI controls are awaiting recognition review
+rejected; vocal suppression passed owner listening; the upper-register
+grouped-other MIDI controls were rejected; bass MIDI passed; a multi-register
+grouped-other bank is awaiting recognition review
 
 Plan agreed: 17 August 2026
 
@@ -171,14 +172,25 @@ lyrics, so their timing is evidence but their affect is intentionally
 transformable.
 
 The next gate is role-specific rather than a forced monophonic melody. In
-`repair` mode Sunofriend produced an 82-note polyphonic keys interpretation of
-the grouped-other stem, separate 55-note accompaniment and 27-note melody
-hypotheses, a 20-note bass interpretation, and 55 drum events. Neutral review
-WAVs remain outside the repository. The owner must recognise source identity
-in at least one grouped-other interpretation and assess the bass control before
-the parts can become a generative scaffold. Automatic chroma/onset scores do
-not pass this listening gate, and the drum transcription must not be described
-as melody.
+`repair` mode Sunofriend first produced an 82-note polyphonic keys
+interpretation of grouped other, a 55-note accompaniment and a 27-note upper
+melody hypothesis, plus a 20-note bass interpretation and 55 drum events. The
+owner rejected all three grouped-other renders as unrecognisable but found the
+bass MIDI usefully recognisable. They heard the grouped-other identity lower
+in pitch with higher additions, suggesting an octave-spanning texture rather
+than one top melody.
+
+Sunofriend now publishes a register bank instead of silently preferring the
+highest voice: a 64-note exact lowest-onset line, the 27-note upper contour
+translated down one and two octaves, and a 75-note exact low-plus-upper union.
+The octave translations are labelled inferred, while the exact-pitch variants
+remain observed evidence. A separate hybrid low tracker produced 29 notes in
+MIDI 44-52, and a cross-stem control layers it with the accepted bass MIDI.
+Neutral review WAVs remain outside the repository. The owner must recognise
+source identity in one of these register or cross-stem interpretations before
+the parts become a generative scaffold. Automatic chroma/onset scores do not
+pass this listening gate, and the drum transcription must not be described as
+melody.
 
 ## Decision to make
 
