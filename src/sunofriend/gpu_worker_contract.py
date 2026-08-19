@@ -313,6 +313,13 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
         raise ValueError("GPU worker downloads must be disabled")
     if policy.get("maximum_retries") != 0:
         raise ValueError("GPU worker retries must be disabled")
+    if "T" in natures and policy.get("cublas_workspace_config") not in {
+        ":4096:8",
+        ":16:8",
+    }:
+        raise ValueError(
+            "GPU training must declare a deterministic CuBLAS workspace config"
+        )
     stop_rules = document.get("stop_rules")
     if not isinstance(stop_rules, list) or not stop_rules or any(
         not str(item).strip() for item in stop_rules

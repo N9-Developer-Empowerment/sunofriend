@@ -75,6 +75,8 @@ step and output ceilings. The result can prove that the training machinery is
 reproducible; it cannot claim that a musical model has been trained or
 validated. It uses the worker's already approved PyTorch runtime and neither
 downloads nor installs anything.
+The request fixes the process-local deterministic CuBLAS workspace before
+PyTorch starts so the checkpoint comparison is meaningful on CUDA.
 
 ## Privacy and authority
 

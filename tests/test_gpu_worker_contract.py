@@ -138,6 +138,12 @@ def test_gpu_worker_result_rejects_a_different_request() -> None:
         ("execution_policy", "network_allowed", True, "network"),
         ("execution_policy", "downloads_allowed", True, "downloads"),
         ("execution_policy", "maximum_retries", 1, "retries"),
+        (
+            "execution_policy",
+            "cublas_workspace_config",
+            "invalid",
+            "CuBLAS workspace",
+        ),
         ("training", "shuffled_label_control", False, "shuffled-label"),
     ),
 )
@@ -228,6 +234,7 @@ def _request(
             "network_allowed": False,
             "downloads_allowed": False,
             "maximum_retries": 0,
+            "cublas_workspace_config": ":4096:8",
         },
         stop_rules=[
             "stop on non-finite loss",
