@@ -3,7 +3,7 @@ name: sunofriend
 description: Guide Sunofriend setup and use for reference-conditioned two-song generation through registered local or self-hosted providers, secret-free inspection of optional BYO-key cloud providers, authorised experimental separation, existing-stem preparation, editable MIDI, listening WAVs, GarageBand handoff, vocal comping, melody review, instruments, key/BPM/tuning/alignment transforms, mashups and Clip reuse. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for comparison and feedback. Use for Sunofriend, AI music generation providers, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Never silently upload audio, incur cloud charges, expose API keys, download music, use unpinned models, write lyrics, edit a DAW GUI, claim human-approved mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-19.1 -->
+<!-- sunofriend-interface-contract: 2026-08-19.2 -->
 
 # Sunofriend
 
@@ -302,9 +302,15 @@ on.
   connection to the source melody or rhythm. Turbo additionally cannot honour
   independent style strength because it ignores guidance scale. ACE-Step is
   executable but rejected as the full-song remix provider for this fixture.
-  Do not run more ACE candidates or advance any to stems/MIDI. The next private
-  gate is a reviewed, audible melody/rhythm/section scaffold before bounded
-  role generation or evaluation of another source-audio provider.
+  Do not run more ACE candidates or advance any to stems/MIDI. The accepted
+  accompaniment-first evidence identifies grouped other as the primary musical
+  identity carrier, bass as secondary and drums as transformable groove
+  evidence; the first upper-register grouped-other MIDI controls failed while
+  bass MIDI passed. Read `docs/REMIX_RESEARCH_HANDOVER.md` before new remix
+  work. Follow `docs/SEMANTIC_MUSICAL_STATE_AND_TRAINING_PLAN.md`: define the
+  versioned Musical State and owner-anchored benchmark, probe frozen ACE and
+  independent temporal representations, then train the smallest justified
+  adapter. Do not make another full-song generation sweep the next gate.
 - Treat that command as the implemented whole-song vertical slice, not the
   complete creative workflow. The agreed destination is an immutable
   song-project version graph: retain both initial candidates, branch instead of
