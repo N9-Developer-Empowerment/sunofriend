@@ -455,7 +455,10 @@ def _seed_pitched_v2(
         )
 
     if kind in {"keys", "piano"}:
-        from .transcribe_pitched import separate_keys_roles
+        from .transcribe_pitched import (
+            build_keys_register_hypotheses,
+            separate_keys_roles,
+        )
 
         segments = None
         if chords_pdf:
@@ -482,15 +485,32 @@ def _seed_pitched_v2(
             "melody": roles.melody,
             "accompaniment": roles.accompaniment,
             "uncertain": roles.uncertain,
+            **build_keys_register_hypotheses(full_evidence, roles.melody),
         }
         for name, notes in variants.items():
+            translated_register = name in {"melody_down_12", "melody_down_24"}
             variant_provenance[name] = provenance_for_notes(
                 notes,
-                origin="observed",
-                confidence=0.8 if name != "uncertain" else 0.45,
+                origin="inferred" if translated_register else "observed",
+                confidence=(
+                    0.55
+                    if translated_register
+                    else 0.45
+                    if name == "uncertain"
+                    else 0.8
+                ),
                 tier="uncertain" if name == "uncertain" else "main",
                 confidence_basis="policy",
-                sources=("basic-pitch", "spectral-verification", f"keys-role:{name}"),
+                sources=(
+                    "basic-pitch",
+                    "spectral-verification",
+                    f"keys-role:{name}",
+                    *(
+                        ("register-translation-for-human-review",)
+                        if translated_register
+                        else ()
+                    ),
+                ),
                 family=name,
             )
 

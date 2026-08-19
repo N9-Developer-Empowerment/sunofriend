@@ -11,7 +11,7 @@ import {
 export const metadata: Metadata = {
   title: "Sunofriend for AI agents",
   description:
-    "Portable skill entry point for local coding agents, with an honest MacBook-only test boundary and an invitation for Windows and Linux feedback.",
+    "Portable skill entry point for local coding agents, with supported macOS guidance, partially verified Windows setup notes and an invitation for portability feedback.",
   alternates: {
     canonical: "/for-agents/",
   },
@@ -50,6 +50,7 @@ export default function ForAgents() {
         </Link>
         <nav aria-label="Agent page navigation">
           <a href="#portability">Portability</a>
+          <Link href="/windows/">Windows</Link>
           <a href="#recognise">Recognise</a>
           <a href="#onboard">Onboard</a>
           <a href="#stems">Stem inputs</a>
@@ -99,15 +100,22 @@ export default function ForAgents() {
             </div>
             <div className="agent-card">
               <span className="card-number">PLATFORM TEST STATUS</span>
-              <h3>Only a MacBook has been tested so far</h3>
+              <h3>macOS supported; native Windows partially verified</h3>
               <p>
-                Do not turn intended portability into a support claim. Windows
-                and Linux are unverified. If you try either platform, report
-                the agent, operating system, architecture, exact command and
-                first blocker—or the successful path—so the SKILL.md and setup
-                guidance can be made more compatible.
+                Do not turn partial verification into a support claim. On
+                Windows 11 x64, dependency installation, offline doctors and
+                preview rendering passed. A native source-lineage lock and one
+                <code> listen</code> publication path now pass too, but complete
+                demo/create, Studio and TUI journeys remain unqualified. Linux
+                and Windows Subsystem for Linux remain unverified. Report the
+                agent, operating system, architecture, exact command and first
+                blocker or successful path so SKILL.md and setup guidance can
+                improve.
               </p>
               <div className="journey-links">
+                <Link className="text-link" href="/windows/">
+                  Read the Windows setup notes →
+                </Link>
                 <a className="text-link" href={links.compatibility}>
                   Send compatibility feedback ↗
                 </a>
@@ -130,6 +138,19 @@ export default function ForAgents() {
                 <li>authorised stems or vocals to MIDI;</li>
                 <li>a balanced MIDI-derived listening WAV;</li>
                 <li>GarageBand or another DAW handoff;</li>
+                <li>
+                  planning and running two-candidate reference-conditioned
+                  full-song generation through an already configured backend;
+                </li>
+                <li>
+                  explicitly selecting ACE-Step native cover/remix mode when
+                  source-locked duration and replacement lyrics are intended;
+                </li>
+                <li>
+                  inspecting local, self-hosted and BYO-key cloud provider
+                  capabilities with the read-only <code>song-providers</code>
+                  command;
+                </li>
                 <li>comparing several transcription processes;</li>
                 <li>key, BPM, tuning, alignment and bounded MIDI correction;</li>
                 <li>matching or building local sample instruments.</li>
@@ -141,13 +162,36 @@ export default function ForAgents() {
               <ul>
                 <li>exact multitrack recovery or narrow instrument-family separation;</li>
                 <li>downloading music from a streaming link;</li>
-                <li>lyrics or full-song generation;</li>
+                <li>
+                  silently writing lyrics, selecting a generated song, or
+                  installing or starting a model service without approval;
+                </li>
+                <li>
+                  treating prompt-only generation or source-audio continuation
+                  as equivalent to reference-conditioned generation;
+                </li>
                 <li>a guaranteed exact transcription;</li>
                 <li>a human-approved release master;</li>
                 <li>unapproved model, plugin or checkpoint downloads.</li>
               </ul>
             </div>
           </div>
+          <p className="guide-note">
+            Provider eligibility is capability-based. ACE-Step is registered
+            for both creative-reference generation and the distinct native
+            cover/remix operation. Native remix uses source-locked duration;
+            the first private pair executed correctly but was rejected for
+            monotonic talk-singing, unmusical backing and lack of enjoyment.
+            Track-level extraction/completion is the next private experiment,
+            not a public capability yet. TREBLO v3 is visible as an optional
+            proprietary BYO-key cloud provider, but its documented source-audio
+            operation is continuation rather than general reference
+            conditioning. Read the{" "}
+            <a href="https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SONG_GENERATION_PROVIDERS.md">
+              song-generation provider policy
+            </a>
+            .
+          </p>
         </section>
 
         <section id="onboard">

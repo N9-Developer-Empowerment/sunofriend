@@ -860,6 +860,172 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    source_scaffold = sub.add_parser(
+        "source-scaffold",
+        help=(
+            "Build an unreviewed melody, beat and harmony scaffold before "
+            "reference-conditioned generation"
+        ),
+    )
+    source_scaffold.add_argument(
+        "source", help="One authorised local source song or excerpt"
+    )
+    source_scaffold.add_argument(
+        "--melody-provenance",
+        required=True,
+        help="Sunofriend vocal-melody variant provenance JSON",
+    )
+    source_scaffold.add_argument(
+        "--bpm", type=float, required=True, help="Working MIDI tempo"
+    )
+    source_scaffold.add_argument(
+        "--out-dir", required=True, help="Fresh scaffold output directory"
+    )
+
+    sub.add_parser(
+        "song-providers",
+        help=(
+            "Print the secret-free local/cloud provider capability registry "
+            "without using the network"
+        ),
+    )
+
+    song_generate = sub.add_parser(
+        "song-generate",
+        help=(
+            "Plan or generate two complete songs from authorised reference audio, "
+            "annotated lyrics and a style description"
+        ),
+    )
+    song_generate.add_argument(
+        "reference",
+        help="Authorised complete song or excerpt available to the selected backend",
+    )
+    song_generate.add_argument(
+        "--lyrics",
+        required=True,
+        help="UTF-8 lyric sheet with lightweight section and production annotations",
+    )
+    song_generate.add_argument(
+        "--style",
+        required=True,
+        help="Descriptive musical style and production direction",
+    )
+    song_generate.add_argument(
+        "--reference-strength",
+        type=float,
+        required=True,
+        help="Generalised reference influence from 0 to 1",
+    )
+    song_generate.add_argument(
+        "--generation-mode",
+        choices=["reference", "remix"],
+        default="reference",
+        help=(
+            "reference uses text-to-music reference conditioning; remix uses "
+            "ACE-Step native cover with source-locked duration"
+        ),
+    )
+    song_generate.add_argument(
+        "--style-strength",
+        type=float,
+        required=True,
+        help="Independent style-description guidance from 0 to 1",
+    )
+    song_generate.add_argument(
+        "--out-dir",
+        required=True,
+        help="Fresh request directory; existing paths are never replaced",
+    )
+    song_generate.add_argument(
+        "--backend",
+        choices=["ace-step-api"],
+        default="ace-step-api",
+        help="Interchangeable generation backend (first adapter: ace-step-api)",
+    )
+    song_generate.add_argument(
+        "--api-base-url",
+        default=os.environ.get("SUNOFRIEND_MUSIC_API_URL", "http://127.0.0.1:8001"),
+        help="ACE-Step API origin (default: SUNOFRIEND_MUSIC_API_URL or localhost:8001)",
+    )
+    song_generate.add_argument(
+        "--api-key-env",
+        default="SUNOFRIEND_MUSIC_API_TOKEN",
+        help="Environment variable containing an optional API token; never the token itself",
+    )
+    song_generate.add_argument(
+        "--model",
+        default=os.environ.get("SUNOFRIEND_MUSIC_MODEL", "acestep-v15-base"),
+        help="ACE-Step Base checkpoint name used for effective style guidance",
+    )
+    song_generate.add_argument(
+        "--vocal-language",
+        default="en",
+        help="Backend vocal-language code (default: en)",
+    )
+    song_generate.add_argument(
+        "--output-format",
+        choices=["wav", "wav32", "flac", "mp3", "opus", "aac"],
+        default="wav",
+        help="Complete-song candidate format (default: wav)",
+    )
+    song_generate.add_argument(
+        "--inference-steps",
+        type=int,
+        default=32,
+        help="ACE-Step Base diffusion steps from 1 to 200 (default: 32)",
+    )
+    song_generate.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Optional reproducible non-negative seed; omitted requests random variants",
+    )
+    song_generate.add_argument(
+        "--bpm",
+        type=int,
+        default=None,
+        help="Optional explicit whole-number tempo; omitted lets the backend infer it",
+    )
+    song_generate.add_argument(
+        "--key",
+        default=None,
+        help="Optional explicit musical key, for example 'A Major'",
+    )
+    song_generate.add_argument(
+        "--time-signature",
+        default=None,
+        help="Optional explicit time signature, for example 4/4",
+    )
+    song_generate.add_argument(
+        "--duration-seconds",
+        type=float,
+        default=None,
+        help="Optional 10-600 second target; omitted keeps model-selected duration",
+    )
+    song_generate.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=7200.0,
+        help="Overall generation wait bound (default: 7200)",
+    )
+    song_generate.add_argument(
+        "--poll-seconds",
+        type=float,
+        default=5.0,
+        help="Backend status polling interval (default: 5)",
+    )
+    song_generate.add_argument(
+        "--execute",
+        action="store_true",
+        help="Submit the reviewed plan; without this flag the command only prints JSON",
+    )
+    song_generate.add_argument(
+        "--confirm-rights",
+        action="store_true",
+        help="Affirm authorisation for private personal processing; required with --execute",
+    )
+
     source_import = sub.add_parser(
         "source-import",
         help=(
@@ -2968,6 +3134,12 @@ def main(argv: list[str] | None = None) -> int:
             return _run_source_doctor(args)
         if args.command == "musical-metadata":
             return _run_musical_metadata(args)
+        if args.command == "source-scaffold":
+            return _run_source_scaffold(args)
+        if args.command == "song-providers":
+            return _run_song_providers()
+        if args.command == "song-generate":
+            return _run_song_generate(args)
         if args.command == "source-import":
             return _run_source_import(args)
         if args.command == "source-import-folder":
@@ -4419,6 +4591,90 @@ def _run_musical_metadata(args) -> int:
         print(output)
     else:
         print(json.dumps(document, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_source_scaffold(args) -> int:
+    from .source_identity import build_source_identity_scaffold
+
+    document = build_source_identity_scaffold(
+        args.source,
+        args.melody_provenance,
+        args.out_dir,
+        bpm=args.bpm,
+    )
+    print(json.dumps(document, indent=2, sort_keys=True))
+    return 0
+
+
+def _run_song_generate(args) -> int:
+    from .song_generation import (
+        SongGenerationExecutionError,
+        execute_song_generation,
+        plan_song_generation,
+    )
+
+    plan = plan_song_generation(
+        args.reference,
+        args.lyrics,
+        args.out_dir,
+        style_description=args.style,
+        reference_strength=args.reference_strength,
+        style_strength=args.style_strength,
+        backend=args.backend,
+        api_base_url=args.api_base_url,
+        api_key_env=args.api_key_env,
+        model=args.model,
+        vocal_language=args.vocal_language,
+        output_format=args.output_format,
+        inference_steps=args.inference_steps,
+        seed=args.seed,
+        bpm=args.bpm,
+        key=args.key,
+        time_signature=args.time_signature,
+        duration_seconds=args.duration_seconds,
+        generation_mode=args.generation_mode,
+        timeout_seconds=args.timeout_seconds,
+        poll_seconds=args.poll_seconds,
+    )
+    if not args.execute:
+        print(json.dumps(plan.to_dict(), indent=2, sort_keys=True))
+        return 0
+    if not args.confirm_rights:
+        raise ValueError("--execute requires --confirm-rights")
+    try:
+        result = execute_song_generation(plan, confirm_rights=args.confirm_rights)
+    except SongGenerationExecutionError as exc:
+        raise RuntimeError(f"{exc}; failure receipt: {exc.receipt}") from exc
+    print(
+        json.dumps(
+            {
+                "schema": "sunofriend.song-generation-result.v1",
+                "status": result.status,
+                "root": str(result.root),
+                "request": str(result.request),
+                "receipt": str(result.receipt),
+                "candidates": [str(path) for path in result.candidates],
+                "candidate_count": len(result.candidates),
+                "candidate_selected": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _run_song_providers() -> int:
+    from .song_generation_providers import song_generation_providers_document
+
+    print(
+        json.dumps(
+            song_generation_providers_document(),
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 

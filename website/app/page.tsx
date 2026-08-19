@@ -67,6 +67,7 @@ export default function Home() {
           <a href="#agent">Start</a>
           <a href="#choose">Choose a route</a>
           <Link href="/stems/">What are stems?</Link>
+          <Link href="/windows/">Windows notes</Link>
           <Link href="/research/separation/">Stem research</Link>
           <Link href="/research/vocal-comping/">Vocal comping</Link>
           <a href="#demo">Try the demo</a>
@@ -136,10 +137,13 @@ export default function Home() {
       </section>
 
       <div className="plain-strip">
-        <strong>Tested on a MacBook so far.</strong>
+        <strong>macOS supported; Windows trial documented.</strong>
         <span>
           The skill should work with any coding agent that understands skills
-          and can use a local workspace. Windows and Linux are not verified yet.
+          and can use a local workspace. Windows installation and diagnostics
+          passed, and one conversion/publication path now works after a native
+          locking fix. Complete app journeys remain unqualified. Read the{" "}
+          <Link href="/windows/">Windows setup notes</Link>. Linux is unverified.
         </span>
       </div>
 
@@ -432,8 +436,11 @@ export default function Home() {
         <div className="boundary-list">
           <p>
             <strong>It is not an online converter.</strong> This website never
-            receives your stems. Processing is local, and the app has only been
-            tested on a MacBook so far. Windows and Linux remain unverified.
+            receives your stems. Processing is local. macOS is the supported
+            route; native Windows setup and diagnostics are partially verified,
+            with one conversion/publication path now passing; complete
+            demo/create, Studio and TUI journeys remain unqualified. <Link className="inline-link" href="/windows/">Read the
+            Windows trial notes</Link>. Linux remains unverified.
           </p>
           <p>
             <strong>It is not a one-click multitrack recovery service.</strong>{" "}
@@ -486,8 +493,8 @@ export default function Home() {
             <p>
               Feedback from every Sunofriend user is welcome. Reports from
               Claude Code, Antigravity or another skills-aware agent are
-              especially useful, as are Windows and Linux trials that could
-              help make SKILL.md and the setup path more portable.
+              especially useful, as are follow-up Windows and Linux trials that
+              could help make SKILL.md and the setup path more portable.
             </p>
           </div>
           <div className="feedback-actions">
@@ -525,6 +532,7 @@ export default function Home() {
           <Link href="/stems/">Stems guide</Link>
           <Link href="/glossary/">Glossary</Link>
           <Link href="/demo/">Demo</Link>
+          <Link href="/windows/">Windows setup</Link>
           <Link href="/for-agents">For AI agents</Link>
           <Link href="/research/separation/">Separation research</Link>
           <Link href="/research/vocal-comping/">Vocal comping research</Link>

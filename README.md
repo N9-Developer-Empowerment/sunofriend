@@ -585,6 +585,8 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | Work with vocal melody | [Vocal melody](docs/VOCAL_MELODY.md) |
 | Try or review experimental evidence-first vocal comping | [Ranked-evidence pilot](docs/VOCAL_COMPING_PILOT.md), [design](docs/VOCAL_COMPING_DESIGN.md) and [implementation plan](docs/VOCAL_COMPING_IMPLEMENTATION_PLAN.md) |
 | Match or build instruments | [Instruments](docs/INSTRUMENTS.md) |
+| Review the iterative reference-to-song goal | [Reference-conditioned generation specification](docs/REFERENCE_CONDITIONED_SONG_GENERATION_SPEC.md) |
+| Follow the private-song model comparison | [Empirical song-generation evaluation plan](docs/REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md) and [provider policy](docs/SONG_GENERATION_PROVIDERS.md) |
 | Review the architecture and code | [Technical tour](docs/TECHNICAL_TOUR.md) |
 | Use every expert command | Run `sunofriend --help` and read the [skill interface contract](skills/sunofriend/references/interface-contract.md) |
 | Share or promote the project | [Social media kit](SOCIAL.md) and [brand guide](BRAND.md) |

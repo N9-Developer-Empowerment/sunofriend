@@ -1,6 +1,6 @@
 {
   "schema": "sunofriend.agent-capabilities.v1",
-  "interface_contract_version": "2026-08-16.1",
+  "interface_contract_version": "2026-08-19.2",
   "product": {
     "name": "Sunofriend",
     "status": "alpha",
@@ -16,12 +16,34 @@
     "verified": [
       "MacBook running macOS"
     ],
-    "unverified": [
-      "Windows",
-      "Linux"
+    "partially_verified": [
+      {
+        "platform": "Windows 11 x64",
+        "observed_on": "2026-08-19",
+        "source_version": "0.4.0",
+        "source_commit": "95ca8cf",
+        "followup_branch": "codex/windows-setup-notes",
+        "passed": [
+          "uv-managed CPython 3.11 environment and all runtime dependencies installed",
+          "doctor --require convert",
+          "doctor --require preview including a FluidSynth render smoke test",
+          "source-doctor with local FFmpeg and FFprobe",
+          "sunofriend-separate profiles and doctor load without the former top-level fcntl crash",
+          "Basic Pitch ONNX consensus after removing incompatible TensorFlow 2.14 extras",
+          "cross-platform source-lineage lock and 30 applicable native-Windows tests",
+          "listen MIDI, variant, provenance and evaluation publication after the lock fix"
+        ],
+        "blocked": "The former fcntl source-lineage blocker is fixed on the feature branch, but complete demo/create, Studio and TUI journeys have not been requalified and broader AI-session paths still contain POSIX-specific portability work.",
+        "supported": false,
+        "guide_url": "https://sunofriend.com/windows/"
+      }
     ],
-    "support_boundary": "Windows and Linux compatibility has not yet been verified.",
-    "feedback_requested_from": "Every Sunofriend user, especially anyone trying another coding agent, Windows or Linux.",
+    "unverified": [
+      "Linux",
+      "Windows Subsystem for Linux"
+    ],
+    "support_boundary": "macOS remains supported. Native Windows setup, offline diagnostics and one listen/publication path are partially verified, but complete application journeys are not requalified; Linux and Windows Subsystem for Linux are unverified.",
+    "feedback_requested_from": "Every Sunofriend user, especially anyone trying another coding agent or repeating the Windows and Linux portability work.",
     "feedback_url": "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml"
   },
   "agent_entry": {
@@ -170,6 +192,142 @@
     "provider_ranking_for_downstream_midi_available": false,
     "cloud_privacy_check_required": true,
     "rights_check_required": true
+  },
+  "song_generation": {
+    "status": "ace_step_and_vocal_scaffold_rejected_bass_midi_accepted_grouped_other_register_bank_awaiting_owner_review",
+    "public_command_available": true,
+    "provider_inventory_command": "sunofriend song-providers",
+    "provider_inventory_is_read_only": true,
+    "provider_inventory_uses_network": false,
+    "plan_command": "sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.5 --style-strength 0.5 --out-dir FRESH",
+    "native_remix_plan_command": "sunofriend song-generate REFERENCE --lyrics LYRICS --style DESCRIPTION --reference-strength 0.2 --style-strength 0.8 --generation-mode remix --out-dir FRESH",
+    "source_scaffold_command": "sunofriend source-scaffold REFERENCE --melody-provenance LEAD_PROVENANCE --bpm BPM --out-dir FRESH",
+    "source_scaffold_status": "implemented_but_first_private_vocal_derived_control_rejected",
+    "source_scaffold_primary_roles": ["lead_melody", "source_timed_beat_accents"],
+    "source_scaffold_harmony_policy": "separate_diagnostic_never_automatically_admitted_to_primary",
+    "rough_vocal_policy": "when_the_owner_says_the_guide_vocal_does_not_carry_the_tune_do_not_use_vocal_f0_as_source_identity",
+    "accompaniment_first_experiment": {
+      "status": "vocal_suppression_owner_approved_upper_grouped_other_midi_rejected_bass_midi_accepted_register_bank_awaiting_owner_review",
+      "public_sunofriend_backend": false,
+      "source_window_seconds": [47.0, 65.0],
+      "runtime": "demucs-4.0.1-htdemucs_ft-pytorch-2.7.1+cu128",
+      "roles": ["vocals", "no_vocals", "other", "bass", "drums"],
+      "sample_rate_hz": 44100,
+      "source_sum_correlation": 0.993192,
+      "source_sum_reconstruction_snr_db": 18.573,
+      "vocal_suppression_owner_review": "passed_recognisable_instrumental_music_retained_scratch_singing_sufficiently_removed",
+      "owner_role_hierarchy": [
+        "grouped_other_primary_musical_identity",
+        "bass_secondary_musical_identity",
+        "drums_groove_not_melody"
+      ],
+      "drum_affect_policy": "source_groove_is_evidence_but_upbeat_happy_affect_conflicts_with_lyrics_and_is_transformable",
+      "role_midi_controls": {
+        "grouped_other_keys_primary_notes": 82,
+        "grouped_other_accompaniment_notes": 55,
+        "grouped_other_melody_hypothesis_notes": 27,
+        "bass_notes": 20,
+        "drum_events": 55,
+        "human_reviewed": "partial",
+        "upper_grouped_other_controls": "rejected_unrecognisable",
+        "bass_control": "accepted_usefully_recognisable",
+        "register_bank": {
+          "lowest_line_observed_notes": 64,
+          "melody_down_12_inferred_notes": 27,
+          "melody_down_24_inferred_notes": 27,
+          "low_with_upper_additions_observed_notes": 75,
+          "hybrid_low_line_notes": 29,
+          "human_reviewed": false
+        }
+      },
+      "next_gate": "owner_recognises_source_identity_in_one_grouped_other_register_or_cross_stem_control_before_generation"
+    },
+    "generation_modes": {
+      "reference": {
+        "backend_task": "text2music",
+        "audio_role": "creative_reference_audio",
+        "duration_policy": "model_selected_unless_explicit"
+      },
+      "remix": {
+        "backend_task": "cover",
+        "audio_role": "editable_source_audio",
+        "replacement_lyrics": true,
+        "duration_policy": "source_locked",
+        "independent_bpm_key_meter_duration_locks": false,
+        "quality_verified": false,
+        "human_evaluation": "rejected_base_for_flat_monotonic_talk_singing_and_turbo_for_no_source_melody_or_rhythm_connection",
+        "advances": false
+      }
+    },
+    "execute_suffix": "--execute --confirm-rights",
+    "default_is_read_only_plan": true,
+    "candidate_count": 2,
+    "output": "complete listener-ready mixed tracks",
+    "model_selects_duration": true,
+    "input_precedence": "reference_primary_lyrics_and_style_secondary",
+    "nonzero_reference_requires_owner_recognisable_musical_relationship": true,
+    "reference_relationship_examples": [
+      "transformed_melodic_contour_or_motif",
+      "rhythmic_phrasing_or_groove",
+      "harmonic_motion",
+      "section_energy_shape",
+      "vocal_range_or_delivery"
+    ],
+    "zero_reference_is_only_prompt_only_mode": true,
+    "matched_no_reference_counterfactual_required_for_provider_qualification": true,
+    "independent_strength_controls": [
+      "reference_strength",
+      "style_description_strength"
+    ],
+    "backends": [
+      "ace-step-api"
+    ],
+    "evaluated_providers": [
+      {
+        "id": "ace-step-api",
+        "type": "open_weights_local_or_self_hosted",
+        "reference_conditioned_full_song_registered": true,
+        "input_precedence": "reference_primary_lyrics_and_style_secondary",
+        "no_reference_counterfactual_required_for_qualification": true,
+        "native_audio_remix_registered": true,
+        "native_audio_remix_quality_verified": false,
+        "base_track_level_completion_quality_verified": false,
+        "base_track_level_human_evaluation": "rejected_out_of_tune_preserved_vocal_or_unrelated_instrumental_without_melody_or_likeness",
+        "base_track_level_advances": false,
+        "turbo_native_remix_candidates_generated": 2,
+        "turbo_native_remix_human_evaluation": "rejected_in_tune_and_more_musical_but_no_source_melody_or_rhythm_connection",
+        "turbo_native_remix_advances": false,
+        "turbo_reference_strength_effective": true,
+        "turbo_style_strength_effective": false,
+        "turbo_style_strength_limitation": "guidance_scale_is_base_only",
+        "full_song_remix_provider_for_fixture": false,
+        "next_private_gate": "owner_review_of_vocal_suppressed_accompaniment_excerpt"
+      },
+      {
+        "id": "treblo-v3-api",
+        "type": "proprietary_cloud_byok",
+        "reference_conditioned_full_song_registered": false,
+        "prompt_and_lyrics_generation": true,
+        "annotated_lyrics_semantics_verified": false,
+        "reference_audio_conditioning": false,
+        "source_audio_extension_only": true,
+        "independent_reference_strength": false,
+        "candidate_count_per_request": 1,
+        "remote_result_retention_hours": 168,
+        "api_key_environment": "SUNOFRIEND_TREBLO_API_KEY",
+        "attribution_required": true,
+        "possible_charges": true,
+        "explicit_cloud_consent_required": true
+      }
+    ],
+    "backend_service_started_implicitly": false,
+    "backend_service_installed_implicitly": false,
+    "reference_transport": "multipart_audio_upload",
+    "candidate_selected_automatically": false,
+    "creates_stems": false,
+    "creates_midi": false,
+    "spec_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/REFERENCE_CONDITIONED_SONG_GENERATION_SPEC.md",
+    "provider_policy_url": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SONG_GENERATION_PROVIDERS.md"
   },
   "modes": {
     "agent_create": {
@@ -1123,6 +1281,7 @@
     "demo": "https://sunofriend.com/demo/",
     "stems": "https://sunofriend.com/stems/",
     "glossary": "https://sunofriend.com/glossary/",
+    "windows_setup": "https://sunofriend.com/windows/",
     "separation_research": "https://sunofriend.com/research/separation/",
     "vocal_comping_research": "https://sunofriend.com/research/vocal-comping/",
     "separation_developer_preview": "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",

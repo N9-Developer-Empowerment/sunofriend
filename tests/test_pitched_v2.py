@@ -13,6 +13,7 @@ from sunofriend.imagine import (
 )
 from sunofriend.models import ChordSegment, NoteEvent
 from sunofriend.transcribe_pitched import (
+    build_keys_register_hypotheses,
     _BassSustainEvidence,
     repair_bass_octaves,
     repair_bass_sustain,
@@ -273,6 +274,31 @@ class BassContourTests(unittest.TestCase):
 
 
 class KeysRoleTests(unittest.TestCase):
+    def test_register_bank_keeps_low_evidence_and_labels_octave_interpretations(self):
+        low_a = NoteEvent(0.0, 0.8, 45, 70)
+        high_a = NoteEvent(0.01, 0.4, 69, 100)
+        low_b = NoteEvent(0.5, 1.0, 47, 75)
+        high_b = NoteEvent(0.51, 0.9, 74, 95)
+
+        variants = build_keys_register_hypotheses(
+            [low_a, high_a, low_b, high_b],
+            [high_a, high_b],
+        )
+
+        self.assertEqual(variants["lowest_line"], [low_a, low_b])
+        self.assertEqual(
+            [note.pitch for note in variants["melody_down_12"]],
+            [57, 62],
+        )
+        self.assertEqual(
+            [note.pitch for note in variants["melody_down_24"]],
+            [45, 50],
+        )
+        self.assertEqual(
+            variants["low_with_upper_additions"],
+            [low_a, high_a, low_b, high_b],
+        )
+
     def test_chart_constrains_accompaniment_but_not_melody(self):
         segment = ChordSegment(0.0, 2.0, "C", (0, 4, 7))
         chord = [

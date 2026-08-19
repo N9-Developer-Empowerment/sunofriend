@@ -11,13 +11,17 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import fcntl
 import re
 import stat
 import struct
 from collections import Counter
 from pathlib import Path
 from typing import Any
+
+try:
+    import fcntl as _fcntl
+except ModuleNotFoundError:  # pragma: no cover - exercised on Windows
+    _fcntl = None
 
 
 SCHEMA = "sunofriend.private-safetensors-static-inspection.v1"
@@ -117,12 +121,16 @@ def _inspect_private_safetensors_descriptor(
     """
 
     _validate_expected_identity(expected_bytes, expected_sha256)
+    if _fcntl is None or not hasattr(os, "pread"):
+        raise ValueError(
+            "Safetensors descriptor inspection requires POSIX fcntl and pread"
+        )
     if isinstance(descriptor, bool) or not isinstance(descriptor, int) or descriptor < 0:
         raise ValueError("Safetensors descriptor is invalid")
     try:
         attached = os.fstat(descriptor)
         inheritable = os.get_inheritable(descriptor)
-        access_mode = fcntl.fcntl(descriptor, fcntl.F_GETFL) & os.O_ACCMODE
+        access_mode = _fcntl.fcntl(descriptor, _fcntl.F_GETFL) & os.O_ACCMODE
     except OSError as error:
         raise ValueError("Safetensors descriptor is unavailable") from error
     if (

@@ -633,6 +633,65 @@ class KeysRoleSeparation:
     uncertain: list[NoteEvent]
 
 
+def build_keys_register_hypotheses(
+    notes: list[NoteEvent],
+    melody: list[NoteEvent],
+    *,
+    onset_tolerance: float = 0.08,
+) -> dict[str, list[NoteEvent]]:
+    """Build explicitly competing register interpretations for review.
+
+    A polyphonic accompaniment can carry its recognisable line below bright
+    decorations, in the middle of a voicing, or doubled across octaves.  The
+    normal melody heuristic therefore cannot be the only audition.  This bank
+    keeps a lowest-onset line and a low-plus-upper union at their observed
+    pitches, then supplies one- and two-octave translations of the same upper
+    contour.  The translated variants are hypotheses, not observed notes, and
+    callers must label their provenance accordingly.
+    """
+    if onset_tolerance < 0:
+        raise ValueError("onset_tolerance must be non-negative")
+
+    lowest_line: list[NoteEvent] = []
+    for group in _group_note_onsets(notes, onset_tolerance):
+        lowest_line.append(
+            min(
+                group,
+                key=lambda note: (
+                    note.pitch,
+                    -note.velocity,
+                    -(note.end - note.start),
+                ),
+            )
+        )
+
+    def shifted(semitones: int) -> list[NoteEvent]:
+        return [
+            NoteEvent(
+                note.start,
+                note.end,
+                note.pitch + semitones,
+                note.velocity,
+            )
+            for note in melody
+            if 0 <= note.pitch + semitones <= 127
+        ]
+
+    def note_key(note: NoteEvent) -> tuple[float, int, float, int]:
+        return note.start, note.pitch, note.end, note.velocity
+
+    low_plus_upper = {
+        note_key(note): note
+        for note in [*lowest_line, *melody]
+    }
+    return {
+        "lowest_line": sorted(lowest_line, key=note_key),
+        "melody_down_12": shifted(-12),
+        "melody_down_24": shifted(-24),
+        "low_with_upper_additions": sorted(low_plus_upper.values(), key=note_key),
+    }
+
+
 def separate_keys_roles(
     notes: list[NoteEvent],
     segments: list[ChordSegment] | None = None,

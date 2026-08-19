@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .venv-ai/
 .venv-ai313/
+.tools/
 .pytest_cache/
 .coverage
 .DS_Store

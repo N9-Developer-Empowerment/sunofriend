@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: "%s — Sunofriend",
   },
   description:
-    "Use the Sunofriend skill with a local coding agent to turn authorised music stems into editable MIDI, a balanced song-interpretation WAV and a starter ZIP. Tested on a MacBook so far.",
+    "Use the Sunofriend skill with a local coding agent to turn authorised music stems into editable MIDI, a balanced song-interpretation WAV and a starter ZIP. macOS is supported; native Windows setup is partially verified and documented.",
   applicationName: "Sunofriend",
   alternates: {
     canonical: "/",
