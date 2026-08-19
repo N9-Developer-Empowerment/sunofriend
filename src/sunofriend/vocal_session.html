@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sunofriend Vocal Session</title>
+  <link rel="stylesheet" href="/vocal_session.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Sunofriend · Vocal comping lab</p>
+      <h1 id="song-title">Vocal session</h1>
+    </div>
+    <div class="privacy-pill"><span></span> Private on this computer</div>
+  </header>
+
+  <main class="workspace" aria-live="polite">
+    <aside class="song-map panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Song map</p>
+          <h2>What needs you</h2>
+        </div>
+        <span id="progress-count" class="count">—</span>
+      </div>
+      <div class="progress-track"><span id="progress-fill"></span></div>
+      <nav id="phrase-list" aria-label="Song phrases"></nav>
+      <div class="map-note">
+        Progress changes only when you make a clear phrase decision. Listening
+        never chooses for you.
+      </div>
+    </aside>
+
+    <section class="phrase-stage panel">
+      <div class="stage-meta">
+        <span id="phrase-time">—</span>
+        <span id="phrase-state" class="state-chip">Open</span>
+      </div>
+      <p id="phrase-lyrics" class="lyrics">Loading your phrase…</p>
+
+      <div class="listen-card">
+        <div class="listen-heading">
+          <div>
+            <p class="eyebrow">Human takes</p>
+            <h2>Listen without ranking</h2>
+          </div>
+          <button id="stop-audio" class="quiet-button" type="button">Stop</button>
+        </div>
+        <p class="support-copy">
+          Each button plays this phrase only. The labels are neutral; no score
+          or automatic “best take” is shown.
+        </p>
+        <div id="source-tray" class="source-tray"></div>
+        <audio id="player" preload="metadata"></audio>
+      </div>
+
+      <div class="record-card">
+        <div class="record-icon" aria-hidden="true"></div>
+        <div>
+          <p class="eyebrow">Guided pickup recording</p>
+          <h2 id="record-title">Preparing the safe cue</h2>
+          <p id="record-reason" class="support-copy"></p>
+        </div>
+        <button type="button" disabled>Record a new attempt</button>
+      </div>
+    </section>
+
+    <aside class="decision-panel panel">
+      <p class="eyebrow">Your decision</p>
+      <h2>What should happen here?</h2>
+      <p class="support-copy">
+        Choose only after listening. This records the source plan; it does not
+        assemble, tune or alter any audio.
+      </p>
+
+      <div id="current-choice" class="current-choice hidden"></div>
+
+      <label for="session-note">Note for yourself</label>
+      <textarea id="session-note" rows="4" maxlength="2000"
+        placeholder="For example: stronger last word, but keep the warmth."></textarea>
+      <p id="draft-status" class="microcopy">Saved locally as a draft only.</p>
+
+      <div id="decision-actions" class="decision-actions">
+        <button id="use-human" class="primary-button" type="button" disabled>
+          Use the selected human take
+        </button>
+        <button id="record-again" type="button">Record this phrase again</button>
+        <button id="no-candidate" class="quiet-button" type="button">
+          No acceptable human take
+        </button>
+        <button id="ai-fallback" class="ai-button hidden" type="button">
+          Keep authorised AI here for now
+        </button>
+      </div>
+
+      <div class="boundary-note">
+        <strong>Not happening yet</strong>
+        <span>No comp render, join, pitch correction, timing correction or model training.</span>
+      </div>
+      <p id="notice" role="status" class="notice"></p>
+    </aside>
+  </main>
+
+  <script src="/vocal_session.js"></script>
+</body>
+</html>
