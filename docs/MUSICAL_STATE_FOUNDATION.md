@@ -77,6 +77,8 @@ validated. It uses the worker's already approved PyTorch runtime and neither
 downloads nor installs anything.
 The request fixes the process-local deterministic CuBLAS workspace before
 PyTorch starts so the checkpoint comparison is meaningful on CUDA.
+Windows resource receipts use a typed 64-bit process handle and record peak
+working-set bytes through the modern or legacy documented system entry point.
 
 ## Privacy and authority
 
