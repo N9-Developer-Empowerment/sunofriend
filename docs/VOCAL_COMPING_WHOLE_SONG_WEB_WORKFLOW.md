@@ -33,6 +33,10 @@ The current source map assumes full-song/common-zero takes. Browser-created
 full-song files padded with silence will not become the canonical workaround;
 the preferred next increment retains the phrase capture plus guard frames and
 records an explicit source-local window and destination-song placement.
+The path-free `browser-vocal-capture.v1` receipt now enforces that geometry,
+the reviewed phrase and exact cue/audio hashes while keeping the stored capture
+unreviewed and ineligible for selection, rendering, correction or training.
+Admission into a new immutable Vocal Performance State remains the next gate.
 
 Companion documents:
 
