@@ -294,7 +294,7 @@ class SongGenerationTests(unittest.TestCase):
                 "editable_source_audio",
             )
             self.assertEqual(payload["task_type"], "cover")
-            self.assertEqual(payload["src_audio_path"], str(reference))
+            self.assertEqual(payload["src_audio_path"], str(reference.resolve()))
             self.assertNotIn("reference_audio_path", payload)
 
     def test_native_remix_rejects_unverifiable_musical_locks(self) -> None:
@@ -481,7 +481,7 @@ class SongGenerationTests(unittest.TestCase):
                     path, fields, file_field, file_path = backend.submission
                     self.assertEqual(path, "/release_task")
                     self.assertEqual(file_field, expected_field)
-                    self.assertEqual(file_path, reference)
+                    self.assertEqual(file_path, reference.resolve())
                     self.assertNotIn("reference_audio_path", fields)
                     self.assertNotIn("src_audio_path", fields)
                     self.assertEqual(fields["task_type"], expected_task)
