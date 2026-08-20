@@ -70,19 +70,31 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
         draft = self.store.load_draft(session)
         sources = []
         human_index = 0
+        phrase_capture_index = 0
         for source in session["sources"]:
             capability = self.media_capability_by_source[source["source_id"]]
             if source["source_class"] == "human_vocal_take":
                 human_index += 1
+            elif source["source_class"] == "human_vocal_phrase_capture":
+                phrase_capture_index += 1
+            media = self.media[source["source_id"]]
             sources.append(
                 {
                     **source,
                     "display_label": (
                         "AI reference"
                         if source["source_class"] == "authorised_ai_vocal_reference"
-                        else f"Attempt {human_index}"
+                        else (
+                            f"Attempt {human_index}"
+                            if source["source_class"] == "human_vocal_take"
+                            else source.get(
+                                "label", f"Phrase attempt {phrase_capture_index}"
+                            )
+                        )
                     ),
                     "media_url": f"/media/{capability}",
+                    "playback_start_seconds": media.get("playback_start_seconds"),
+                    "playback_end_seconds": media.get("playback_end_seconds"),
                 }
             )
         return {
@@ -438,6 +450,7 @@ def _authorised_media(
 ) -> dict[str, dict[str, Any]]:
     vocal = musical_state["vocal_performance_state"]
     sources = list(vocal["takes"])
+    sources.extend(vocal.get("phrase_captures", []))
     reference = vocal.get("reference")
     if isinstance(reference, Mapping):
         sources.insert(0, reference)
@@ -459,6 +472,20 @@ def _authorised_media(
             "audio_bytes": size,
             "audio_sha256": digest,
             "private_path": str(path),
+            **(
+                {
+                    "playback_start_seconds": source["placement"][
+                        "source_phrase_start_frame"
+                    ]
+                    / source["audio_properties"]["sample_rate"],
+                    "playback_end_seconds": source["placement"][
+                        "source_phrase_end_frame"
+                    ]
+                    / source["audio_properties"]["sample_rate"],
+                }
+                if source.get("source_class") == "human_vocal_phrase_capture"
+                else {}
+            ),
         }
     return authorised
 

@@ -41,7 +41,7 @@ def create_phrase_decision(
     if outcome not in PHRASE_OUTCOMES:
         raise ValueError("unsupported vocal phrase outcome")
     _require_reviewed_structure(state)
-    selected_source = _selected_source(state, outcome, source_id)
+    selected_source = _selected_source(state, phrase_id, outcome, source_id)
     if not isinstance(notes, (str, type(None))):
         raise ValueError("decision notes must be text or null")
     if reviewed_at is not None and not str(reviewed_at).strip():
@@ -138,6 +138,7 @@ def validate_phrase_decision(
         raise ValueError("unsupported vocal phrase outcome")
     expected_source = _selected_source(
         state,
+        phrase["phrase_id"],
         str(outcome),
         str(document.get("selected_source_id"))
         if outcome == "human_take" and document.get("selected_source_id") is not None
@@ -224,22 +225,24 @@ def create_vocal_source_map(
         if decision is None:
             continue
         if decision["outcome"] in _SOURCE_OUTCOMES:
-            segments.append(
-                {
-                    "phrase_id": phrase_id,
-                    "decision_document_sha256": decision["document_sha256"],
-                    "outcome": decision["outcome"],
-                    "destination_start_seconds": phrase["start_seconds"],
-                    "destination_end_seconds": phrase["end_seconds"],
-                    "source_id": decision["selected_source_id"],
-                    "source_class": decision["selected_source_class"],
-                    "source_audio_sha256": decision["selected_source_sha256"],
-                    "source_start_seconds": phrase["start_seconds"],
-                    "source_end_seconds": phrase["end_seconds"],
-                    "join_status": "not_reviewed",
-                    "correction_status": "off",
-                }
-            )
+            segment = {
+                "phrase_id": phrase_id,
+                "decision_document_sha256": decision["document_sha256"],
+                "outcome": decision["outcome"],
+                "destination_start_seconds": phrase["start_seconds"],
+                "destination_end_seconds": phrase["end_seconds"],
+                "source_id": decision["selected_source_id"],
+                "source_class": decision["selected_source_class"],
+                "source_audio_sha256": decision["selected_source_sha256"],
+                **_source_geometry(
+                    state,
+                    phrase_id,
+                    str(decision["selected_source_id"]),
+                ),
+                "join_status": "not_reviewed",
+                "correction_status": "off",
+            }
+            segments.append(segment)
         else:
             unresolved.append(
                 {
@@ -336,8 +339,7 @@ def validate_vocal_source_map(
             "source_id": source_id,
             "source_class": source["source_class"],
             "source_audio_sha256": source["audio_sha256"],
-            "source_start_seconds": phrase["start_seconds"],
-            "source_end_seconds": phrase["end_seconds"],
+            **_source_geometry(state, phrase_id, source_id),
             "join_status": "not_reviewed",
             "correction_status": "off",
         }
@@ -415,7 +417,10 @@ def validate_vocal_source_map(
 
 
 def _selected_source(
-    state: Mapping[str, Any], outcome: str, source_id: str | None
+    state: Mapping[str, Any],
+    phrase_id: str,
+    outcome: str,
+    source_id: str | None,
 ) -> dict[str, Any] | None:
     vocal = state["vocal_performance_state"]
     if outcome == "human_take":
@@ -428,6 +433,16 @@ def _selected_source(
                     "source_class": "human_vocal_take",
                     "audio_sha256": take["audio"]["sha256"],
                 }
+        for capture in vocal.get("phrase_captures", []):
+            if capture["source_id"] != source_id:
+                continue
+            if capture["phrase"]["phrase_id"] != phrase_id:
+                raise ValueError("human phrase capture is bound to another phrase")
+            return {
+                "source_id": source_id,
+                "source_class": "human_vocal_phrase_capture",
+                "audio_sha256": capture["audio"]["sha256"],
+            }
         reference = vocal.get("reference")
         if isinstance(reference, Mapping) and reference.get("source_id") == source_id:
             raise ValueError("human_take requires a human take source")
@@ -463,7 +478,39 @@ def _sources(state: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
             "source_class": "authorised_ai_vocal_reference",
             "audio_sha256": reference["audio"]["sha256"],
         }
+    for capture in vocal.get("phrase_captures", []):
+        result[capture["source_id"]] = {
+            "source_class": "human_vocal_phrase_capture",
+            "audio_sha256": capture["audio"]["sha256"],
+            "phrase_id": capture["phrase"]["phrase_id"],
+        }
     return result
+
+
+def _source_geometry(
+    state: Mapping[str, Any], phrase_id: str, source_id: str
+) -> dict[str, Any]:
+    vocal = state["vocal_performance_state"]
+    for capture in vocal.get("phrase_captures", []):
+        if capture["source_id"] != source_id:
+            continue
+        if capture["phrase"]["phrase_id"] != phrase_id:
+            raise ValueError("human phrase capture is bound to another phrase")
+        placement = capture["placement"]
+        sample_rate = capture["audio_properties"]["sample_rate"]
+        start_frame = placement["source_phrase_start_frame"]
+        end_frame = placement["source_phrase_end_frame"]
+        return {
+            "source_start_frame": start_frame,
+            "source_end_frame": end_frame,
+            "source_start_seconds": start_frame / sample_rate,
+            "source_end_seconds": end_frame / sample_rate,
+        }
+    phrase = _phrase(state, phrase_id)
+    return {
+        "source_start_seconds": phrase["start_seconds"],
+        "source_end_seconds": phrase["end_seconds"],
+    }
 
 
 def _phrase(state: Mapping[str, Any], phrase_id: str) -> Mapping[str, Any]:
