@@ -18,6 +18,15 @@ def main() -> int:
     parser.add_argument("--title", default="Vocal comp session")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--open", action="store_true")
+    parser.add_argument(
+        "--recording-cue-source-id",
+        help="Exact reference-vocal source ID already admitted to the Musical State",
+    )
+    parser.add_argument(
+        "--capture-output-dir",
+        type=Path,
+        help="Fresh parent directory for owner-only phrase-capture states",
+    )
     args = parser.parse_args()
     run_vocal_session(
         args.musical_state,
@@ -25,6 +34,8 @@ def main() -> int:
         title=args.title,
         port=args.port,
         open_browser=args.open,
+        recording_cue_source_id=args.recording_cue_source_id,
+        capture_output_dir=args.capture_output_dir,
     )
     return 0
 

@@ -88,10 +88,31 @@ def test_vocal_musical_state_preserves_audio_native_unreviewed_evidence(
     assert source_hashes == {
         path.name: file_sha256(path) for path in fixture["take_dir"].glob("*.wav")
     }
-    copied_hashes = {
-        row["label"]: row["audio"]["sha256"] for row in vocal["takes"]
-    }
+    copied_hashes = {row["label"]: row["audio"]["sha256"] for row in vocal["takes"]}
     assert copied_hashes == source_hashes
+
+
+def test_wavex_reference_is_accepted_as_exact_hash_bound_wav(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    wavex = tmp_path / "reference-wavex.wav"
+    samples = np.zeros(8_000 * 2, dtype=np.float32)
+    soundfile.write(wavex, samples, 8_000, subtype="PCM_24", format="WAVEX")
+
+    plan = plan_vocal_musical_state(
+        fixture["take_dir"],
+        lyrics=fixture["lyrics"],
+        phrase_timeline=fixture["timeline"],
+        reference_vocal=wavex,
+        rights_category="owned",
+        processing_chain="dry",
+        confirm_common_recorded_zero=True,
+        confirm_timeline_reviewed=True,
+    )
+
+    assert plan["reference_vocal"]["audio"]["format"] == "WAV"
+    assert plan["reference_vocal"]["audio"]["subtype"] == "PCM_24"
 
 
 def test_vocal_musical_state_requires_explicit_alignment_and_review(
@@ -206,9 +227,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
             subtype="PCM_24",
         )
     reference = tmp_path / "reference-vocal.wav"
-    reference_audio = (0.10 * np.sin(2.0 * np.pi * 233.08 * time)).astype(
-        np.float32
-    )
+    reference_audio = (0.10 * np.sin(2.0 * np.pi * 233.08 * time)).astype(np.float32)
     soundfile.write(reference, reference_audio, sample_rate, subtype="PCM_24")
 
     lyrics = tmp_path / "lyrics.txt"

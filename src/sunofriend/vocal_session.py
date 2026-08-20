@@ -20,6 +20,7 @@ from .vocal_phrase_decision import create_phrase_decision, validate_phrase_decis
 VOCAL_SESSION_SCHEMA = "sunofriend.vocal-comp-session.v1"
 VOCAL_SESSION_DRAFT_SCHEMA = "sunofriend.vocal-comp-session-draft.v1"
 VOCAL_SESSION_EVENT_SCHEMA = "sunofriend.vocal-comp-session-event.v1"
+VOCAL_SESSION_REOPEN_SCHEMA = "sunofriend.vocal-comp-session-reopen.v1"
 VOCAL_SESSION_TRANSITION_REQUEST_SCHEMA = (
     "sunofriend.vocal-comp-session-transition-request.v1"
 )
@@ -212,6 +213,76 @@ class VocalSessionStore:
         self._secure_database_files()
         return event
 
+    def reopen_phrase(
+        self,
+        session: Mapping[str, Any],
+        *,
+        phrase_id: str,
+        expected_decision_document_sha256: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        """Explicitly reopen one decided phrase without deleting its history."""
+
+        current = {
+            row["phrase_id"]: row.get("decision") for row in session.get("phrases", [])
+        }
+        decision = current.get(phrase_id)
+        if not isinstance(decision, Mapping):
+            raise ValueError("only a currently decided phrase can be reopened")
+        if (
+            decision.get("decision_document_sha256")
+            != expected_decision_document_sha256
+        ):
+            raise ValueError("phrase reopen does not bind the current decision")
+        if not _SHA256.fullmatch(expected_decision_document_sha256):
+            raise ValueError("phrase reopen decision hash is invalid")
+        normalized_reason = str(reason).strip()
+        if normalized_reason not in {
+            "record_replacement",
+            "change_source",
+            "review_again",
+        }:
+            raise ValueError("phrase reopen reason is unsupported")
+        document: dict[str, Any] = {
+            "schema": VOCAL_SESSION_REOPEN_SCHEMA,
+            "reopen_id": str(uuid.uuid4()),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "session_id": session["session_id"],
+            "musical_state_sha256": session["binding"]["musical_state_sha256"],
+            "phrase_id": phrase_id,
+            "reopened_decision_document_sha256": expected_decision_document_sha256,
+            "reason": normalized_reason,
+            "authority": {
+                "explicit_human_reopen": True,
+                "prior_decision_deleted": False,
+                "new_phrase_decision_created": False,
+                "playback_or_draft_authority": "none",
+            },
+            "effects": _zero_effects(),
+            "network_used": False,
+        }
+        document["document_sha256"] = document_sha256(document)
+        with self._connect() as connection:
+            if connection.execute(
+                "SELECT 1 FROM vocal_session_reopens WHERE decision_document_sha256 = ?",
+                (expected_decision_document_sha256,),
+            ).fetchone():
+                raise ValueError("this phrase decision has already been reopened")
+            connection.execute(
+                "INSERT INTO vocal_session_reopens "
+                "(reopen_id, session_id, phrase_id, decision_document_sha256, reopen_json) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    document["reopen_id"],
+                    session["session_id"],
+                    phrase_id,
+                    expected_decision_document_sha256,
+                    canonical_json_bytes(document).decode("utf-8"),
+                ),
+            )
+        self._secure_database_files()
+        return document
+
     def apply_transition(
         self,
         previous_session: Mapping[str, Any],
@@ -243,7 +314,7 @@ class VocalSessionStore:
             raise ValueError("vocal session transition binding changed")
         expected_parent_hashes = [
             event["decision_document_sha256"]
-            for event in self.events(previous_session["session_id"])
+            for event in self._current_decision_events(previous_session["session_id"])
         ]
         if [
             row["parent_decision_document_sha256"]
@@ -313,10 +384,44 @@ class VocalSessionStore:
             ).fetchall()
         return [json.loads(row[0]) for row in rows]
 
-    def current_session(self, musical_state: Mapping[str, Any]) -> dict[str, Any]:
+    def reopens(self, session_id: str | None = None) -> list[dict[str, Any]]:
+        query = "SELECT reopen_json FROM vocal_session_reopens"
+        parameters: tuple[Any, ...] = ()
+        if session_id is not None:
+            query += " WHERE session_id = ?"
+            parameters = (session_id,)
+        query += " ORDER BY sequence"
+        with self._connect() as connection:
+            rows = connection.execute(query, parameters).fetchall()
+        return [json.loads(row[0]) for row in rows]
+
+    def _current_decision_events(self, session_id: str) -> list[dict[str, Any]]:
+        reopened = {
+            row["reopened_decision_document_sha256"] for row in self.reopens(session_id)
+        }
+        current_by_phrase: dict[str, dict[str, Any]] = {}
+        for event in self.events(session_id):
+            if event["decision_document_sha256"] in reopened:
+                continue
+            phrase_id = event["decision"]["phrase"]["phrase_id"]
+            if phrase_id in current_by_phrase:
+                raise ValueError(
+                    "vocal session contains multiple active phrase decisions"
+                )
+            current_by_phrase[phrase_id] = event
+        return list(current_by_phrase.values())
+
+    def current_decisions(
+        self, musical_state: Mapping[str, Any]
+    ) -> list[dict[str, Any]]:
         empty = build_vocal_session(musical_state)
-        decisions = [event["decision"] for event in self.events(empty["session_id"])]
-        return build_vocal_session(musical_state, decisions)
+        return [
+            event["decision"]
+            for event in self._current_decision_events(empty["session_id"])
+        ]
+
+    def current_session(self, musical_state: Mapping[str, Any]) -> dict[str, Any]:
+        return build_vocal_session(musical_state, self.current_decisions(musical_state))
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.database)
@@ -343,6 +448,24 @@ class VocalSessionStore:
                 BEFORE DELETE ON vocal_session_events
                 BEGIN
                     SELECT RAISE(ABORT, 'append-only event store');
+                END;
+                CREATE TABLE IF NOT EXISTS vocal_session_reopens (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                    reopen_id TEXT NOT NULL UNIQUE,
+                    session_id TEXT NOT NULL,
+                    phrase_id TEXT NOT NULL,
+                    decision_document_sha256 TEXT NOT NULL UNIQUE,
+                    reopen_json TEXT NOT NULL
+                );
+                CREATE TRIGGER IF NOT EXISTS vocal_session_reopens_no_update
+                BEFORE UPDATE ON vocal_session_reopens
+                BEGIN
+                    SELECT RAISE(ABORT, 'append-only reopen store');
+                END;
+                CREATE TRIGGER IF NOT EXISTS vocal_session_reopens_no_delete
+                BEFORE DELETE ON vocal_session_reopens
+                BEGIN
+                    SELECT RAISE(ABORT, 'append-only reopen store');
                 END;
                 CREATE TABLE IF NOT EXISTS vocal_session_transitions (
                     sequence INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -859,6 +982,7 @@ def _transition_effects() -> dict[str, bool]:
 __all__ = [
     "VOCAL_SESSION_DRAFT_SCHEMA",
     "VOCAL_SESSION_EVENT_SCHEMA",
+    "VOCAL_SESSION_REOPEN_SCHEMA",
     "VOCAL_SESSION_SCHEMA",
     "VOCAL_SESSION_TRANSITION_REQUEST_SCHEMA",
     "VOCAL_SESSION_TRANSITION_SCHEMA",

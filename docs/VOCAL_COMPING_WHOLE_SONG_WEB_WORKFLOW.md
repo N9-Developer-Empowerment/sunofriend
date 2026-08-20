@@ -8,18 +8,37 @@ correct or render a complete vocal comp.
 
 ## Implementation checkpoint — 20 August 2026
 
-The first reusable W1/W2 foundation is now implemented on the current research
+The reusable W1/W2 foundation is now implemented on the current research
 branch as a dedicated loopback Vocal Session, separate from the larger MIDI
 Workbench. It can reopen an exact Musical State, show its reviewed phrase
-roster, audition hash-bound human or authorised-AI sources, restore local draft
-notes and fold only explicit phrase decisions from an append-only owner-only
-store. Playback, dwell and drafts remain zero-authority. The page cannot yet
-assemble, tune, correct or train on audio.
+roster, audition hash-bound human sources and a reference-vocal cue, restore
+local draft notes and fold only explicit phrase decisions from an append-only
+owner-only store. Playback, dwell and drafts remain zero-authority. The page
+cannot yet assemble, tune, correct or train on audio.
 
-The first real session reopens the reviewed *The Heart Sees* phrase and its
-four common-zero human takes, including the previously recorded human choice.
-Recording remains unavailable for that older state until a reference cue is
-explicitly admitted; the server never borrows an adjacent unverified file.
+The current private *The Heart Sees* pilot has two reviewed phrases, the two
+historically preferred common-zero human sources and the exact full-song AI
+vocal admitted as an audition and guided-recording cue. The reference is not
+AI-fallback render authority. Earlier decisions were deliberately not migrated
+into the changed state: each phrase starts open for explicit revalidation.
+
+The page now treats recording as an iterative workflow rather than a terminal
+`record_again` decision. Each human source has separate **Play** and **Use**
+actions, the active audition is visible, and seeking waits for media metadata.
+The singer can hear the original or a human attempt over the exact phrase,
+surrounding reviewed section or song-time scope. A saved phrase decision can
+be explicitly reopened, or a replacement recording can begin without deleting
+the earlier decision. Reopen events and capture-round transitions preserve the
+append-only history.
+
+This is the immediate two-phrase vertical slice, not yet the complete
+hundred-phrase interface. The next scaling increment is a candidate vault that
+keeps rejected and unsaved-to-comp recordings without creating a fresh Musical
+State for every audition, plus filters, **Next phrase needing me**, keyboard
+shortcuts and section-level checkpoints. A later audition plan must bind the
+backing/full-mix asset so phrase, section and song playback can compare the
+working comp in music context; the current scope controls audition vocal
+sources only.
 
 Before guided pickup recording is admitted, the data contract must distinguish
 the immutable bounded microphone capture from its placement on the song clock.

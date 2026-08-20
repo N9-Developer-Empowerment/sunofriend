@@ -130,6 +130,7 @@ def test_launch_is_loopback_only_uses_a_fresh_token_and_returns_path_free_state(
         )
         assert status == 200
         session = browser_state["session"]
+        assert browser_state["ai_fallback_available"] is False
         assert session["schema"] == VOCAL_SESSION_SCHEMA
         assert (
             session["binding"]["musical_state_sha256"]
@@ -202,6 +203,71 @@ def test_mutation_requires_token_same_origin_and_an_explicit_decision(
     assert payload["event"]["decision"]["selected_source_id"] == "take-001"
     assert payload["state"]["session"]["coverage"]["decision_count"] == 1
     assert not _keys_named_path(payload)
+
+
+def test_explicit_reopen_retains_history_and_allows_a_new_phrase_choice(
+    vocal_http: _VocalSessionHTTP,
+) -> None:
+    fixture = vocal_http
+    decision_request = {
+        "phrase_id": "phrase-001",
+        "outcome": "human_take",
+        "source_id": "take-001",
+        "notes": "First explicit choice.",
+    }
+    status, _, first = fixture.json_request(
+        "POST",
+        f"/api/decision?token={fixture.token}",
+        decision_request,
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 201
+    first_hash = first["event"]["decision_document_sha256"]
+
+    status, _, reopened = fixture.json_request(
+        "POST",
+        f"/api/reopen?token={fixture.token}",
+        {
+            "phrase_id": "phrase-001",
+            "expected_decision_document_sha256": first_hash,
+            "reason": "change_source",
+        },
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 201
+    assert reopened["reopen"]["reopened_decision_document_sha256"] == first_hash
+    assert reopened["reopen"]["authority"] == {
+        "explicit_human_reopen": True,
+        "prior_decision_deleted": False,
+        "new_phrase_decision_created": False,
+        "playback_or_draft_authority": "none",
+    }
+    assert reopened["state"]["session"]["phrases"][0]["decision"] is None
+    assert reopened["state"]["session"]["coverage"]["decision_count"] == 0
+    assert (
+        len(fixture.server.store.events(reopened["state"]["session"]["session_id"]))
+        == 1
+    )
+    assert (
+        len(fixture.server.store.reopens(reopened["state"]["session"]["session_id"]))
+        == 1
+    )
+
+    decision_request.update({"source_id": "take-002", "notes": "Revised choice."})
+    status, _, second = fixture.json_request(
+        "POST",
+        f"/api/decision?token={fixture.token}",
+        decision_request,
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 201
+    assert (
+        second["state"]["session"]["phrases"][0]["decision"]["selected_source_id"]
+        == "take-002"
+    )
+    assert (
+        len(fixture.server.store.events(second["state"]["session"]["session_id"])) == 2
+    )
 
 
 def test_draft_put_is_same_origin_non_authoritative_and_revision_checked(
