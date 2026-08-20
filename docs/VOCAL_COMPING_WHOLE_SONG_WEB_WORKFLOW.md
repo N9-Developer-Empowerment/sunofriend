@@ -2,11 +2,11 @@
 
 Prepared: 16 August 2026
 
-Status: product and engineering design. The existing private pilot records and
-reviews one phrase at a time. It does not yet select, assemble, correct or
-render a complete vocal comp.
+Status: product and engineering design with the first reusable phrase-session
+and browser-recording increment implemented. It does not yet select, assemble,
+correct or render a complete vocal comp.
 
-## Implementation checkpoint — 19 August 2026
+## Implementation checkpoint — 20 August 2026
 
 The first reusable W1/W2 foundation is now implemented on the current research
 branch as a dedicated loopback Vocal Session, separate from the larger MIDI
@@ -18,9 +18,8 @@ assemble, tune, correct or train on audio.
 
 The first real session reopens the reviewed *The Heart Sees* phrase and its
 four common-zero human takes, including the previously recorded human choice.
-Its Musical State does not yet admit a backing or reference cue, so microphone
-recording is visibly unavailable instead of borrowing an adjacent unverified
-audio file.
+Recording remains unavailable for that older state until a reference cue is
+explicitly admitted; the server never borrows an adjacent unverified file.
 
 Before guided pickup recording is admitted, the data contract must distinguish
 the immutable bounded microphone capture from its placement on the song clock.
@@ -28,16 +27,29 @@ The current source map assumes full-song/common-zero takes. Browser-created
 full-song files padded with silence will not become the canonical workaround;
 the preferred next increment retains the phrase capture plus guard frames and
 records an explicit source-local window and destination-song placement.
-The path-free `browser-vocal-capture.v1` receipt now enforces that geometry,
+The path-free `browser-vocal-capture.v1` receipt enforces that geometry,
 the reviewed phrase and exact cue/audio hashes while keeping the stored capture
 unreviewed and ineligible for selection, rendering, correction or training.
 Admission is now implemented as `sunofriend.vocal-performance-state.v3`: it
 copies the exact receipt and WAV into a fresh owner-only state, retains the
 complete parent state and earlier evidence unchanged, and exposes the pickup
 only to its bound phrase. Existing common-zero full takes retain their v2
-decision and source-map shape. The next gate is explicit browser save/ingest
-using a verified cue; microphone recording remains unavailable until that cue
-is admitted rather than borrowed from an adjacent file.
+decision and source-map shape.
+
+The dedicated Vocal Session now also has an opt-in browser microphone path for
+a state with an exact, hash-verified reference-vocal cue. It plays the bounded
+cue through headphones, records mono PCM24 with browser processing requested
+off, preserves half-second source-local guards, and writes nothing until the
+singer presses **Save this recording locally**. The server then verifies the
+WAV, cue, phrase, Musical State and placement before creating a fresh v3 state.
+Listening, stopping, discarding and unsaved attempts remain zero-write and
+zero-authority. The placement records the intended cue clock only: it is not a
+claim that browser/device latency has been measured or corrected.
+
+This first recording increment intentionally blocks further capture after an
+explicit phrase decision, because admitting a new source changes the Musical
+State identity. A later session transition must explicitly rebind or revisit
+decisions; the implementation will not silently migrate musical authority.
 
 Companion documents:
 

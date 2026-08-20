@@ -30,6 +30,7 @@ _REQUIRED_NATURE = {
     "pairwise_vocal_ranker": "T",
     "remix_identity_probe": "I",
 }
+_C0_EXPERIMENT_ID = "c0-synthetic-tiny-overfit-001"
 
 
 def build_gpu_worker_request(
@@ -100,11 +101,24 @@ def build_gpu_worker_result(
     outputs: Sequence[Mapping[str, Any]],
     timings: Mapping[str, Any],
     resources: Mapping[str, Any],
+    training_evidence: Mapping[str, Any] | None = None,
     warnings: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Build one technical result that cannot make a musical decision."""
 
     request_document = validate_gpu_worker_request(request)
+    expected_outputs = {
+        str(row["output_id"]): row for row in request_document["expected_outputs"]
+    }
+    normalized_outputs: list[dict[str, Any]] = []
+    for raw in outputs:
+        row = dict(raw)
+        expected = expected_outputs.get(str(row.get("output_id", "")))
+        if expected is not None:
+            row.setdefault("media_type", expected["media_type"])
+            if "shape" in expected:
+                row.setdefault("shape", expected["shape"])
+        normalized_outputs.append(row)
     document: dict[str, Any] = {
         "schema": GPU_WORKER_RESULT_SCHEMA,
         "status": status,
@@ -113,9 +127,12 @@ def build_gpu_worker_result(
         "experiment_id": request_document["experiment_id"],
         "task_kind": request_document["task_kind"],
         "environment": dict(environment),
-        "outputs": [dict(item) for item in outputs],
+        "outputs": normalized_outputs,
         "timings": dict(timings),
         "resources": dict(resources),
+        "training_evidence": (
+            dict(training_evidence) if training_evidence is not None else None
+        ),
         "warnings": list(warnings),
         "authority": {
             "technical_completion_only": True,
@@ -143,9 +160,7 @@ def validate_gpu_worker_result(
         "document_sha256"
     ):
         raise ValueError("GPU result does not bind the supplied request")
-    if document.get("repository_commit") != request_document.get(
-        "repository_commit"
-    ):
+    if document.get("repository_commit") != request_document.get("repository_commit"):
         raise ValueError("GPU result repository commit does not match request")
     for key in ("experiment_id", "task_kind"):
         if document.get(key) != request_document.get(key):
@@ -164,6 +179,14 @@ def validate_gpu_worker_result(
         expected = requested_outputs[output_id]
         if row.get("kind") != expected.get("kind"):
             raise ValueError(f"GPU result output kind changed: {output_id}")
+        if ("media_type" in row or "shape" in expected) and row.get(
+            "media_type"
+        ) != expected.get("media_type"):
+            raise ValueError(f"GPU result output media type changed: {output_id}")
+        if ("shape" in row or "shape" in expected) and row.get("shape") != expected.get(
+            "shape"
+        ):
+            raise ValueError(f"GPU result output shape changed: {output_id}")
     ceiling = request_document["resource_ceiling"]
     if _finite_number(document["timings"].get("wall_seconds"), "wall_seconds") > int(
         ceiling["maximum_wall_seconds"]
@@ -181,11 +204,30 @@ def validate_gpu_worker_result(
         ceiling["maximum_output_bytes"]
     ):
         raise ValueError("GPU result exceeded maximum output bytes")
-    training = request_document.get("training")
-    if training is not None and int(document["timings"].get("optimisation_steps", -1)) > int(
-        training["maximum_steps_per_arm"]
+    reported_output_bytes = document["resources"].get("output_bytes")
+    if request_document.get("experiment_id") == _C0_EXPERIMENT_ID:
+        if isinstance(reported_output_bytes, bool) or int(
+            reported_output_bytes if reported_output_bytes is not None else -1
+        ) != sum(int(row["bytes"]) for row in returned_outputs.values()):
+            raise ValueError("GPU result output bytes do not match returned outputs")
+    if reported_output_bytes is not None and int(reported_output_bytes) > int(
+        ceiling["maximum_output_bytes"]
     ):
+        raise ValueError("GPU result exceeded maximum output bytes")
+    training = request_document.get("training")
+    if training is not None and int(
+        document["timings"].get("optimisation_steps", -1)
+    ) > int(training["maximum_steps_per_arm"]):
         raise ValueError("GPU result exceeded maximum optimisation steps")
+    training_evidence = document.get("training_evidence")
+    if request_document.get("experiment_id") == _C0_EXPERIMENT_ID:
+        if training_evidence is None:
+            raise ValueError("C0 result must include training evidence")
+        _validate_training_evidence(
+            training_evidence,
+            request=request_document,
+            result=document,
+        )
     return document
 
 
@@ -199,8 +241,10 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
     if document.get("task_kind") not in _TASK_KINDS:
         raise ValueError("unsupported GPU worker task_kind")
     natures = document.get("method_natures")
-    if not isinstance(natures, list) or not natures or any(
-        item not in {"D", "I", "T", "H"} for item in natures
+    if (
+        not isinstance(natures, list)
+        or not natures
+        or any(item not in {"D", "I", "T", "H"} for item in natures)
     ):
         raise ValueError("method_natures must contain D, I, T or H labels")
     if len(set(natures)) != len(natures):
@@ -211,8 +255,10 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
             f"{document.get('task_kind')} must declare {required_nature} work"
         )
     hashes = document.get("authorised_asset_hashes")
-    if not isinstance(hashes, list) or not hashes or any(
-        not _SHA256.fullmatch(str(item)) for item in hashes
+    if (
+        not isinstance(hashes, list)
+        or not hashes
+        or any(not _SHA256.fullmatch(str(item)) for item in hashes)
     ):
         raise ValueError("authorised_asset_hashes must contain lowercase SHA-256s")
     if len(set(hashes)) != len(hashes):
@@ -296,7 +342,9 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
             raise ValueError("training must require a shuffled-label control")
     elif training is not None:
         raise ValueError("non-training request cannot contain training config")
-    ceiling = _require_safe_mapping(document.get("resource_ceiling"), "resource ceiling")
+    ceiling = _require_safe_mapping(
+        document.get("resource_ceiling"), "resource ceiling"
+    )
     for key in (
         "maximum_wall_seconds",
         "maximum_gpu_bytes",
@@ -321,11 +369,123 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
             "GPU training must declare a deterministic CuBLAS workspace config"
         )
     stop_rules = document.get("stop_rules")
-    if not isinstance(stop_rules, list) or not stop_rules or any(
-        not str(item).strip() for item in stop_rules
+    if (
+        not isinstance(stop_rules, list)
+        or not stop_rules
+        or any(not str(item).strip() for item in stop_rules)
     ):
         raise ValueError("stop_rules must contain non-empty rules")
+    if document.get("experiment_id") == _C0_EXPERIMENT_ID:
+        _validate_c0_request(document)
     _reject_private_or_path_fields(document)
+
+
+def _validate_c0_request(document: Mapping[str, Any]) -> None:
+    dataset = _require_safe_mapping(document.get("dataset"), "C0 dataset")
+    if dataset.get("schema") != "sunofriend.synthetic-pairwise.v1":
+        raise ValueError("C0 dataset schema changed")
+    generation_seed = dataset.get("generation_seed")
+    if (
+        isinstance(generation_seed, bool)
+        or not isinstance(generation_seed, int)
+        or not 0 <= generation_seed <= 2**32 - 1
+    ):
+        raise ValueError("C0 dataset generation seed must be a uint32")
+    train_ids = [f"composition-{index:02d}" for index in range(12)]
+    heldout_ids = [f"composition-{index:02d}" for index in range(12, 16)]
+    for key, expected in (
+        ("train_group_ids", train_ids),
+        ("heldout_group_ids", heldout_ids),
+        ("train_composition_ids", train_ids),
+        ("heldout_composition_ids", heldout_ids),
+    ):
+        observed = dataset.get(key)
+        if not isinstance(observed, list) or not observed:
+            raise ValueError(f"C0 {key} must be non-empty")
+        if any(not _SAFE_ID.fullmatch(str(item)) for item in observed):
+            raise ValueError(f"C0 {key} contains an unsafe group ID")
+    if set(dataset["train_group_ids"]) & set(dataset["heldout_group_ids"]):
+        raise ValueError("C0 train and heldout group IDs must be disjoint")
+    for key, expected in (
+        ("train_group_ids", train_ids),
+        ("heldout_group_ids", heldout_ids),
+        ("train_composition_ids", train_ids),
+        ("heldout_composition_ids", heldout_ids),
+    ):
+        if dataset[key] != expected:
+            raise ValueError(f"C0 {key} changed; group IDs must remain disjoint")
+    expected_dataset = {
+        "group_count": 16,
+        "feature_count": 16,
+        "example_count": 256,
+        "feature_shape": [256, 16],
+        "train_shape": [192, 16],
+        "heldout_shape": [64, 16],
+        "dtype": "float32",
+        "train_group_count": 12,
+        "heldout_group_count": 4,
+        "generation_seed": 1729,
+    }
+    for key, expected in expected_dataset.items():
+        if dataset.get(key) != expected:
+            raise ValueError(f"C0 dataset {key} changed")
+
+    model = _require_safe_mapping(document.get("model"), "C0 model")
+    expected_model = {
+        "name": "tiny-pairwise-pipeline-canary",
+        "version": "0.0.1",
+        "architecture": "linear16-tanh-linear1",
+        "input_features": 16,
+        "hidden_features": 16,
+        "output_features": 1,
+        "parameter_dtype": "float32",
+        "initialisation_seed": 1729,
+        "authority": "pipeline_test_only",
+    }
+    if dict(model) != expected_model:
+        raise ValueError("C0 model architecture or identity changed")
+
+    training = _require_safe_mapping(document.get("training"), "C0 training")
+    expected_training = {
+        "seed": 1729,
+        "optimiser": "adamw",
+        "maximum_steps_per_arm": 200,
+        "resume_step": 100,
+        "checkpoint_steps": [100, 200],
+        "batch_size": 32,
+        "learning_rate": 0.01,
+        "shuffled_label_control": True,
+        "deterministic_algorithms": True,
+    }
+    if dict(training) != expected_training:
+        raise ValueError(
+            "C0 training must retain AdamW, 200 steps, resume 100 and checkpoints 100/200"
+        )
+
+    expected_outputs = [
+        {
+            "output_id": "metrics-json",
+            "kind": "metrics",
+            "media_type": "application/json",
+            "shape": {"arm_count": 3, "scalar_metric_count": 3},
+        },
+        *[
+            {
+                "output_id": output_id,
+                "kind": "checkpoint",
+                "media_type": "application/x-pytorch",
+                "shape": {"parameter_count": 289, "step": step},
+            }
+            for output_id, step in (
+                ("checkpoint-step-100", 100),
+                ("checkpoint-final-uninterrupted", 200),
+                ("checkpoint-final-resumed", 200),
+                ("checkpoint-final-shuffled", 200),
+            )
+        ],
+    ]
+    if document.get("expected_outputs") != expected_outputs:
+        raise ValueError("C0 expected output kind, shape or checkpoint roster changed")
 
 
 def _validate_result_fields(document: Mapping[str, Any]) -> None:
@@ -351,22 +511,34 @@ def _validate_result_fields(document: Mapping[str, Any]) -> None:
             raise ValueError("output.sha256 must be a lowercase SHA-256")
         if int(row.get("bytes", -1)) < 0:
             raise ValueError("output.bytes must be non-negative")
+        if "media_type" in row and not str(row.get("media_type", "")).strip():
+            raise ValueError("output.media_type is required")
+        if "shape" in row:
+            _require_safe_mapping(row["shape"], "output.shape")
     output_ids = [str(row["output_id"]) for row in outputs]
     if len(set(output_ids)) != len(output_ids):
         raise ValueError("GPU result output IDs must be unique")
     _require_safe_mapping(document.get("timings"), "timings")
     timings = _require_safe_mapping(document.get("timings"), "timings")
     _finite_number(timings.get("wall_seconds"), "wall_seconds")
-    if isinstance(timings.get("optimisation_steps"), bool) or int(
-        timings.get("optimisation_steps", -1)
-    ) < 0:
+    if (
+        isinstance(timings.get("optimisation_steps"), bool)
+        or int(timings.get("optimisation_steps", -1)) < 0
+    ):
         raise ValueError("timings.optimisation_steps must be non-negative")
     resources = _require_safe_mapping(document.get("resources"), "resources")
     for key in ("peak_gpu_bytes", "peak_ram_bytes"):
         if isinstance(resources.get(key), bool) or int(resources.get(key, -1)) < 0:
             raise ValueError(f"resources.{key} must be non-negative")
+    if "output_bytes" in resources and (
+        isinstance(resources["output_bytes"], bool)
+        or int(resources["output_bytes"]) < 0
+    ):
+        raise ValueError("resources.output_bytes must be non-negative")
     warnings = document.get("warnings")
-    if not isinstance(warnings, list) or any(not isinstance(item, str) for item in warnings):
+    if not isinstance(warnings, list) or any(
+        not isinstance(item, str) for item in warnings
+    ):
         raise ValueError("warnings must be a list of strings")
     authority = _require_safe_mapping(document.get("authority"), "authority")
     if authority.get("technical_completion_only") is not True:
@@ -381,7 +553,149 @@ def _validate_result_fields(document: Mapping[str, Any]) -> None:
         )
     ):
         raise ValueError("GPU result cannot grant musical or product authority")
+    training_evidence = document.get("training_evidence")
+    if training_evidence is not None:
+        _require_safe_mapping(training_evidence, "training_evidence")
     _reject_private_or_path_fields(document)
+
+
+def _validate_training_evidence(
+    value: Mapping[str, Any],
+    *,
+    request: Mapping[str, Any],
+    result: Mapping[str, Any],
+) -> None:
+    training = _require_safe_mapping(request.get("training"), "request training")
+    dataset = _require_safe_mapping(value.get("dataset"), "training dataset evidence")
+    if dataset.get("sha256") != request["dataset"].get("sha256"):
+        raise ValueError("training evidence dataset does not bind the request")
+    if dataset.get("generation_seed") != request["dataset"].get("generation_seed"):
+        raise ValueError("training evidence generation seed changed")
+    if dataset.get("dtype") != "float32":
+        raise ValueError("training evidence must declare float32")
+    for key in (
+        "train_group_ids",
+        "heldout_group_ids",
+        "train_composition_ids",
+        "heldout_composition_ids",
+    ):
+        rows = dataset.get(key)
+        if (
+            not isinstance(rows, list)
+            or not rows
+            or any(not _SAFE_ID.fullmatch(str(item)) for item in rows)
+        ):
+            raise ValueError(f"training evidence {key} must contain safe IDs")
+        if len(rows) != len(set(rows)):
+            raise ValueError(f"training evidence {key} must be unique")
+    if set(dataset["train_group_ids"]) & set(dataset["heldout_group_ids"]):
+        raise ValueError("training and heldout group IDs must be disjoint")
+    if set(dataset["train_composition_ids"]) & set(dataset["heldout_composition_ids"]):
+        raise ValueError("training and heldout composition IDs must be disjoint")
+    if dataset.get("train_shape") != [192, 16] or dataset.get("heldout_shape") != [
+        64,
+        16,
+    ]:
+        raise ValueError("training evidence fixture shapes changed")
+
+    model = _require_safe_mapping(value.get("model"), "training model evidence")
+    request_model = _require_safe_mapping(request.get("model"), "request model")
+    for key in (
+        "architecture",
+        "input_features",
+        "hidden_features",
+        "output_features",
+        "parameter_dtype",
+    ):
+        if model.get(key) != request_model.get(key):
+            raise ValueError(f"training evidence model {key} changed")
+
+    execution = _require_safe_mapping(
+        value.get("execution"), "training execution evidence"
+    )
+    for key in (
+        "seed",
+        "optimiser",
+        "learning_rate",
+        "batch_size",
+        "maximum_steps_per_arm",
+        "resume_step",
+        "checkpoint_steps",
+        "deterministic_algorithms",
+    ):
+        if execution.get(key) != training.get(key):
+            raise ValueError(f"training execution {key} changed")
+    if execution.get("network_attempts") != 0:
+        raise ValueError("training evidence must report zero network attempts")
+    if execution.get("retries") != 0:
+        raise ValueError("training evidence must report zero retries")
+
+    arms = value.get("arms")
+    if not isinstance(arms, list) or [row.get("arm_id") for row in arms] != [
+        "clean_uninterrupted",
+        "clean_resumed",
+        "shuffled_label_control",
+    ]:
+        raise ValueError("training evidence must contain the exact three C0 arms")
+    maximum_steps = int(training["maximum_steps_per_arm"])
+    for row in arms:
+        _require_safe_mapping(row, "training arm")
+        if (
+            isinstance(row.get("steps"), bool)
+            or not 0 < int(row.get("steps", 0)) <= maximum_steps
+        ):
+            raise ValueError("training arm steps exceed the request")
+        if (
+            request.get("experiment_id") == _C0_EXPERIMENT_ID
+            and int(row["steps"]) != maximum_steps
+        ):
+            raise ValueError("every C0 arm must finish at request step 200")
+        for key in ("final_loss", "heldout_accuracy"):
+            _finite_number(row.get(key), f"training arm {key}")
+        if row.get("finite_losses") is not True:
+            raise ValueError("training arm losses must all be finite")
+
+    resume = _require_safe_mapping(
+        value.get("resume_equivalence"), "resume equivalence"
+    )
+    for key in (
+        "maximum_parameter_difference",
+        "maximum_optimiser_difference",
+        "tolerance",
+    ):
+        if _finite_number(resume.get(key), f"resume {key}") < 0:
+            raise ValueError(f"resume {key} must be non-negative")
+    calculated_resume_pass = max(
+        float(resume["maximum_parameter_difference"]),
+        float(resume["maximum_optimiser_difference"]),
+    ) <= float(resume["tolerance"])
+    if resume.get("passed") is not calculated_resume_pass:
+        raise ValueError("resume equivalence flag does not match its evidence")
+    if result.get("status") == "complete" and not calculated_resume_pass:
+        raise ValueError("complete training evidence requires resume equivalence")
+
+    acceptance = _require_safe_mapping(
+        value.get("acceptance"), "training acceptance evidence"
+    )
+    if set(acceptance) != {
+        "clean_accuracy_at_least_0_90",
+        "clean_advantage_at_least_0_20",
+        "resume_equivalence_at_most_1e_7",
+    } or any(not isinstance(item, bool) for item in acceptance.values()):
+        raise ValueError("training acceptance fields changed")
+    clean_accuracy = float(arms[0]["heldout_accuracy"])
+    shuffled_accuracy = float(arms[2]["heldout_accuracy"])
+    calculated_acceptance = {
+        "clean_accuracy_at_least_0_90": clean_accuracy >= 0.90,
+        "clean_advantage_at_least_0_20": (clean_accuracy - shuffled_accuracy >= 0.20),
+        "resume_equivalence_at_most_1e_7": (
+            calculated_resume_pass and float(resume["tolerance"]) == 1e-7
+        ),
+    }
+    if dict(acceptance) != calculated_acceptance:
+        raise ValueError("training acceptance flags do not match their evidence")
+    if result.get("status") == "complete" and not all(acceptance.values()):
+        raise ValueError("complete training result must pass every C0 acceptance gate")
 
 
 def _verify_document_hash(document: Mapping[str, Any]) -> None:

@@ -7,6 +7,20 @@ let activeSourceId = null;
 let stopAt = null;
 let draftTimer = null;
 let draftNotes = {};
+let microphoneStream = null;
+let audioContext = null;
+let microphoneSource = null;
+let microphoneProcessor = null;
+let silentGain = null;
+let cueNode = null;
+let captureTimer = null;
+let recording = false;
+let captureChunks = [];
+let captureFrameCursor = 0;
+let captureOriginContextTime = null;
+let captureStartContextTime = null;
+let recordedAttempt = null;
+let attemptObjectUrl = null;
 const player = document.querySelector("#player");
 
 function apiPath(path) {
@@ -112,11 +126,16 @@ function render() {
 
   document.querySelector("#record-title").textContent = appState.recording.available ? "Ready to record" : "Cue required before recording";
   document.querySelector("#record-reason").textContent = appState.recording.reason || "";
+  document.querySelector("#enable-mic").disabled = !appState.recording.available || Boolean(microphoneStream);
+  document.querySelector("#record-attempt").disabled = !appState.recording.available || !microphoneStream || recording;
+  document.querySelector("#recorder-panel").classList.toggle("hidden", !appState.recording.available);
   restoreNote();
 }
 
 function selectPhrase(phraseId) {
   stopPlayback();
+  if (recording) stopRecording(true);
+  discardRecordedAttempt();
   activePhraseId = phraseId;
   activeSourceId = null;
   render();
@@ -218,6 +237,304 @@ document.querySelector("#use-human").addEventListener("click", () => decide("hum
 document.querySelector("#record-again").addEventListener("click", () => decide("record_again"));
 document.querySelector("#no-candidate").addEventListener("click", () => decide("no_acceptable_candidate"));
 document.querySelector("#ai-fallback").addEventListener("click", () => decide("ai_fallback"));
+
+function dbfs(value) {
+  return value > 0 ? 20 * Math.log10(value) : -Infinity;
+}
+
+function setRecorderStatus(message, error = false) {
+  const status = document.querySelector("#record-status");
+  status.textContent = message;
+  status.style.color = error ? "var(--danger)" : "";
+}
+
+async function enableMicrophone() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
+    setRecorderStatus("This browser cannot provide the required local microphone capture.", true);
+    return;
+  }
+  try {
+    microphoneStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: {ideal: 1},
+        sampleRate: {ideal: 44100},
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+      video: false,
+    });
+    audioContext = new AudioContext({sampleRate: 44100, latencyHint: "interactive"});
+    await audioContext.resume();
+    microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
+    microphoneProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+    silentGain = audioContext.createGain();
+    silentGain.gain.value = 0;
+    microphoneSource.connect(microphoneProcessor);
+    microphoneProcessor.connect(silentGain);
+    silentGain.connect(audioContext.destination);
+    microphoneProcessor.onaudioprocess = (event) => {
+      const input = event.inputBuffer.getChannelData(0);
+      let sum = 0;
+      for (let index = 0; index < input.length; index += 1) sum += input[index] * input[index];
+      const rms = Math.sqrt(sum / Math.max(1, input.length));
+      const level = Math.max(0, Math.min(100, (dbfs(rms) + 60) * (100 / 60)));
+      document.querySelector("#mic-meter").style.width = `${level}%`;
+      if (recording) {
+        if (captureOriginContextTime === null) captureOriginContextTime = event.playbackTime;
+        captureChunks.push({frame: captureFrameCursor, samples: new Float32Array(input)});
+        captureFrameCursor += input.length;
+      }
+    };
+    const settings = microphoneStream.getAudioTracks()[0]?.getSettings?.() || {};
+    document.querySelector("#mic-status").textContent =
+      `Microphone enabled at ${audioContext.sampleRate} Hz. Echo cancellation ${settings.echoCancellation === false ? "off" : "browser-controlled"}; noise suppression ${settings.noiseSuppression === false ? "off" : "browser-controlled"}; automatic gain ${settings.autoGainControl === false ? "off" : "browser-controlled"}.`;
+    setRecorderStatus("Ready. Wear headphones, then record the current phrase.");
+    render();
+  } catch (error) {
+    microphoneStream = null;
+    setRecorderStatus(`Microphone could not be enabled: ${error?.message || error}`, true);
+  }
+}
+
+async function startRecording() {
+  if (!audioContext || !microphoneStream || recording || !appState.recording.available) return;
+  stopPlayback();
+  discardRecordedAttempt();
+  const row = phrase();
+  const plan = appState.recording;
+  const phrasePlan = plan.phrases.find((item) => item.phrase_id === row.phrase_id);
+  try {
+    setRecorderStatus("Loading the verified cue…");
+    const response = await fetch(phrasePlan.cue.media_url, {cache: "no-store"});
+    if (!response.ok) throw new Error(`cue request failed (${response.status})`);
+    const cueBuffer = await audioContext.decodeAudioData(await response.arrayBuffer());
+    await audioContext.resume();
+    const before = phrasePlan.placement.pre_guard_frames / audioContext.sampleRate;
+    const after = phrasePlan.placement.post_guard_frames / audioContext.sampleRate;
+    const phraseDuration = row.end_seconds - row.start_seconds;
+    const totalDuration = before + phraseDuration + after;
+    const cueOffset = Math.max(0, phrasePlan.cue.playback_start_seconds);
+    const cueDelay = Math.max(0, -phrasePlan.cue.playback_start_seconds);
+    const availableCueDuration = Math.max(0, cueBuffer.duration - cueOffset);
+    if (availableCueDuration < phraseDuration + after - 0.02) {
+      throw new Error("the verified cue does not cover this phrase and its end guard");
+    }
+    cueNode = audioContext.createBufferSource();
+    cueNode.buffer = cueBuffer;
+    cueNode.connect(audioContext.destination);
+    captureChunks = [];
+    captureFrameCursor = 0;
+    captureOriginContextTime = null;
+    captureStartContextTime = audioContext.currentTime + 0.25;
+    recording = true;
+    document.querySelector("#record-count").textContent = "SING";
+    document.querySelector("#record-attempt").disabled = true;
+    document.querySelector("#stop-recording").disabled = false;
+    cueNode.start(
+      captureStartContextTime + cueDelay,
+      cueOffset,
+      Math.min(availableCueDuration, totalDuration - cueDelay),
+    );
+    captureTimer = window.setTimeout(() => stopRecording(false), (totalDuration + 0.32) * 1000);
+    setRecorderStatus("Recording now. Follow the reference naturally; timing will remain reviewable.");
+  } catch (error) {
+    recording = false;
+    document.querySelector("#record-attempt").disabled = !microphoneStream;
+    document.querySelector("#stop-recording").disabled = true;
+    setRecorderStatus(`Recording could not start: ${error?.message || error}`, true);
+  }
+}
+
+function assembleFrames(startFrame, frameCount) {
+  const result = new Float32Array(frameCount);
+  const endFrame = startFrame + frameCount;
+  for (const chunk of captureChunks) {
+    const chunkStart = chunk.frame;
+    const chunkEnd = chunkStart + chunk.samples.length;
+    const overlapStart = Math.max(startFrame, chunkStart);
+    const overlapEnd = Math.min(endFrame, chunkEnd);
+    if (overlapEnd <= overlapStart) continue;
+    const sourceOffset = overlapStart - chunkStart;
+    const destinationOffset = overlapStart - startFrame;
+    result.set(
+      chunk.samples.subarray(sourceOffset, sourceOffset + overlapEnd - overlapStart),
+      destinationOffset,
+    );
+  }
+  return result;
+}
+
+function encodePcm24Wav(samples, sampleRate) {
+  const dataBytes = samples.length * 3;
+  const buffer = new ArrayBuffer(44 + dataBytes);
+  const view = new DataView(buffer);
+  const writeText = (offset, text) => {
+    for (let index = 0; index < text.length; index += 1) view.setUint8(offset + index, text.charCodeAt(index));
+  };
+  writeText(0, "RIFF");
+  view.setUint32(4, 36 + dataBytes, true);
+  writeText(8, "WAVE");
+  writeText(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 3, true);
+  view.setUint16(32, 3, true);
+  view.setUint16(34, 24, true);
+  writeText(36, "data");
+  view.setUint32(40, dataBytes, true);
+  let offset = 44;
+  for (const sample of samples) {
+    const clamped = Math.max(-1, Math.min(1, sample));
+    let value = clamped < 0 ? Math.round(clamped * 8388608) : Math.round(clamped * 8388607);
+    if (value < 0) value += 16777216;
+    view.setUint8(offset, value & 255);
+    view.setUint8(offset + 1, (value >> 8) & 255);
+    view.setUint8(offset + 2, (value >> 16) & 255);
+    offset += 3;
+  }
+  return new Blob([buffer], {type: "audio/wav"});
+}
+
+function analyseSamples(samples) {
+  let peak = 0;
+  let sum = 0;
+  for (const sample of samples) {
+    peak = Math.max(peak, Math.abs(sample));
+    sum += sample * sample;
+  }
+  return {peakDb: dbfs(peak), rmsDb: dbfs(Math.sqrt(sum / Math.max(1, samples.length))), clipped: peak >= 0.99};
+}
+
+function stopRecording(discard = false) {
+  if (!recording) return;
+  recording = false;
+  window.clearTimeout(captureTimer);
+  captureTimer = null;
+  try { cueNode?.stop(); } catch (_) {}
+  cueNode = null;
+  document.querySelector("#stop-recording").disabled = true;
+  document.querySelector("#record-count").textContent = discard ? "READY" : "REVIEW";
+  if (discard || !audioContext || captureOriginContextTime === null || captureStartContextTime === null) {
+    captureChunks = [];
+    document.querySelector("#record-attempt").disabled = !microphoneStream;
+    setRecorderStatus(discard ? "Recording stopped and discarded." : "No microphone frames were captured; please try again.", !discard);
+    return;
+  }
+  const row = phrase();
+  const sampleRate = audioContext.sampleRate;
+  const phrasePlan = appState.recording.phrases.find((item) => item.phrase_id === row.phrase_id);
+  const preGuardFrames = Math.round(0.5 * sampleRate);
+  const phraseFrames = Math.round((row.end_seconds - row.start_seconds) * sampleRate);
+  const postGuardFrames = Math.round(0.5 * sampleRate);
+  const frameCount = preGuardFrames + phraseFrames + postGuardFrames;
+  const startFrame = Math.round((captureStartContextTime - captureOriginContextTime) * sampleRate);
+  const samples = assembleFrames(startFrame, frameCount);
+  const metrics = analyseSamples(samples.subarray(preGuardFrames, preGuardFrames + phraseFrames));
+  const trackSettings = microphoneStream.getAudioTracks()[0]?.getSettings?.() || {};
+  const actualProcessing = {sample_rate: sampleRate, channel_count: 1};
+  if (typeof trackSettings.echoCancellation === "boolean") actualProcessing.echo_cancellation = trackSettings.echoCancellation;
+  if (typeof trackSettings.noiseSuppression === "boolean") actualProcessing.noise_suppression = trackSettings.noiseSuppression;
+  if (typeof trackSettings.autoGainControl === "boolean") actualProcessing.automatic_gain_control = trackSettings.autoGainControl;
+  recordedAttempt = {
+    phraseId: row.phrase_id,
+    captureId: `attempt-${randomHex(20)}`,
+    blob: encodePcm24Wav(samples, sampleRate),
+    preGuardFrames,
+    phraseStartFrame: preGuardFrames,
+    phraseEndFrame: preGuardFrames + phraseFrames,
+    postGuardFrames,
+    actualProcessing,
+    metrics,
+  };
+  captureChunks = [];
+  attemptObjectUrl = URL.createObjectURL(recordedAttempt.blob);
+  document.querySelector("#attempt-player").src = attemptObjectUrl;
+  document.querySelector("#attempt-level").textContent =
+    `Peak ${Number.isFinite(metrics.peakDb) ? metrics.peakDb.toFixed(1) : "−∞"} dBFS · RMS ${Number.isFinite(metrics.rmsDb) ? metrics.rmsDb.toFixed(1) : "−∞"} dBFS${metrics.clipped ? " · possible clipping" : ""}. This is a safety check, not a musical score.`;
+  document.querySelector("#recorded-attempt").classList.remove("hidden");
+  document.querySelector("#record-attempt").disabled = false;
+  setRecorderStatus(metrics.clipped ? "Attempt captured, but it may be clipping. Listen before saving." : "Attempt captured. Listen, then save or discard it.", metrics.clipped);
+}
+
+function randomHex(length) {
+  const bytes = new Uint8Array(Math.ceil(length / 2));
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("").slice(0, length);
+}
+
+function discardRecordedAttempt() {
+  if (attemptObjectUrl) URL.revokeObjectURL(attemptObjectUrl);
+  attemptObjectUrl = null;
+  recordedAttempt = null;
+  const attemptPlayer = document.querySelector("#attempt-player");
+  attemptPlayer.pause();
+  attemptPlayer.removeAttribute("src");
+  attemptPlayer.load();
+  document.querySelector("#recorded-attempt").classList.add("hidden");
+}
+
+async function blobBase64(blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 32768) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+  }
+  return btoa(binary);
+}
+
+async function saveRecordedAttempt() {
+  if (!recordedAttempt || recordedAttempt.phraseId !== activePhraseId) return;
+  if (!window.confirm("Save this recording as a new unreviewed phrase source? This does not choose or correct it.")) return;
+  const button = document.querySelector("#save-recording");
+  button.disabled = true;
+  try {
+    const phrasePlan = appState.recording.phrases.find((item) => item.phrase_id === recordedAttempt.phraseId);
+    const result = await api("/api/capture", {
+      method: "POST",
+      body: JSON.stringify({
+        expected_musical_state_sha256: appState.session.binding.musical_state_sha256,
+        phrase_id: recordedAttempt.phraseId,
+        capture_id: recordedAttempt.captureId,
+        cue_id: phrasePlan.cue.cue_id,
+        cue_asset_sha256: phrasePlan.cue.audio_sha256,
+        audio_wav_base64: await blobBase64(recordedAttempt.blob),
+        placement: {
+          source_phrase_start_frame: recordedAttempt.phraseStartFrame,
+          source_phrase_end_frame: recordedAttempt.phraseEndFrame,
+          pre_guard_frames: recordedAttempt.preGuardFrames,
+          post_guard_frames: recordedAttempt.postGuardFrames,
+          destination_start_seconds: phrasePlan.placement.destination_start_seconds,
+          destination_end_seconds: phrasePlan.placement.destination_end_seconds,
+        },
+        actual_processing: recordedAttempt.actualProcessing,
+      }),
+    });
+    discardRecordedAttempt();
+    appState = result.state;
+    activeSourceId = result.admission.source_id;
+    draftNotes = {...(appState.draft?.draft?.notes_by_phrase || draftNotes)};
+    render();
+    showNotice("Recording saved locally as an unreviewed phrase source. No take was selected.");
+  } catch (error) {
+    showNotice(error.message, true);
+    setRecorderStatus(`Attempt was not saved: ${error.message}`, true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+document.querySelector("#enable-mic").addEventListener("click", enableMicrophone);
+document.querySelector("#record-attempt").addEventListener("click", startRecording);
+document.querySelector("#stop-recording").addEventListener("click", () => stopRecording(true));
+document.querySelector("#save-recording").addEventListener("click", saveRecordedAttempt);
+document.querySelector("#discard-attempt").addEventListener("click", () => {
+  discardRecordedAttempt();
+  setRecorderStatus("Attempt discarded. Ready to record again.");
+});
+window.addEventListener("beforeunload", () => microphoneStream?.getTracks().forEach((track) => track.stop()));
 
 function showNotice(message, error = false) {
   const notice = document.querySelector("#notice");

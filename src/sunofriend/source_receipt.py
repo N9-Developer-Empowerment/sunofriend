@@ -47,16 +47,17 @@ class SourceImportReceipt:
 def canonical_json_bytes(document: Mapping[str, Any]) -> bytes:
     """Return the repository's stable JSON representation."""
 
-    return (
-        json.dumps(
+    try:
+        rendered = json.dumps(
             document,
             ensure_ascii=False,
             indent=2,
             sort_keys=True,
             allow_nan=False,
         )
-        + "\n"
-    ).encode("utf-8")
+    except ValueError as error:
+        raise ValueError("document values must be finite JSON numbers") from error
+    return (rendered + "\n").encode("utf-8")
 
 
 def document_sha256(document: Mapping[str, Any]) -> str:
@@ -73,7 +74,9 @@ def write_source_receipt(
     if target.exists():
         raise FileExistsError(f"source receipt already exists: {target}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    document = receipt.to_dict() if isinstance(receipt, SourceImportReceipt) else dict(receipt)
+    document = (
+        receipt.to_dict() if isinstance(receipt, SourceImportReceipt) else dict(receipt)
+    )
     validate_source_receipt_document(document)
     temporary = target.with_name(f".{target.name}.tmp")
     try:
