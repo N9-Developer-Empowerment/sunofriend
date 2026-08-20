@@ -25,7 +25,11 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument(
         "--render-scope",
         required=True,
-        choices=("phrase_only", "complete_state_timeline"),
+        choices=(
+            "phrase_only",
+            "reviewed_phrase_excerpt",
+            "complete_state_timeline",
+        ),
     )
     parser.add_argument("--phrase-id")
     parser.add_argument("--out-dir", type=Path)

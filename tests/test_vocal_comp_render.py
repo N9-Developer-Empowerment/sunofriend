@@ -315,6 +315,75 @@ def test_complete_render_requires_roster_declaration_and_handles_gaps(
     ).is_file()
 
 
+def test_reviewed_phrase_excerpt_preserves_gap_without_whole_song_claim(
+    tmp_path: Path,
+) -> None:
+    state_path, state = _state(
+        tmp_path,
+        phrases=[
+            ("phrase-1", 0.5, 1.0, "First line"),
+            ("phrase-2", 1.5, 2.0, "Second line"),
+        ],
+        duration=3.0,
+    )
+    decisions = [
+        create_phrase_decision(state, "phrase-1", "human_take", source_id="take-001"),
+        create_phrase_decision(state, "phrase-2", "human_take", source_id="take-002"),
+    ]
+    source_map = create_vocal_source_map(state, decisions)
+    authorization = _authorization(
+        state_path, source_map, render_scope="reviewed_phrase_excerpt"
+    )
+    plan = create_dry_vocal_comp_plan(
+        state_path,
+        source_map,
+        authorization,
+        render_scope="reviewed_phrase_excerpt",
+    )
+
+    assert plan["status"] == "ready_reviewed_excerpt_dry_uncorrected_preview"
+    assert plan["phrase_id"] is None
+    assert plan["horizon"]["frames"] == SAMPLE_RATE * 3 // 2
+    assert plan["horizon"]["destination_origin_song_frame"] == SAMPLE_RATE // 2
+    assert plan["horizon"]["destination_end_song_frame"] == SAMPLE_RATE * 2
+    assert plan["coverage"]["rendered_phrase_count"] == 2
+    assert plan["coverage"]["whole_song_coverage_claimed"] is False
+    assert [row["kind"] for row in plan["joins"]] == [
+        "separated_equal_power_guard_fades"
+    ]
+
+    result = render_dry_vocal_comp(
+        state_path,
+        source_map,
+        authorization,
+        plan,
+        out_dir=tmp_path / "excerpt-preview",
+        confirm_dry_uncorrected_render=True,
+    )
+
+    assert result["status"] == "complete_unreviewed_uncorrected_excerpt_preview"
+    assert result["render_scope"] == "reviewed_phrase_excerpt"
+    assert result["artifacts"]["dry_vocal_wav"]["relative_path"] == (
+        "AUDIO/dry-vocal-excerpt-preview.wav"
+    )
+    values, rate = sf.read(
+        tmp_path / "excerpt-preview/AUDIO/dry-vocal-excerpt-preview.wav",
+        always_2d=True,
+    )
+    assert rate == SAMPLE_RATE
+    assert values.shape == (SAMPLE_RATE * 3 // 2, 1)
+    assert np.count_nonzero(values[SAMPLE_RATE // 2 + 80 : SAMPLE_RATE - 80]) == 0
+    review = (
+        tmp_path / "excerpt-preview/REVIEW/dry-vocal-comp-review.html"
+    ).read_text()
+    assert "Dry vocal excerpt preview" in review
+    assert "no whole-song coverage claim" in review
+    verification = verify_dry_vocal_comp_round_trip(
+        tmp_path / "excerpt-preview", plan=plan, result=result
+    )
+    assert all(verification["checks"].values())
+
+
 def test_incomplete_map_and_contiguous_source_switch_fail_closed(
     tmp_path: Path,
 ) -> None:
