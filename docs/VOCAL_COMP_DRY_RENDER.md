@@ -134,6 +134,22 @@ reconstructs the edit map, and regenerates the exact review page. Its result is
 technical verification only: it does not review the performance, accept a
 join, select the comp for product use or create a training label.
 
+## Tail comparison and usable-base review
+
+If listening reveals a possible cut phrase tail, create a bounded A/B
+comparison instead of silently changing the render. The `vocal_tail_review`
+contract binds the canonical dry-render receipt, the exact control and
+challenger audio hashes, the phrase and the frame-exact tail window. Candidate
+A may be the unchanged dry excerpt; candidate A and B must still be different
+audio identities.
+
+An explicit tail choice requires the owner to have heard both A and B. A
+separate usable-base review can then mark the chosen excerpt as suitable for
+the next iteration. These review documents create no release, source
+replacement, pitch or timing correction, training-label or model-promotion
+authority. Playback alone creates nothing, and an ordinary usable-base choice
+must never be imported as a pairwise ranker label.
+
 ## Current limitations
 
 - There is no reviewed join-decision artifact yet, so contiguous source
