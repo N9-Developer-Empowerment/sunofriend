@@ -11,6 +11,7 @@ from .source_receipt import document_sha256
 
 VOCAL_PHRASE_DECISION_SCHEMA = "sunofriend.vocal-comp-phrase-decision.v1"
 VOCAL_SOURCE_MAP_SCHEMA = "sunofriend.vocal-comp-source-map.v1"
+VOCAL_RENDER_SOURCE_MAP_SCHEMA = "sunofriend.vocal-comp-source-map.v2"
 
 PHRASE_OUTCOMES = frozenset(
     {
@@ -108,6 +109,25 @@ def validate_phrase_decision(
 
     state = validate_musical_state(musical_state)
     document = dict(decision)
+    _reject_private_or_path_fields(document)
+    if set(document) != {
+        "schema",
+        "status",
+        "method_natures",
+        "binding",
+        "phrase",
+        "outcome",
+        "selected_source_id",
+        "selected_source_class",
+        "selected_source_sha256",
+        "review",
+        "authority_limits",
+        "training",
+        "effects",
+        "network_used",
+        "document_sha256",
+    }:
+        raise ValueError("vocal phrase decision fields changed")
     if document.get("schema") != VOCAL_PHRASE_DECISION_SCHEMA:
         raise ValueError("unsupported vocal phrase decision schema")
     if document.get("status") != "complete_human_decision":
@@ -163,6 +183,8 @@ def validate_phrase_decision(
             "phrase decision source SHA-256 or identity does not match state"
         )
     review = _mapping(document.get("review"), "review")
+    if set(review) != {"authority", "reviewed_at", "evidence_sha256", "notes"}:
+        raise ValueError("vocal phrase decision review fields changed")
     if review.get("authority") != "explicit_human_review":
         raise ValueError("phrase decision lacks explicit human authority")
     if not isinstance(review.get("notes"), (str, type(None))):
@@ -192,6 +214,69 @@ def validate_phrase_decision(
     if document.get("network_used") is not False:
         raise ValueError("phrase decision must record network_used=false")
     _reject_private_or_path_fields(document)
+    return document
+
+
+def create_vocal_render_source_map(
+    musical_state: Mapping[str, Any],
+    decisions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Create a render-safe v2 map with embedded canonical decisions."""
+
+    state = validate_musical_state(musical_state)
+    validated = [validate_phrase_decision(item, state) for item in decisions]
+    legacy = create_vocal_source_map(state, validated)
+    document = dict(legacy)
+    document.pop("document_sha256", None)
+    document["schema"] = VOCAL_RENDER_SOURCE_MAP_SCHEMA
+    document["embedded_decisions"] = validated
+    document["render_projection"] = "exact_reprojection_from_embedded_decisions"
+    document["document_sha256"] = document_sha256(document)
+    return validate_vocal_render_source_map(document, state)
+
+
+def validate_vocal_render_source_map(
+    source_map: Mapping[str, Any], musical_state: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Validate v2 by reprojecting every source row from full decisions."""
+
+    state = validate_musical_state(musical_state)
+    document = dict(source_map)
+    _verify_hash(document, "vocal render source map")
+    expected_keys = {
+        "schema",
+        "status",
+        "method_natures",
+        "binding",
+        "segments",
+        "unresolved_phrases",
+        "undecided_phrase_ids",
+        "coverage",
+        "authority",
+        "training",
+        "effects",
+        "network_used",
+        "embedded_decisions",
+        "render_projection",
+        "document_sha256",
+    }
+    if set(document) != expected_keys:
+        raise ValueError("vocal render source map fields changed")
+    if document.get("schema") != VOCAL_RENDER_SOURCE_MAP_SCHEMA:
+        raise ValueError("unsupported vocal render source map schema")
+    embedded = document.get("embedded_decisions")
+    if not isinstance(embedded, list):
+        raise ValueError("vocal render source map requires embedded decisions")
+    validated = [validate_phrase_decision(item, state) for item in embedded]
+    legacy = create_vocal_source_map(state, validated)
+    expected = dict(legacy)
+    expected.pop("document_sha256", None)
+    expected["schema"] = VOCAL_RENDER_SOURCE_MAP_SCHEMA
+    expected["embedded_decisions"] = validated
+    expected["render_projection"] = "exact_reprojection_from_embedded_decisions"
+    expected["document_sha256"] = document_sha256(expected)
+    if document != expected:
+        raise ValueError("vocal render source map is not the exact decision projection")
     return document
 
 
@@ -455,7 +540,7 @@ def _selected_source(
             raise ValueError("ai_fallback requires an admitted reference vocal")
         return {
             "source_id": reference["source_id"],
-            "source_class": "authorised_ai_vocal_reference",
+            "source_class": "reference_vocal",
             "audio_sha256": reference["audio"]["sha256"],
         }
     if source_id is not None:
@@ -475,7 +560,7 @@ def _sources(state: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
     reference = vocal.get("reference")
     if isinstance(reference, Mapping):
         result[reference["source_id"]] = {
-            "source_class": "authorised_ai_vocal_reference",
+            "source_class": "reference_vocal",
             "audio_sha256": reference["audio"]["sha256"],
         }
     for capture in vocal.get("phrase_captures", []):
@@ -579,9 +664,12 @@ def _reject_private_or_path_fields(value: Any) -> None:
 __all__ = [
     "PHRASE_OUTCOMES",
     "VOCAL_PHRASE_DECISION_SCHEMA",
+    "VOCAL_RENDER_SOURCE_MAP_SCHEMA",
     "VOCAL_SOURCE_MAP_SCHEMA",
     "create_phrase_decision",
     "create_vocal_source_map",
+    "create_vocal_render_source_map",
     "validate_phrase_decision",
     "validate_vocal_source_map",
+    "validate_vocal_render_source_map",
 ]

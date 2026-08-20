@@ -221,3 +221,13 @@ inference, training, networking, automatic preference and selection are off.
 No private song comparison has been created yet; the next remix action is to
 choose one authorised synchronized pair and anchor, render one package and
 listen in a real music session.
+
+The next parallel-training foundation is defined in
+[`VOCAL_PAIRWISE_TRAINING.md`](VOCAL_PAIRWISE_TRAINING.md). It adds an explicit
+human A/B label bound to one exact Musical State, phrase and two human-attempt
+audio hashes. A path-free snapshot checks composition-, group- and
+Musical-State-disjoint splits but remains training-ineligible until exact state
+manifests and an owner-confirmed composition/group registry are bound. Its
+declared evidence counts are advisory until then. A deterministic synthetic ranker canary passes clean, shuffled-label
+and exact serialized-resume controls. It uses no real labels or audio and its
+checkpoint evidence cannot rank or select a product vocal.
