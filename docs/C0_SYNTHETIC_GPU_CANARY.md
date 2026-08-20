@@ -55,8 +55,13 @@ access was used.
 This proves only the bounded synthetic loader, split, optimisation,
 checkpoint/resume, control and evidence pipeline. It does not train a music
 model, admit a representation, select a vocal or authorise real-data training.
-The returned artifact set must still pass the read-only round-trip verifier
-below before it is archived as portable evidence.
+The returned artifact set subsequently passed the read-only round-trip
+verifier from commit `ad5adc76c2986d1ab2a1db10b62a41d537df87fd` without
+rerunning training or loading a checkpoint. The path-free verification receipt
+has document SHA-256
+`e1fef9064ed47dc2c6bdeb8ae1ffcaf245448e15c412af8d813cbc467d2715fc`;
+all artifact byte counts and hashes, the clean exact-commit checkout, resource
+ceilings, offline evidence and technical-only authority passed.
 
 ## Windows worker commands
 
