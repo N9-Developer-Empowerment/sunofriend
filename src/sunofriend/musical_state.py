@@ -53,6 +53,7 @@ def plan_vocal_musical_state(
     tuning_hz: float = 440.0,
     confirm_common_recorded_zero: bool = False,
     confirm_timeline_reviewed: bool = False,
+    take_phrase_bindings: Mapping[str, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     """Validate an audio-native state import without writing anything."""
 
@@ -105,11 +106,21 @@ def plan_vocal_musical_state(
         raise ValueError("lyrics must contain non-whitespace text")
 
     timeline = _load_reviewed_timeline(timeline_path, canonical_lyrics)
+    eligible_phrases = _take_phrase_bindings(
+        take_phrase_bindings,
+        take_names=[path.name for path in take_paths],
+        phrase_ids=[row["phrase_id"] for row in timeline["phrases"]],
+    )
     take_records = [
         {
             "source_name": path.name,
             "source": _absolute_file_record(path),
             "audio": _audio_record(path),
+            **(
+                {"eligible_phrase_ids": eligible_phrases[path.name]}
+                if path.name in eligible_phrases
+                else {}
+            ),
         }
         for path in take_paths
     ]
@@ -171,6 +182,7 @@ def create_vocal_musical_state(
     tuning_hz: float = 440.0,
     confirm_common_recorded_zero: bool = False,
     confirm_timeline_reviewed: bool = False,
+    take_phrase_bindings: Mapping[str, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     """Copy exact evidence into one fresh owner-only Musical State project."""
 
@@ -185,6 +197,7 @@ def create_vocal_musical_state(
         tuning_hz=tuning_hz,
         confirm_common_recorded_zero=confirm_common_recorded_zero,
         confirm_timeline_reviewed=confirm_timeline_reviewed,
+        take_phrase_bindings=take_phrase_bindings,
     )
     destination = Path(out_dir).expanduser().absolute()
     if destination.exists():
@@ -222,6 +235,11 @@ def create_vocal_musical_state(
                     "audio_properties": row["audio"],
                     "recorded_zero_offset_seconds": 0.0,
                     "review_status": "not_reviewed_in_this_state",
+                    **(
+                        {"eligible_phrase_ids": row["eligible_phrase_ids"]}
+                        if "eligible_phrase_ids" in row
+                        else {}
+                    ),
                 }
             )
 
@@ -521,6 +539,7 @@ def validate_musical_state(
             )
     else:
         _validate_phrase_capture_state(document, vocal)
+    _validate_take_phrase_bindings(document, vocal)
     if vocal.get("selection_authority") != "human_only":
         raise ValueError("vocal selection authority must remain human_only")
     for key in (
@@ -576,6 +595,63 @@ def validate_musical_state(
         if vocal_schema == VOCAL_PERFORMANCE_STATE_SCHEMA_V3:
             _validate_phrase_capture_lineage(document, base)
     return document
+
+
+def _take_phrase_bindings(
+    value: Mapping[str, Sequence[str]] | None,
+    *,
+    take_names: Sequence[str],
+    phrase_ids: Sequence[str],
+) -> dict[str, list[str]]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError("take_phrase_bindings must be an object keyed by WAV name")
+    known_takes = set(take_names)
+    known_phrases = set(phrase_ids)
+    normalized: dict[str, list[str]] = {}
+    for raw_name, raw_ids in value.items():
+        name = str(raw_name)
+        if name not in known_takes:
+            raise ValueError("take_phrase_bindings contains an unknown WAV name")
+        if isinstance(raw_ids, (str, bytes)) or not isinstance(raw_ids, Sequence):
+            raise ValueError("each take phrase binding must be a non-empty list")
+        ids = [str(item) for item in raw_ids]
+        if (
+            not ids
+            or len(ids) != len(set(ids))
+            or any(item not in known_phrases for item in ids)
+        ):
+            raise ValueError(
+                "take phrase bindings must contain unique reviewed phrase IDs"
+            )
+        normalized[name] = ids
+    return normalized
+
+
+def _validate_take_phrase_bindings(
+    document: Mapping[str, Any], vocal: Mapping[str, Any]
+) -> None:
+    phrase_ids = {
+        row["phrase_id"]
+        for row in _mapping(document.get("structure"), "structure").get("phrases", [])
+    }
+    for take in vocal.get("takes", []):
+        row = _mapping(take, "vocal take")
+        eligible = row.get("eligible_phrase_ids")
+        if eligible is None:
+            continue
+        if (
+            not isinstance(eligible, list)
+            or not eligible
+            or len(eligible) != len(set(eligible))
+            or any(
+                not isinstance(item, str) or item not in phrase_ids for item in eligible
+            )
+        ):
+            raise ValueError(
+                "eligible_phrase_ids must contain unique reviewed phrase IDs"
+            )
 
 
 def _validate_phrase_capture_state(

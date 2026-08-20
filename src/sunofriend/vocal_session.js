@@ -50,7 +50,9 @@ function source(sourceId) {
 
 function isHumanSourceForPhrase(item, phraseId) {
   if (!item) return false;
-  if (item.source_class === "human_vocal_take") return true;
+  if (item.source_class === "human_vocal_take") {
+    return !item.eligible_phrase_ids || item.eligible_phrase_ids.includes(phraseId);
+  }
   return item.source_class === "human_vocal_phrase_capture"
     && item.bound_phrase_id === phraseId;
 }
@@ -62,7 +64,11 @@ function formatTime(seconds) {
 
 function outcomeText(decision) {
   if (decision.outcome === "human_take") {
-    return `Human base: ${source(decision.selected_source_id)?.display_label || "saved take"}`;
+    const available = appState.sources.filter(
+      (item) => isHumanSourceForPhrase(item, decision.phrase_id || activePhraseId),
+    );
+    const index = available.findIndex((item) => item.source_id === decision.selected_source_id);
+    return `Human base: ${index >= 0 ? `Attempt ${index + 1}` : "saved take"}`;
   }
   if (decision.outcome === "ai_fallback") return "Authorised AI kept here for now";
   if (decision.outcome === "record_again") return "Needs a new recording";
@@ -119,13 +125,13 @@ function render() {
   const availableSources = appState.sources.filter(
     (item) => isHumanSourceForPhrase(item, row.phrase_id),
   );
-  tray.replaceChildren(...availableSources.map((item) => {
+  tray.replaceChildren(...availableSources.map((item, attemptIndex) => {
     const card = document.createElement("article");
     const activeAudition = item.source_id === activeSourceId;
     card.className = `source-card${item.source_id === selected ? " selected" : ""}${activeAudition ? " active-audition" : ""}`;
     card.dataset.sourceId = item.source_id;
     const label = document.createElement("strong");
-    label.textContent = item.display_label;
+    label.textContent = `Attempt ${attemptIndex + 1}`;
     const actions = document.createElement("div");
     actions.className = "source-card-actions";
     const play = document.createElement("button");
@@ -249,14 +255,14 @@ async function playSource(sourceId) {
     // waitForMetadata resolves only after loadedmetadata, before any currentTime seek.
     await waitForMetadata(player);
     const window = contextWindow();
-    const phraseBound = Boolean(item.bound_phrase_id);
-    player.currentTime = phraseBound
+    const sourceLocalCapture = item.source_class === "human_vocal_phrase_capture";
+    player.currentTime = sourceLocalCapture
       ? (item.playback_start_seconds ?? 0)
       : window.start;
-    stopAt = phraseBound
+    stopAt = sourceLocalCapture
       ? (item.playback_end_seconds ?? player.duration)
       : Math.min(window.end, player.duration);
-    if (phraseBound && contextScope !== "phrase") {
+    if (sourceLocalCapture && contextScope !== "phrase") {
       showNotice("This short pickup can play only its recorded phrase. Use an original or full take for wider context.");
     }
     await player.play();

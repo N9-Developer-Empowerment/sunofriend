@@ -115,6 +115,60 @@ def test_wavex_reference_is_accepted_as_exact_hash_bound_wav(
     assert plan["reference_vocal"]["audio"]["subtype"] == "PCM_24"
 
 
+def test_phrase_specific_common_zero_takes_keep_exact_candidate_scope(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    bindings = {
+        "attempt-01.wav": ["phrase-001"],
+        "attempt-02.wav": ["phrase-001"],
+    }
+
+    plan = plan_vocal_musical_state(
+        fixture["take_dir"],
+        lyrics=fixture["lyrics"],
+        phrase_timeline=fixture["timeline"],
+        reference_vocal=fixture["reference"],
+        rights_category="owned",
+        processing_chain="dry",
+        confirm_common_recorded_zero=True,
+        confirm_timeline_reviewed=True,
+        take_phrase_bindings=bindings,
+    )
+    result = create_vocal_musical_state(
+        fixture["take_dir"],
+        out_dir=tmp_path / "phrase-bound-state",
+        lyrics=fixture["lyrics"],
+        phrase_timeline=fixture["timeline"],
+        reference_vocal=fixture["reference"],
+        rights_category="owned",
+        processing_chain="dry",
+        confirm_common_recorded_zero=True,
+        confirm_timeline_reviewed=True,
+        take_phrase_bindings=bindings,
+    )
+
+    assert [row["eligible_phrase_ids"] for row in plan["takes"]] == [
+        ["phrase-001"],
+        ["phrase-001"],
+    ]
+    assert [
+        row["eligible_phrase_ids"] for row in result["vocal_performance_state"]["takes"]
+    ] == [["phrase-001"], ["phrase-001"]]
+
+    with pytest.raises(ValueError, match="unknown WAV name"):
+        plan_vocal_musical_state(
+            fixture["take_dir"],
+            lyrics=fixture["lyrics"],
+            phrase_timeline=fixture["timeline"],
+            rights_category="owned",
+            processing_chain="dry",
+            confirm_common_recorded_zero=True,
+            confirm_timeline_reviewed=True,
+            take_phrase_bindings={"missing.wav": ["phrase-001"]},
+        )
+
+
 def test_vocal_musical_state_requires_explicit_alignment_and_review(
     tmp_path: Path,
 ) -> None:

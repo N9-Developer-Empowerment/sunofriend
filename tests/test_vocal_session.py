@@ -109,6 +109,29 @@ def test_projection_folds_only_exact_explicit_phrase_decisions() -> None:
     assert completed["effects"] == _zero_session_effects()
 
 
+def test_phrase_specific_common_zero_take_is_hidden_and_rejected_elsewhere() -> None:
+    state = _musical_state()
+    state["vocal_performance_state"]["takes"][0]["eligible_phrase_ids"] = ["phrase-001"]
+    state["vocal_performance_state"]["takes"][1]["eligible_phrase_ids"] = ["phrase-002"]
+    _rehash(state)
+
+    session = build_vocal_session(state)
+    take_sources = [
+        row for row in session["sources"] if row["source_class"] == "human_vocal_take"
+    ]
+    assert [row["bound_phrase_id"] for row in take_sources] == [
+        "phrase-001",
+        "phrase-002",
+    ]
+    with pytest.raises(ValueError, match="bound to another phrase"):
+        create_phrase_decision(
+            state,
+            phrase_id="phrase-001",
+            outcome="human_take",
+            source_id="take-002",
+        )
+
+
 def test_projection_rejects_duplicate_foreign_or_tampered_decisions() -> None:
     state = _musical_state()
     decision = create_phrase_decision(
