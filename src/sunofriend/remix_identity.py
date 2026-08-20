@@ -520,9 +520,9 @@ def _validate_points(
     if (
         not isinstance(points, Sequence)
         or isinstance(points, (str, bytes))
-        or len(points) < 2
+        or not 2 <= len(points) <= 16
     ):
-        raise ValueError("delta envelope requires at least two points")
+        raise ValueError("delta envelope requires between two and sixteen points")
     result: list[dict[str, Any]] = []
     for item in points:
         row = dict(_mapping(item, "delta envelope point"))
@@ -536,8 +536,11 @@ def _validate_points(
             isinstance(delta, bool)
             or not isinstance(delta, (int, float))
             or not math.isfinite(float(delta))
+            or not -12.0 <= float(delta) <= 0.0
         ):
-            raise ValueError("delta envelope gain must be finite")
+            raise ValueError(
+                "delta envelope gain must be finite and between -12 and 0 dB"
+            )
         result.append({"frame": frame, "delta_db": float(delta)})
     frames = [row["frame"] for row in result]
     if (
@@ -547,6 +550,8 @@ def _validate_points(
         or len(set(frames)) != len(frames)
     ):
         raise ValueError("delta envelope frame geometry must span the exact anchor")
+    if result[0]["delta_db"] != 0.0 or result[-1]["delta_db"] != 0.0:
+        raise ValueError("delta envelope must return to 0 dB at both anchor edges")
     return result
 
 

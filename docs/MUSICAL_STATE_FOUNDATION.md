@@ -210,9 +210,14 @@ map retains the reviewed song destination. Admission itself creates no choice,
 join, correction, render or training label. The next vocal increment is the
 explicit browser save/ingest action and a hash-bound recording cue.
 
-The next remix increment remains **D+H**. It first asks the musician to name and
-confirm an identity anchor for an authorised short excerpt, then creates a
-one-variable deterministic control/challenger. The first edit uses a declared
-stem-estimate delta against the exact source, so separation error cannot be
-mistaken for source identity preservation. Model inference and training are
-both off for that comparison.
+The first remix **D+H** product slice is now implemented as the bounded
+deterministic delta described in `BOUNDED_REMIX_DELTA.md`. It binds a
+musician-named identity anchor, exact source control and one synchronized
+separation estimate before rendering. The challenger applies only an
+attenuation envelope to that estimate against the unchanged source and the
+local page requires explicit owner labels. Separation error therefore remains
+visible rather than being mistaken for source identity preservation. Model
+inference, training, networking, automatic preference and selection are off.
+No private song comparison has been created yet; the next remix action is to
+choose one authorised synchronized pair and anchor, render one package and
+listen in a real music session.
