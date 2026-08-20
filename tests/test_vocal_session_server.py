@@ -139,6 +139,9 @@ def test_launch_is_loopback_only_uses_a_fresh_token_and_returns_path_free_state(
         assert headers["cache-control"] == "no-store"
         assert headers["cross-origin-resource-policy"] == "same-origin"
         assert "default-src 'self'" in headers["content-security-policy"]
+        assert "media-src 'self' blob:" in headers["content-security-policy"]
+        assert "script-src 'self';" in headers["content-security-policy"]
+        assert "script-src 'self' blob:" not in headers["content-security-policy"]
         assert not _keys_named_path(session)
         assert not _keys_named_path(browser_state)
         assert str(first.root) not in json.dumps(browser_state)
