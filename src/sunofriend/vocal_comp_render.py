@@ -41,6 +41,41 @@ VOCAL_DRY_ROUND_TRIP_VERIFICATION_SCHEMA = (
 _MAX_RENDER_FRAMES = 96_000 * 60 * 20
 _MAX_RENDER_BYTES = 2 * 1024 * 1024 * 1024
 _MAX_FADE_SECONDS = 0.010
+_RENDER_SCOPES = frozenset(
+    {"phrase_only", "reviewed_phrase_excerpt", "complete_state_timeline"}
+)
+
+
+def _audio_name(render_scope: str) -> str:
+    return {
+        "phrase_only": "dry-vocal-phrase-preview.wav",
+        "reviewed_phrase_excerpt": "dry-vocal-excerpt-preview.wav",
+        "complete_state_timeline": "dry-vocal-comp.wav",
+    }[render_scope]
+
+
+def _plan_status(render_scope: str) -> str:
+    return {
+        "phrase_only": "ready_phrase_only_dry_uncorrected_preview",
+        "reviewed_phrase_excerpt": "ready_reviewed_excerpt_dry_uncorrected_preview",
+        "complete_state_timeline": "ready_complete_dry_uncorrected",
+    }[render_scope]
+
+
+def _result_status(render_scope: str) -> str:
+    return {
+        "phrase_only": "complete_unreviewed_uncorrected_phrase_preview",
+        "reviewed_phrase_excerpt": "complete_unreviewed_uncorrected_excerpt_preview",
+        "complete_state_timeline": "complete_unreviewed_uncorrected",
+    }[render_scope]
+
+
+def _confirmation_scope(render_scope: str) -> str:
+    return {
+        "phrase_only": "one_dry_uncorrected_phrase_preview",
+        "reviewed_phrase_excerpt": "one_dry_uncorrected_reviewed_phrase_excerpt",
+        "complete_state_timeline": "one_dry_uncorrected_complete_vocal_comp",
+    }[render_scope]
 
 
 def create_dry_vocal_render_authorization(
@@ -77,7 +112,9 @@ def create_dry_vocal_render_authorization(
         if checked_map["status"] != "complete_unrendered":
             raise ValueError("complete timeline authorization requires every phrase")
     elif confirm_complete_intended_vocal_roster:
-        raise ValueError("phrase-only authorization cannot claim complete coverage")
+        raise ValueError(
+            "excerpt or phrase-only authorization cannot claim complete coverage"
+        )
     document: dict[str, Any] = {
         "schema": VOCAL_DRY_RENDER_AUTHORIZATION_SCHEMA,
         "status": "explicit_owner_authorization",
@@ -211,8 +248,11 @@ def create_dry_vocal_comp_plan(
     )
     if state["vocal_performance_state"].get("processing_chain") != "dry":
         raise ValueError("first dry renderer requires sources declared as dry")
-    if render_scope not in {"phrase_only", "complete_state_timeline"}:
-        raise ValueError("render_scope must be phrase_only or complete_state_timeline")
+    if render_scope not in _RENDER_SCOPES:
+        raise ValueError(
+            "render_scope must be phrase_only, reviewed_phrase_excerpt or "
+            "complete_state_timeline"
+        )
     if (
         checked_authorization["render_scope"] != render_scope
         or checked_authorization["phrase_id"] != phrase_id
@@ -222,7 +262,16 @@ def create_dry_vocal_comp_plan(
         if not isinstance(phrase_id, str) or not phrase_id:
             raise ValueError("phrase_only rendering requires one explicit phrase_id")
     elif phrase_id is not None:
-        raise ValueError("complete_state_timeline must not select one phrase_id")
+        raise ValueError("multi-phrase rendering must not select one phrase_id")
+    if render_scope == "reviewed_phrase_excerpt":
+        if len(state["structure"]["phrases"]) < 2:
+            raise ValueError("reviewed phrase excerpt requires at least two phrases")
+        if checked_map["status"] != "complete_unrendered":
+            raise ValueError("reviewed phrase excerpt requires every reviewed phrase")
+        if checked_map["unresolved_phrases"] or checked_map["undecided_phrase_ids"]:
+            raise ValueError(
+                "reviewed phrase excerpt cannot contain unresolved phrases"
+            )
     if render_scope == "complete_state_timeline":
         if checked_map["status"] != "complete_unrendered":
             raise ValueError("complete dry vocal comp requires every phrase source")
@@ -262,6 +311,26 @@ def create_dry_vocal_comp_plan(
             "source_audio_sha256": source["audio"]["sha256"],
             "sample_rate": sample_rate,
             "channels": source["audio_properties"]["channels"],
+            "frames": song_end - song_start,
+            "song_zero_frame": 0,
+            "destination_origin_song_frame": song_start,
+            "destination_end_song_frame": song_end,
+        }
+    elif render_scope == "reviewed_phrase_excerpt":
+        first_source = inventory[selected_map_rows[0]["source_id"]]
+        properties = first_source["audio_properties"]
+        sample_rate = properties["sample_rate"]
+        song_start = round(
+            float(state["structure"]["phrases"][0]["start_seconds"]) * sample_rate
+        )
+        song_end = round(
+            float(state["structure"]["phrases"][-1]["end_seconds"]) * sample_rate
+        )
+        horizon = {
+            "authority": "exact_reviewed_phrase_excerpt_window",
+            "source_audio_sha256": first_source["audio"]["sha256"],
+            "sample_rate": sample_rate,
+            "channels": properties["channels"],
             "frames": song_end - song_start,
             "song_zero_frame": 0,
             "destination_origin_song_frame": song_start,
@@ -345,24 +414,20 @@ def create_dry_vocal_comp_plan(
         segments.append(segment)
 
     expected_phrase_order = (
-        [row["phrase_id"] for row in state["structure"]["phrases"]]
-        if render_scope == "complete_state_timeline"
-        else [phrase_id]
+        [phrase_id]
+        if render_scope == "phrase_only"
+        else [row["phrase_id"] for row in state["structure"]["phrases"]]
     )
     if [row["phrase_id"] for row in segments] != expected_phrase_order:
         raise ValueError("source map segments must follow the requested phrase order")
     joins = (
-        _join_plan(segments, horizon_frames, sample_rate)
-        if render_scope == "complete_state_timeline"
-        else []
+        []
+        if render_scope == "phrase_only"
+        else _join_plan(segments, horizon_frames, sample_rate)
     )
     plan: dict[str, Any] = {
         "schema": VOCAL_DRY_RENDER_PLAN_SCHEMA,
-        "status": (
-            "ready_complete_dry_uncorrected"
-            if render_scope == "complete_state_timeline"
-            else "ready_phrase_only_dry_uncorrected_preview"
-        ),
+        "status": _plan_status(render_scope),
         "render_scope": render_scope,
         "phrase_id": phrase_id,
         "method_natures": ["D", "H"],
@@ -517,11 +582,7 @@ def render_dry_vocal_comp(
         technical_dir = staging / "TECHNICAL"
         for directory in (audio_dir, review_dir, technical_dir):
             directory.mkdir(mode=0o700)
-        audio_name = (
-            "dry-vocal-comp.wav"
-            if checked_plan["render_scope"] == "complete_state_timeline"
-            else "dry-vocal-phrase-preview.wav"
-        )
+        audio_name = _audio_name(checked_plan["render_scope"])
         audio_path = audio_dir / audio_name
         soundfile.write(
             audio_path,
@@ -548,11 +609,7 @@ def render_dry_vocal_comp(
         _write_private(review_path, _review_html(edit_map).encode("utf-8"))
         result: dict[str, Any] = {
             "schema": VOCAL_DRY_RENDER_RESULT_SCHEMA,
-            "status": (
-                "complete_unreviewed_uncorrected"
-                if checked_plan["render_scope"] == "complete_state_timeline"
-                else "complete_unreviewed_uncorrected_phrase_preview"
-            ),
+            "status": _result_status(checked_plan["render_scope"]),
             "render_scope": checked_plan["render_scope"],
             "phrase_id": checked_plan["phrase_id"],
             "method_natures": ["D", "H"],
@@ -565,11 +622,7 @@ def render_dry_vocal_comp(
             },
             "render_confirmation": {
                 "explicit": True,
-                "scope": (
-                    "one_dry_uncorrected_complete_vocal_comp"
-                    if checked_plan["render_scope"] == "complete_state_timeline"
-                    else "one_dry_uncorrected_phrase_preview"
-                ),
+                "scope": _confirmation_scope(checked_plan["render_scope"]),
             },
             "artifacts": {
                 "dry_vocal_wav": {
@@ -642,11 +695,7 @@ def verify_dry_vocal_comp_round_trip(
     _verify_document(checked_plan, VOCAL_DRY_RENDER_PLAN_SCHEMA, "dry render plan")
     checked_result = validate_dry_vocal_comp_result(result, checked_plan)
     root = Path(output_dir).expanduser().absolute()
-    audio_name = (
-        "dry-vocal-comp.wav"
-        if checked_plan["render_scope"] == "complete_state_timeline"
-        else "dry-vocal-phrase-preview.wav"
-    )
+    audio_name = _audio_name(checked_plan["render_scope"])
     expected_roster = {
         f"AUDIO/{audio_name}",
         "REVIEW/dry-vocal-comp-review.html",
@@ -774,15 +823,21 @@ def _source_map_rows_for_scope(
         if len(selected) != 1:
             raise ValueError("phrase-only authorization requires one explicit source")
         return selected
-    if render_scope != "complete_state_timeline" or phrase_id is not None:
+    if render_scope not in {"reviewed_phrase_excerpt", "complete_state_timeline"}:
         raise ValueError("dry render authorization scope is unsupported")
+    if phrase_id is not None:
+        raise ValueError("multi-phrase authorization cannot bind one phrase")
     if (
         source_map["status"] != "complete_unrendered"
         or source_map["unresolved_phrases"]
         or source_map["undecided_phrase_ids"]
         or [row["phrase_id"] for row in source_map["segments"]] != phrases
     ):
-        raise ValueError("complete timeline authorization requires every phrase")
+        raise ValueError(
+            "multi-phrase authorization requires every phrase in the reviewed roster"
+        )
+    if render_scope == "reviewed_phrase_excerpt" and len(phrases) < 2:
+        raise ValueError("reviewed phrase excerpt requires at least two phrases")
     return list(source_map["segments"])
 
 
@@ -1007,11 +1062,7 @@ def _edit_map(
 ) -> dict[str, Any]:
     document: dict[str, Any] = {
         "schema": VOCAL_DRY_EDIT_MAP_SCHEMA,
-        "status": (
-            "complete_unreviewed_uncorrected"
-            if plan["render_scope"] == "complete_state_timeline"
-            else "complete_unreviewed_uncorrected_phrase_preview"
-        ),
+        "status": _result_status(plan["render_scope"]),
         "render_scope": plan["render_scope"],
         "phrase_id": plan["phrase_id"],
         "binding": {
@@ -1066,11 +1117,7 @@ def _validate_plan(
     render_scope = document.get("render_scope")
     phrase_id = document.get("phrase_id")
     expected_status = (
-        "ready_complete_dry_uncorrected"
-        if render_scope == "complete_state_timeline"
-        else "ready_phrase_only_dry_uncorrected_preview"
-        if render_scope == "phrase_only"
-        else None
+        _plan_status(render_scope) if render_scope in _RENDER_SCOPES else None
     )
     if expected_status is None or document.get("status") != expected_status:
         raise ValueError("dry render plan scope or status is not render-ready")
@@ -1080,7 +1127,7 @@ def _validate_plan(
         }:
             raise ValueError("dry phrase preview binds an unknown phrase")
     elif phrase_id is not None:
-        raise ValueError("complete dry render cannot claim a phrase-only scope")
+        raise ValueError("multi-phrase dry render cannot claim a phrase-only scope")
     if document.get("binding") != {
         "musical_state_schema": MUSICAL_STATE_SCHEMA,
         "musical_state_sha256": state["document_sha256"],
@@ -1091,9 +1138,7 @@ def _validate_plan(
     }:
         raise ValueError("dry render plan binding changed")
     expected_rendered = (
-        len(state["structure"]["phrases"])
-        if render_scope == "complete_state_timeline"
-        else 1
+        1 if render_scope == "phrase_only" else len(state["structure"]["phrases"])
     )
     if document.get("coverage") != {
         "reviewed_roster_phrase_count": len(state["structure"]["phrases"]),
@@ -1112,6 +1157,13 @@ def _validate_plan(
         != "reviewed_complete_intended_vocal_roster"
     ):
         raise ValueError("complete dry render lacks complete roster authority")
+    if render_scope == "reviewed_phrase_excerpt" and (
+        len(state["structure"]["phrases"]) < 2
+        or source_map["status"] != "complete_unrendered"
+        or source_map["unresolved_phrases"]
+        or source_map["undecided_phrase_ids"]
+    ):
+        raise ValueError("reviewed phrase excerpt lacks complete excerpt authority")
     if document.get("authority") != {
         "source_choices_are_explicit_human_decisions": True,
         "render_confirmation_required": True,
@@ -1172,11 +1224,7 @@ def validate_dry_vocal_comp_result(
         "document_sha256",
     }:
         raise ValueError("dry render result fields changed")
-    expected_status = (
-        "complete_unreviewed_uncorrected"
-        if plan["render_scope"] == "complete_state_timeline"
-        else "complete_unreviewed_uncorrected_phrase_preview"
-    )
+    expected_status = _result_status(plan["render_scope"])
     if (
         document.get("status") != expected_status
         or document.get("render_scope") != plan["render_scope"]
@@ -1202,11 +1250,7 @@ def validate_dry_vocal_comp_result(
         raise ValueError("dry render result exact binding changed")
     if document.get("method_natures") != ["D", "H"]:
         raise ValueError("dry render result method nature changed")
-    expected_confirmation_scope = (
-        "one_dry_uncorrected_complete_vocal_comp"
-        if plan["render_scope"] == "complete_state_timeline"
-        else "one_dry_uncorrected_phrase_preview"
-    )
+    expected_confirmation_scope = _confirmation_scope(plan["render_scope"])
     if document.get("render_confirmation") != {
         "explicit": True,
         "scope": expected_confirmation_scope,
@@ -1249,11 +1293,7 @@ def validate_dry_vocal_comp_result(
     }:
         raise ValueError("dry render result artifact roster changed")
     audio = artifacts.get("dry_vocal_wav")
-    expected_audio_path = (
-        "AUDIO/dry-vocal-comp.wav"
-        if plan["render_scope"] == "complete_state_timeline"
-        else "AUDIO/dry-vocal-phrase-preview.wav"
-    )
+    expected_audio_path = f"AUDIO/{_audio_name(plan['render_scope'])}"
     if not isinstance(audio, Mapping) or set(audio) != {
         "sha256",
         "bytes",
@@ -1371,19 +1411,24 @@ def _inspect_output(path: Path) -> dict[str, Any]:
 
 
 def _review_html(edit_map: Mapping[str, Any]) -> str:
-    phrase_only = edit_map["render_scope"] == "phrase_only"
-    title = (
-        "Dry vocal phrase preview — review required"
-        if phrase_only
-        else "Dry vocal comp — review required"
-    )
-    notice = (
-        "Phrase preview complete but unreviewed. This is only the exact reviewed "
-        "phrase window; it makes no whole-song coverage claim."
-        if phrase_only
-        else "Complete state-timeline render, but unreviewed."
-    )
-    audio_name = "dry-vocal-phrase-preview.wav" if phrase_only else "dry-vocal-comp.wav"
+    render_scope = edit_map["render_scope"]
+    title = {
+        "phrase_only": "Dry vocal phrase preview — review required",
+        "reviewed_phrase_excerpt": "Dry vocal excerpt preview — review required",
+        "complete_state_timeline": "Dry vocal comp — review required",
+    }[render_scope]
+    notice = {
+        "phrase_only": (
+            "Phrase preview complete but unreviewed. This is only the exact reviewed "
+            "phrase window; it makes no whole-song coverage claim."
+        ),
+        "reviewed_phrase_excerpt": (
+            "Reviewed phrase excerpt rendered but unreviewed. It spans only the "
+            "reviewed excerpt and makes no whole-song coverage claim."
+        ),
+        "complete_state_timeline": "Complete state-timeline render, but unreviewed.",
+    }[render_scope]
+    audio_name = _audio_name(render_scope)
     rows = "".join(
         "<tr>"
         f"<td>{html.escape(str(row['phrase_id']))}</td>"

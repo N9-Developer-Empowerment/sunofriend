@@ -1,7 +1,8 @@
 # Dry vocal comp renderer
 
-Status: first deterministic, synthetic-tested product slice. No private song
-has been rendered.
+Status: first deterministic product slice, covered by synthetic contract tests
+and exercised with an owner-only, technically verified private excerpt. Private
+audio and review artifacts are not retained in the repository.
 
 ## What it does
 
@@ -27,6 +28,13 @@ the start of that window, while the edit map retains its original song-frame
 start and end. This is the only honest route for the current one-phrase pilot;
 it cannot create a mostly silent full-length file and call it a whole-song
 comp.
+
+`reviewed_phrase_excerpt` renders every phrase in a bounded reviewed Musical
+State from the first phrase start through the last phrase end. It requires an
+explicit source decision for every phrase, preserves reviewed gaps, and retains
+the original song-frame origin in the edit map. It is an excerpt preview, never
+a whole-song coverage claim. This is the honest scope for iterative verse or
+multi-phrase work before the complete song roster exists.
 
 `complete_state_timeline` additionally requires:
 
@@ -109,8 +117,9 @@ PYTHONPATH=src python scripts/render-vocal-comp-dry.py \
 
 The package contains:
 
-- `AUDIO/dry-vocal-phrase-preview.wav` for `phrase_only`, or
-  `AUDIO/dry-vocal-comp.wav` for `complete_state_timeline`;
+- `AUDIO/dry-vocal-phrase-preview.wav` for `phrase_only`;
+- `AUDIO/dry-vocal-excerpt-preview.wav` for `reviewed_phrase_excerpt`; or
+- `AUDIO/dry-vocal-comp.wav` for `complete_state_timeline`;
 - `TECHNICAL/dry-vocal-edit-map.json`;
 - `TECHNICAL/dry-vocal-render-receipt.json`; and
 - `REVIEW/dry-vocal-comp-review.html`.
