@@ -167,9 +167,7 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
         if phrase is None:
             raise ValueError("vocal capture phrase is unknown")
         transition_request: Mapping[str, Any] | None = None
-        parent_decisions = [
-            event["decision"] for event in self.store.events(session["session_id"])
-        ]
+        parent_decisions = self.store.current_decisions(self.musical_state)
         if has_decisions:
             transition_request = _mapping(request.get("transition"), "transition")
             expected_transition = build_vocal_session_transition_request(
@@ -364,6 +362,30 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
             "recording": {
                 **self._recording_state(session),
             },
+            "context_playback": {
+                "scopes": ["phrase", "section", "song"],
+                "default_scope": "phrase",
+                "section_phrase_radius": 2,
+                "original_source_id": next(
+                    (
+                        row["source_id"]
+                        for row in sources
+                        if row["source_class"] == "authorised_ai_vocal_reference"
+                    ),
+                    None,
+                ),
+                "song_start_seconds": 0.0,
+                "song_end_seconds": max(
+                    (float(row["end_seconds"]) for row in session["phrases"]),
+                    default=0.0,
+                ),
+                "authority": "audition_only",
+                "playback_creates_decision": False,
+                "artifact_created": False,
+            },
+            # A reference-vocal cue authorises audition and guided recording only.
+            # AI fallback needs its own later, explicit render-use authorisation.
+            "ai_fallback_available": False,
             "privacy": {
                 "local_only": True,
                 "uploads_available": False,
@@ -555,6 +577,34 @@ class _VocalSessionHandler(BaseHTTPRequestHandler):
                 self._error(HTTPStatus.BAD_REQUEST, str(exc))
                 return
             self._json(HTTPStatus.CREATED, result)
+            return
+        if parsed.path == "/api/reopen":
+            try:
+                request = self._request_json()
+                if set(request) != {
+                    "phrase_id",
+                    "expected_decision_document_sha256",
+                    "reason",
+                }:
+                    raise ValueError("phrase reopen request fields changed")
+                session = self.server.store.current_session(self.server.musical_state)
+                reopened = self.server.store.reopen_phrase(
+                    session,
+                    phrase_id=_text(request.get("phrase_id"), "phrase_id", 256),
+                    expected_decision_document_sha256=_text(
+                        request.get("expected_decision_document_sha256"),
+                        "expected_decision_document_sha256",
+                        64,
+                    ),
+                    reason=_text(request.get("reason"), "reason", 64),
+                )
+            except (ValueError, OSError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(
+                HTTPStatus.CREATED,
+                {"reopen": reopened, "state": self.server.browser_state()},
+            )
             return
         if parsed.path != "/api/decision":
             self._error(HTTPStatus.NOT_FOUND, "vocal session route not found")

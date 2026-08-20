@@ -84,8 +84,14 @@ h2 { margin-bottom: 0.4rem; font-size: 1.12rem; }
 .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.82rem; }
 .progress-track { height: 4px; margin: 1.2rem 0 1.5rem; overflow: hidden; border-radius: 999px; background: #303532; }
 .progress-track span { display: block; height: 100%; width: 0; background: var(--aqua); transition: width 240ms ease; }
+.phrase-tools { display: grid; gap: 0.55rem; margin-bottom: 0.8rem; }
+.phrase-filter { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; }
+.phrase-filter button { padding: 0.5rem 0.35rem; color: var(--muted); background: transparent; font-size: 0.72rem; }
+.phrase-filter button[aria-pressed="true"] { color: #07130f; border-color: transparent; background: var(--aqua); }
+#next-open-phrase { width: 100%; padding: 0.62rem; font-size: 0.74rem; }
 
 #phrase-list { display: grid; gap: 0.55rem; }
+.empty-phrases { padding: 0.9rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; font-size: 0.78rem; line-height: 1.45; }
 .phrase-row {
   width: 100%;
   display: grid;
@@ -108,19 +114,24 @@ h2 { margin-bottom: 0.4rem; font-size: 1.12rem; }
 .state-chip.decided { color: var(--aqua); background: var(--aqua-dark); }
 .lyrics { max-width: 850px; min-height: 2.6em; margin: clamp(2.2rem, 6vh, 5rem) auto; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2rem, 4.6vw, 4.15rem); line-height: 1.12; letter-spacing: -0.035em; text-align: center; }
 
-.listen-card, .record-card, .current-choice, .boundary-note {
+.context-card, .listen-card, .record-card, .current-choice, .boundary-note {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.025);
 }
-.listen-card { padding: 1.15rem; }
+.context-card, .listen-card { padding: 1.15rem; }
+.context-card { margin-bottom: 1rem; border-color: rgba(239, 197, 111, 0.22); }
+.scope-switch { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.9rem 0; }
+.scope-switch button { padding: 0.55rem 0.75rem; background: transparent; }
+.scope-switch button[aria-pressed="true"] { color: #07130f; border-color: transparent; background: var(--gold); }
 .support-copy { color: var(--muted); font-size: 0.84rem; line-height: 1.55; }
-.source-tray { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 0.65rem; }
-.source-button { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; text-align: left; }
-.source-button::after { content: "Play"; color: var(--aqua); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; }
-.source-button.playing { border-color: var(--aqua); background: var(--aqua-dark); }
-.source-button.selected { box-shadow: inset 0 0 0 1px var(--gold); }
-.source-button.selected::before { content: "Chosen"; position: absolute; top: -8px; right: 8px; padding: 0.18rem 0.38rem; color: #151007; background: var(--gold); border-radius: 999px; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.source-tray { display: grid; gap: 0.65rem; }
+.source-card { display: grid; grid-template-columns: minmax(100px, 1fr) auto; align-items: center; gap: 0.7rem; padding: 0.7rem; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, 0.02); }
+.source-card.active-audition { border-color: var(--aqua); background: var(--aqua-dark); }
+.source-card.selected { box-shadow: inset 4px 0 0 var(--gold); }
+.source-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.45rem; }
+.source-card-actions button { padding: 0.58rem 0.72rem; }
+.source-button[aria-pressed="true"] { color: #06120e; border-color: transparent; background: var(--aqua); }
 
 .record-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; margin-top: 1rem; padding: 1rem 1.15rem; }
 .record-icon { width: 38px; height: 38px; border: 1px solid rgba(255, 155, 145, 0.35); border-radius: 50%; background: radial-gradient(circle, var(--danger) 0 28%, transparent 31%); }

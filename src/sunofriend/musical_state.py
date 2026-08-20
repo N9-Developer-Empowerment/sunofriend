@@ -870,12 +870,14 @@ def _audio_record(path: Path) -> dict[str, Any]:
     import soundfile
 
     info = soundfile.info(path)
-    if info.format != "WAV":
+    if info.format not in {"WAV", "WAVEX", "RF64"}:
         raise ValueError(f"vocal source must be a WAV file: {path.name}")
     if info.frames <= 0 or info.samplerate <= 0 or not 1 <= info.channels <= 2:
         raise ValueError(f"vocal source has unsupported audio geometry: {path.name}")
     return {
-        "format": info.format,
+        # libsndfile reports extensible and RF64 WAV containers separately.
+        # They remain WAV audio for the product contract; exact bytes are hash-bound.
+        "format": "WAV",
         "subtype": info.subtype,
         "sample_rate": int(info.samplerate),
         "channels": int(info.channels),

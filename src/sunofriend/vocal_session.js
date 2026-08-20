@@ -4,6 +4,8 @@ const token = new URLSearchParams(window.location.search).get("token") || "";
 let appState = null;
 let activePhraseId = null;
 let activeSourceId = null;
+let contextScope = "phrase";
+let phraseFilter = "open";
 let stopAt = null;
 let draftTimer = null;
 let draftNotes = {};
@@ -63,7 +65,7 @@ function outcomeText(decision) {
     return `Human base: ${source(decision.selected_source_id)?.display_label || "saved take"}`;
   }
   if (decision.outcome === "ai_fallback") return "Authorised AI kept here for now";
-  if (decision.outcome === "record_again") return "Record this phrase again";
+  if (decision.outcome === "record_again") return "Needs a new recording";
   return "No acceptable candidate yet";
 }
 
@@ -75,7 +77,13 @@ function render() {
   document.querySelector("#progress-fill").style.width = `${coverage.phrase_count ? 100 * coverage.decision_count / coverage.phrase_count : 0}%`;
 
   const list = document.querySelector("#phrase-list");
-  list.replaceChildren(...appState.session.phrases.map((row, index) => {
+  const visiblePhrases = appState.session.phrases.filter((row) => {
+    if (phraseFilter === "open") return !row.decision;
+    if (phraseFilter === "decided") return Boolean(row.decision);
+    return true;
+  });
+  list.replaceChildren(...visiblePhrases.map((row) => {
+    const index = appState.session.phrases.findIndex((item) => item.phrase_id === row.phrase_id);
     const button = document.createElement("button");
     button.type = "button";
     button.className = `phrase-row${row.phrase_id === activePhraseId ? " active" : ""}${row.decision ? " decided" : ""}`;
@@ -86,6 +94,18 @@ function render() {
     button.addEventListener("click", () => selectPhrase(row.phrase_id));
     return button;
   }));
+  if (!visiblePhrases.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-phrases";
+    empty.textContent = phraseFilter === "open"
+      ? "Every phrase currently has a saved decision."
+      : "No phrases match this view.";
+    list.append(empty);
+  }
+  document.querySelectorAll("[data-phrase-filter]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.phraseFilter === phraseFilter));
+  });
+  document.querySelector("#next-open-phrase").disabled = coverage.remaining_phrase_count === 0;
 
   const row = phrase();
   document.querySelector("#phrase-lyrics").textContent = row.lyrics;
@@ -97,32 +117,59 @@ function render() {
   const selected = row.decision?.selected_source_id || null;
   const tray = document.querySelector("#source-tray");
   const availableSources = appState.sources.filter(
-    (item) => !item.bound_phrase_id || item.bound_phrase_id === row.phrase_id,
+    (item) => isHumanSourceForPhrase(item, row.phrase_id),
   );
   tray.replaceChildren(...availableSources.map((item) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `source-button${item.source_id === selected ? " selected" : ""}`;
-    button.textContent = item.display_label;
-    button.dataset.sourceId = item.source_id;
-    button.addEventListener("click", () => playSource(item.source_id, button));
-    return button;
+    const card = document.createElement("article");
+    const activeAudition = item.source_id === activeSourceId;
+    card.className = `source-card${item.source_id === selected ? " selected" : ""}${activeAudition ? " active-audition" : ""}`;
+    card.dataset.sourceId = item.source_id;
+    const label = document.createElement("strong");
+    label.textContent = item.display_label;
+    const actions = document.createElement("div");
+    actions.className = "source-card-actions";
+    const play = document.createElement("button");
+    play.type = "button";
+    play.className = "source-button";
+    play.textContent = activeAudition ? "Play again" : "Play";
+    play.ariaPressed = String(activeAudition);
+    play.addEventListener("click", () => playSource(item.source_id));
+    const use = document.createElement("button");
+    use.type = "button";
+    use.className = "quiet-button";
+    use.textContent = item.source_id === selected ? "Saved choice" : "Use this attempt";
+    use.disabled = Boolean(row.decision);
+    use.addEventListener("click", () => decide("human_take", item.source_id));
+    actions.append(play, use);
+    card.append(label, actions);
+    return card;
   }));
 
   const current = document.querySelector("#current-choice");
   const actions = document.querySelector("#decision-actions");
+  const revisionActions = document.querySelector("#decision-revision-actions");
   if (row.decision) {
     current.classList.remove("hidden");
     current.innerHTML = "<strong>Saved explicit decision</strong><span></span>";
     current.querySelector("span").textContent = outcomeText(row.decision);
     actions.classList.add("hidden");
+    revisionActions.classList.remove("hidden");
+    document.querySelector("#reopen-phrase").disabled = false;
+    document.querySelector("#record-new-attempt").disabled = false;
   } else {
     current.classList.add("hidden");
     actions.classList.remove("hidden");
+    revisionActions.classList.add("hidden");
   }
-  const ai = appState.sources.some((item) => item.source_class === "authorised_ai_vocal_reference");
-  document.querySelector("#ai-fallback").classList.toggle("hidden", !ai);
+  document.querySelector("#ai-fallback").classList.toggle(
+    "hidden",
+    !appState.ai_fallback_available,
+  );
   document.querySelector("#use-human").disabled = !isHumanSourceForPhrase(source(activeSourceId), row.phrase_id);
+  document.querySelector("#play-original").disabled = !appState.context_playback.original_source_id;
+  document.querySelectorAll("[data-context-scope]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.contextScope === contextScope));
+  });
 
   document.querySelector("#record-title").textContent = appState.recording.available
     ? (appState.recording.transition_required ? "Ready for an explicit new recording round" : "Ready to record")
@@ -144,21 +191,77 @@ function selectPhrase(phraseId) {
   saveDraftSoon();
 }
 
-async function playSource(sourceId, button) {
+function selectNextOpenPhrase() {
+  const rows = appState.session.phrases;
+  const currentIndex = rows.findIndex((row) => row.phrase_id === activePhraseId);
+  const ordered = rows.slice(currentIndex + 1).concat(rows.slice(0, currentIndex + 1));
+  const next = ordered.find((row) => !row.decision);
+  if (!next) {
+    showNotice("Every phrase currently has a saved decision.");
+    return;
+  }
+  phraseFilter = "open";
+  selectPhrase(next.phrase_id);
+}
+
+function contextWindow() {
+  const row = phrase();
+  if (contextScope === "song") {
+    return {
+      start: appState.context_playback.song_start_seconds,
+      end: appState.context_playback.song_end_seconds,
+    };
+  }
+  if (contextScope === "section") {
+    const rows = appState.session.phrases;
+    const index = rows.findIndex((item) => item.phrase_id === row.phrase_id);
+    const radius = appState.context_playback.section_phrase_radius;
+    return {
+      start: rows[Math.max(0, index - radius)].start_seconds,
+      end: rows[Math.min(rows.length - 1, index + radius)].end_seconds,
+    };
+  }
+  return {start: row.start_seconds, end: row.end_seconds};
+}
+
+function waitForMetadata(media) {
+  if (media.readyState >= 1) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const loaded = () => { cleanup(); resolve(); };
+    const failed = () => { cleanup(); reject(new Error("This audio source could not be loaded.")); };
+    const cleanup = () => {
+      media.removeEventListener("loadedmetadata", loaded);
+      media.removeEventListener("error", failed);
+    };
+    media.addEventListener("loadedmetadata", loaded, {once: true});
+    media.addEventListener("error", failed, {once: true});
+  });
+}
+
+async function playSource(sourceId) {
   stopPlayback();
   activeSourceId = sourceId;
   const item = source(sourceId);
   const row = phrase();
-  player.src = item.media_url;
-  player.currentTime = item.playback_start_seconds ?? row.start_seconds;
-  stopAt = item.playback_end_seconds ?? row.end_seconds;
-  button.classList.add("playing");
-  document.querySelector("#use-human").disabled = !isHumanSourceForPhrase(item, row.phrase_id) || Boolean(row.decision);
+  render();
   try {
+    player.src = item.media_url;
+    // waitForMetadata resolves only after loadedmetadata, before any currentTime seek.
+    await waitForMetadata(player);
+    const window = contextWindow();
+    const phraseBound = Boolean(item.bound_phrase_id);
+    player.currentTime = phraseBound
+      ? (item.playback_start_seconds ?? 0)
+      : window.start;
+    stopAt = phraseBound
+      ? (item.playback_end_seconds ?? player.duration)
+      : Math.min(window.end, player.duration);
+    if (phraseBound && contextScope !== "phrase") {
+      showNotice("This short pickup can play only its recorded phrase. Use an original or full take for wider context.");
+    }
     await player.play();
   } catch (error) {
     showNotice(error.message, true);
-    button.classList.remove("playing");
   }
 }
 
@@ -236,9 +339,62 @@ async function decide(outcome, sourceId = null) {
 }
 
 document.querySelector("#use-human").addEventListener("click", () => decide("human_take", activeSourceId));
-document.querySelector("#record-again").addEventListener("click", () => decide("record_again"));
 document.querySelector("#no-candidate").addEventListener("click", () => decide("no_acceptable_candidate"));
 document.querySelector("#ai-fallback").addEventListener("click", () => decide("ai_fallback"));
+
+async function reopenPhrase(reason = "review_again") {
+  const row = phrase();
+  if (!row.decision) return;
+  if (!window.confirm("Reopen this phrase? The earlier choice remains in the private history and no audio is changed.")) return;
+  try {
+    const result = await api("/api/reopen", {
+      method: "POST",
+      body: JSON.stringify({
+        phrase_id: row.phrase_id,
+        expected_decision_document_sha256: row.decision.decision_document_sha256,
+        reason,
+      }),
+    });
+    appState = result.state;
+    activeSourceId = null;
+    render();
+    showNotice("Phrase reopened. The earlier decision is retained in history.");
+  } catch (error) {
+    showNotice(error.message, true);
+  }
+}
+
+async function beginRecordWorkflow() {
+  if (!appState.recording.available) {
+    showNotice(appState.recording.reason || "Recording is not configured for this session.", true);
+    return;
+  }
+  document.querySelector("#recorder-panel").scrollIntoView({behavior: "smooth", block: "center"});
+  if (!microphoneStream) await enableMicrophone();
+  if (microphoneStream) setRecorderStatus("Ready. Hear the original if needed, then press Record.");
+}
+
+document.querySelector("#reopen-phrase").addEventListener("click", () => reopenPhrase("review_again"));
+document.querySelector("#record-new-attempt").addEventListener("click", beginRecordWorkflow);
+document.querySelector("#record-replacement").addEventListener("click", beginRecordWorkflow);
+document.querySelector("#play-original").addEventListener("click", () => {
+  const original = appState.context_playback.original_source_id;
+  if (original) playSource(original);
+});
+document.querySelectorAll("[data-context-scope]").forEach((button) => {
+  button.addEventListener("click", () => {
+    contextScope = button.dataset.contextScope;
+    stopPlayback();
+    render();
+  });
+});
+document.querySelectorAll("[data-phrase-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    phraseFilter = button.dataset.phraseFilter;
+    render();
+  });
+});
+document.querySelector("#next-open-phrase").addEventListener("click", selectNextOpenPhrase);
 
 function dbfs(value) {
   return value > 0 ? 20 * Math.log10(value) : -Infinity;
