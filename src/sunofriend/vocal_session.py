@@ -249,6 +249,10 @@ def build_vocal_session(
         _source_projection(take, "human_vocal_take")
         for take in state["vocal_performance_state"]["takes"]
     )
+    sources.extend(
+        _capture_source_projection(capture)
+        for capture in state["vocal_performance_state"].get("phrase_captures", [])
+    )
     decision_count = len(validated)
     document: dict[str, Any] = {
         "schema": VOCAL_SESSION_SCHEMA,
@@ -343,6 +347,10 @@ def validate_vocal_session(
         _source_projection(take, "human_vocal_take")
         for take in state["vocal_performance_state"]["takes"]
     )
+    expected_sources.extend(
+        _capture_source_projection(capture)
+        for capture in state["vocal_performance_state"].get("phrase_captures", [])
+    )
     if document.get("sources") != expected_sources:
         raise ValueError("vocal session source roster changed")
     expected_coverage = {
@@ -397,12 +405,24 @@ def _source_projection(source: Mapping[str, Any], source_class: str) -> dict[str
     }
 
 
+def _capture_source_projection(source: Mapping[str, Any]) -> dict[str, Any]:
+    projection = _source_projection(source, "human_vocal_phrase_capture")
+    projection["bound_phrase_id"] = source["phrase"]["phrase_id"]
+    return projection
+
+
 def _state_source_identities(state: Mapping[str, Any]) -> dict[str, str]:
     vocal = state["vocal_performance_state"]
     result = {take["source_id"]: take["audio"]["sha256"] for take in vocal["takes"]}
     reference = vocal.get("reference")
     if isinstance(reference, Mapping):
         result[reference["source_id"]] = reference["audio"]["sha256"]
+    result.update(
+        {
+            capture["source_id"]: capture["audio"]["sha256"]
+            for capture in vocal.get("phrase_captures", [])
+        }
+    )
     return result
 
 

@@ -32,6 +32,13 @@ function source(sourceId) {
   return appState.sources.find((row) => row.source_id === sourceId);
 }
 
+function isHumanSourceForPhrase(item, phraseId) {
+  if (!item) return false;
+  if (item.source_class === "human_vocal_take") return true;
+  return item.source_class === "human_vocal_phrase_capture"
+    && item.bound_phrase_id === phraseId;
+}
+
 function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${String(Math.floor(seconds % 60)).padStart(2, "0")}.${String(Math.round((seconds % 1) * 10))}`;
@@ -75,7 +82,10 @@ function render() {
 
   const selected = row.decision?.selected_source_id || null;
   const tray = document.querySelector("#source-tray");
-  tray.replaceChildren(...appState.sources.map((item) => {
+  const availableSources = appState.sources.filter(
+    (item) => !item.bound_phrase_id || item.bound_phrase_id === row.phrase_id,
+  );
+  tray.replaceChildren(...availableSources.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `source-button${item.source_id === selected ? " selected" : ""}`;
@@ -98,7 +108,7 @@ function render() {
   }
   const ai = appState.sources.some((item) => item.source_class === "authorised_ai_vocal_reference");
   document.querySelector("#ai-fallback").classList.toggle("hidden", !ai);
-  document.querySelector("#use-human").disabled = !activeSourceId || source(activeSourceId)?.source_class !== "human_vocal_take";
+  document.querySelector("#use-human").disabled = !isHumanSourceForPhrase(source(activeSourceId), row.phrase_id);
 
   document.querySelector("#record-title").textContent = appState.recording.available ? "Ready to record" : "Cue required before recording";
   document.querySelector("#record-reason").textContent = appState.recording.reason || "";
@@ -119,10 +129,10 @@ async function playSource(sourceId, button) {
   const item = source(sourceId);
   const row = phrase();
   player.src = item.media_url;
-  player.currentTime = row.start_seconds;
-  stopAt = row.end_seconds;
+  player.currentTime = item.playback_start_seconds ?? row.start_seconds;
+  stopAt = item.playback_end_seconds ?? row.end_seconds;
   button.classList.add("playing");
-  document.querySelector("#use-human").disabled = item.source_class !== "human_vocal_take" || Boolean(row.decision);
+  document.querySelector("#use-human").disabled = !isHumanSourceForPhrase(item, row.phrase_id) || Boolean(row.decision);
   try {
     await player.play();
   } catch (error) {

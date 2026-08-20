@@ -24,6 +24,7 @@ from .source_receipt import canonical_json_bytes, document_sha256
 
 MUSICAL_STATE_SCHEMA = "sunofriend.musical-state.v0"
 VOCAL_PERFORMANCE_STATE_SCHEMA = "sunofriend.vocal-performance-state.v2"
+VOCAL_PERFORMANCE_STATE_SCHEMA_V3 = "sunofriend.vocal-performance-state.v3"
 VOCAL_COMP_TIMELINE_SCHEMA = "sunofriend.vocal-comp-timeline.v1"
 
 METHOD_NATURES = frozenset({"D", "I", "T", "H"})
@@ -31,6 +32,8 @@ METHOD_NATURES = frozenset({"D", "I", "T", "H"})
 _AUDIO_SUFFIXES = frozenset({".wav"})
 _PHRASE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _MAX_TAKES = 24
+_MAX_PHRASE_CAPTURES = 2048
+_MAX_CAPTURES_PER_PHRASE = 16
 _MAX_PHRASES = 128
 _MAX_LYRICS_BYTES = 256 * 1024
 _MAX_TIMELINE_BYTES = 512 * 1024
@@ -81,8 +84,7 @@ def plan_vocal_musical_state(
         raise ValueError("confirm_timeline_reviewed is required")
     if rights_category not in RIGHTS_CATEGORIES:
         raise ValueError(
-            "rights_category must be one of: "
-            + ", ".join(sorted(RIGHTS_CATEGORIES))
+            "rights_category must be one of: " + ", ".join(sorted(RIGHTS_CATEGORIES))
         )
     normalized_chain = str(processing_chain).strip().casefold().replace("-", "_")
     if normalized_chain not in {"dry", "same_gentle_chain"}:
@@ -112,12 +114,16 @@ def plan_vocal_musical_state(
         for path in take_paths
     ]
     final_phrase_end = float(timeline["phrases"][-1]["end_seconds"])
-    if final_phrase_end > min(
-        float(row["audio"]["duration_seconds"]) for row in take_records
-    ) + 1e-6:
+    if (
+        final_phrase_end
+        > min(float(row["audio"]["duration_seconds"]) for row in take_records) + 1e-6
+    ):
         raise ValueError("phrase timeline extends beyond a supplied vocal take")
     reference_audio = _audio_record(reference_path) if reference_path else None
-    if reference_audio and reference_audio["duration_seconds"] + 1e-6 < final_phrase_end:
+    if (
+        reference_audio
+        and reference_audio["duration_seconds"] + 1e-6 < final_phrase_end
+    ):
         raise ValueError("reference vocal ends before the reviewed phrase timeline")
 
     return {
@@ -222,9 +228,7 @@ def create_vocal_musical_state(
         copied_lyrics = lyrics_dir / "lyrics.txt"
         copied_timeline = timeline_dir / "reviewed-phrase-timeline.json"
         _copy_private(Path(lyrics).expanduser().absolute(), copied_lyrics)
-        _copy_private(
-            Path(phrase_timeline).expanduser().absolute(), copied_timeline
-        )
+        _copy_private(Path(phrase_timeline).expanduser().absolute(), copied_timeline)
         _verify_copy(copied_lyrics, plan["lyrics"], "lyrics")
         _verify_copy(copied_timeline, plan["phrase_timeline"], "phrase timeline")
 
@@ -262,9 +266,7 @@ def create_vocal_musical_state(
                 "automatic_rewrite_permitted": False,
             },
             "structure": {
-                "phrase_timeline": _relative_file_record(
-                    copied_timeline, temporary
-                ),
+                "phrase_timeline": _relative_file_record(copied_timeline, temporary),
                 "phrase_timeline_schema": VOCAL_COMP_TIMELINE_SCHEMA,
                 "review_status": "reviewed",
                 "phrases": [
@@ -314,6 +316,173 @@ def create_vocal_musical_state(
     return validate_musical_state(destination / "musical-state.json", root=destination)
 
 
+def admit_vocal_phrase_capture(
+    base_manifest: str | Path,
+    *,
+    capture_wav: str | Path,
+    capture_receipt: str | Path | Mapping[str, Any],
+    out_dir: str | Path,
+    label: str | None = None,
+) -> dict[str, Any]:
+    """Admit one bounded capture into a fresh immutable derived state.
+
+    The parent state, its exact referenced artifacts, the capture receipt and
+    microphone WAV are copied into a new owner-only project.  No existing
+    state is changed and no phrase decision is migrated or created.
+    """
+
+    from .vocal_capture import VOCAL_CAPTURE_SCHEMA, validate_vocal_capture
+
+    parent_path = _file(base_manifest, "base musical-state manifest")
+    parent_root = parent_path.parent.resolve()
+    parent = validate_musical_state(parent_path, root=parent_root)
+    receipt_source: Path | None = None
+    if isinstance(capture_receipt, Mapping):
+        receipt_input = dict(capture_receipt)
+    else:
+        receipt_source = _file(capture_receipt, "vocal capture receipt")
+        receipt_input = _read_json(receipt_source)
+    receipt = validate_vocal_capture(receipt_input, parent)
+    source_audio = _file(capture_wav, "vocal phrase capture")
+    if source_audio.stat().st_size != receipt["audio"]["bytes"]:
+        raise ValueError("vocal phrase capture byte count does not match receipt")
+    if file_sha256(source_audio) != receipt["audio"]["sha256"]:
+        raise ValueError("vocal phrase capture SHA-256 does not match receipt")
+    properties = _audio_record(source_audio)
+    expected_audio = receipt["audio"]
+    if {
+        "format": properties["format"],
+        "subtype": properties["subtype"],
+        "sample_rate": properties["sample_rate"],
+        "channels": properties["channels"],
+        "frames": properties["frames"],
+    } != {
+        "format": expected_audio["format"],
+        "subtype": expected_audio["subtype"],
+        "sample_rate": expected_audio["sample_rate"],
+        "channels": expected_audio["channels"],
+        "frames": expected_audio["frames"],
+    }:
+        raise ValueError("vocal phrase capture audio geometry does not match receipt")
+
+    source_id = receipt["capture"]["source_id"]
+    existing_ids = _vocal_source_ids(parent)
+    if source_id in existing_ids:
+        raise ValueError("vocal phrase capture source_id already exists")
+    phrase_id = receipt["phrase"]["phrase_id"]
+    prior_captures = list(parent["vocal_performance_state"].get("phrase_captures", []))
+    if (
+        sum(
+            row.get("phrase", {}).get("phrase_id") == phrase_id
+            for row in prior_captures
+        )
+        >= _MAX_CAPTURES_PER_PHRASE
+    ):
+        raise ValueError("vocal phrase capture limit reached for this phrase")
+    if len(prior_captures) >= _MAX_PHRASE_CAPTURES:
+        raise ValueError("vocal phrase capture limit reached for this state")
+
+    capture_label = _capture_label(label, source_id)
+    destination = Path(out_dir).expanduser().absolute()
+    if destination.exists():
+        raise ValueError(f"musical-state output already exists: {destination}")
+    if destination == parent_root or parent_root in destination.parents:
+        raise ValueError(
+            "derived musical-state output must be outside the parent state"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(
+        tempfile.mkdtemp(prefix=f".{destination.name}.tmp-", dir=destination.parent)
+    )
+    os.chmod(temporary, 0o700)
+    try:
+        _copy_manifest_artifacts(parent, parent_root, temporary)
+
+        parent_copy = (
+            temporary / "LINEAGE" / f"musical-state-{parent['document_sha256']}.json"
+        )
+        _private_parent(parent_copy, temporary)
+        _copy_private(parent_path, parent_copy)
+        _verify_copy(
+            parent_copy,
+            _absolute_file_record(parent_path),
+            "parent musical-state manifest",
+        )
+
+        receipt_copy = (
+            temporary / "RECEIPTS" / f"vocal-capture-{receipt['document_sha256']}.json"
+        )
+        _private_parent(receipt_copy, temporary)
+        if receipt_source is None:
+            _write_private_json(receipt_copy, receipt)
+        else:
+            _copy_private(receipt_source, receipt_copy)
+            _verify_copy(
+                receipt_copy,
+                _absolute_file_record(receipt_source),
+                "vocal capture receipt",
+            )
+
+        audio_copy = (
+            temporary
+            / "SOURCES"
+            / "phrase-captures"
+            / f"{source_id}-{receipt['audio']['sha256'][:12]}.wav"
+        )
+        _private_parent(audio_copy, temporary)
+        _copy_private(source_audio, audio_copy)
+        _verify_copy(
+            audio_copy,
+            _absolute_file_record(source_audio),
+            "vocal phrase capture",
+        )
+
+        capture_row = {
+            "source_id": source_id,
+            "source_class": "human_vocal_phrase_capture",
+            "label": capture_label,
+            "audio": _relative_file_record(audio_copy, temporary),
+            "audio_properties": properties,
+            "capture_receipt": {
+                "schema": VOCAL_CAPTURE_SCHEMA,
+                "document_sha256": receipt["document_sha256"],
+                "artifact": _relative_file_record(receipt_copy, temporary),
+            },
+            "phrase": dict(receipt["phrase"]),
+            "placement": dict(receipt["placement"]),
+            "review_status": "stored_unreviewed",
+            "authority": dict(receipt["authority"]),
+        }
+        derived = json.loads(canonical_json_bytes(parent).decode("utf-8"))
+        derived.pop("document_sha256", None)
+        derived.pop("lineage", None)
+        vocal = derived["vocal_performance_state"]
+        vocal["schema"] = VOCAL_PERFORMANCE_STATE_SCHEMA_V3
+        vocal["phrase_captures"] = [*prior_captures, capture_row]
+        derived["lineage"] = {
+            "operation": "admit_vocal_phrase_capture",
+            "parent": {
+                "schema": MUSICAL_STATE_SCHEMA,
+                "document_sha256": parent["document_sha256"],
+                "manifest": _relative_file_record(parent_copy, temporary),
+            },
+            "admitted_capture": {
+                "schema": VOCAL_CAPTURE_SCHEMA,
+                "document_sha256": receipt["document_sha256"],
+                "audio_sha256": receipt["audio"]["sha256"],
+            },
+        }
+        derived["document_sha256"] = document_sha256(derived)
+        manifest_path = temporary / "musical-state.json"
+        _write_private_json(manifest_path, derived)
+        validate_musical_state(manifest_path, root=temporary)
+        os.replace(temporary, destination)
+    except Exception:
+        shutil.rmtree(temporary, ignore_errors=True)
+        raise
+    return validate_musical_state(destination / "musical-state.json", root=destination)
+
+
 def validate_musical_state(
     manifest: str | Path | Mapping[str, Any],
     *,
@@ -339,8 +508,19 @@ def validate_musical_state(
     if document.get("method_natures") != ["D", "H"]:
         raise ValueError("v0 musical state must declare deterministic and human work")
     vocal = _mapping(document.get("vocal_performance_state"), "vocal state")
-    if vocal.get("schema") != VOCAL_PERFORMANCE_STATE_SCHEMA:
+    vocal_schema = vocal.get("schema")
+    if vocal_schema not in {
+        VOCAL_PERFORMANCE_STATE_SCHEMA,
+        VOCAL_PERFORMANCE_STATE_SCHEMA_V3,
+    }:
         raise ValueError("unsupported vocal-performance-state schema")
+    if vocal_schema == VOCAL_PERFORMANCE_STATE_SCHEMA:
+        if "phrase_captures" in vocal or "lineage" in document:
+            raise ValueError(
+                "vocal-performance-state v2 cannot contain phrase captures"
+            )
+    else:
+        _validate_phrase_capture_state(document, vocal)
     if vocal.get("selection_authority") != "human_only":
         raise ValueError("vocal selection authority must remain human_only")
     for key in (
@@ -373,7 +553,9 @@ def validate_musical_state(
     base = (
         Path(root).expanduser().absolute().resolve()
         if root is not None
-        else manifest_path.parent.resolve() if manifest_path else None
+        else manifest_path.parent.resolve()
+        if manifest_path
+        else None
     )
     if base is not None:
         for record in _file_records(document):
@@ -384,12 +566,262 @@ def validate_musical_state(
             except ValueError as exc:
                 raise ValueError("musical-state artifact escapes project root") from exc
             if not path.is_file() or path.is_symlink():
-                raise ValueError(f"musical-state artifact is missing or unsafe: {relative}")
+                raise ValueError(
+                    f"musical-state artifact is missing or unsafe: {relative}"
+                )
             if path.stat().st_size != record.get("bytes"):
                 raise ValueError(f"musical-state artifact size changed: {relative}")
             if file_sha256(path) != record.get("sha256"):
                 raise ValueError(f"musical-state artifact hash changed: {relative}")
+        if vocal_schema == VOCAL_PERFORMANCE_STATE_SCHEMA_V3:
+            _validate_phrase_capture_lineage(document, base)
     return document
+
+
+def _validate_phrase_capture_state(
+    document: Mapping[str, Any], vocal: Mapping[str, Any]
+) -> None:
+    captures = vocal.get("phrase_captures")
+    if not isinstance(captures, list) or not 1 <= len(captures) <= _MAX_PHRASE_CAPTURES:
+        raise ValueError("vocal-performance-state v3 requires bounded phrase captures")
+    phrases = {
+        row["phrase_id"]: row
+        for row in _mapping(document.get("structure"), "structure").get("phrases", [])
+    }
+    source_ids = {
+        row.get("source_id")
+        for row in vocal.get("takes", [])
+        if isinstance(row, Mapping)
+    }
+    reference = vocal.get("reference")
+    if isinstance(reference, Mapping):
+        source_ids.add(reference.get("source_id"))
+    counts: dict[str, int] = {}
+    for capture in captures:
+        row = _mapping(capture, "phrase capture")
+        if set(row) != {
+            "source_id",
+            "source_class",
+            "label",
+            "audio",
+            "audio_properties",
+            "capture_receipt",
+            "phrase",
+            "placement",
+            "review_status",
+            "authority",
+        }:
+            raise ValueError("phrase capture fields changed")
+        source_id = str(row.get("source_id", ""))
+        if not _PHRASE_ID.fullmatch(source_id) or source_id in source_ids:
+            raise ValueError(
+                "phrase capture source IDs must be unique safe identifiers"
+            )
+        source_ids.add(source_id)
+        if row.get("source_class") != "human_vocal_phrase_capture":
+            raise ValueError("phrase capture source class changed")
+        _capture_label(row.get("label"), source_id)
+        audio = _mapping(row.get("audio"), "phrase capture audio")
+        if set(audio) != {"path", "bytes", "sha256"}:
+            raise ValueError("phrase capture audio file record changed")
+        _safe_relative_path(audio.get("path"))
+        properties = _mapping(row.get("audio_properties"), "phrase capture audio")
+        if set(properties) != {
+            "format",
+            "subtype",
+            "sample_rate",
+            "channels",
+            "frames",
+            "duration_seconds",
+        }:
+            raise ValueError("phrase capture audio properties changed")
+        if (
+            properties.get("format") != "WAV"
+            or properties.get("subtype") != "PCM_24"
+            or properties.get("channels") != 1
+        ):
+            raise ValueError("phrase capture audio must remain mono WAV PCM_24")
+        sample_rate = _positive_int(properties.get("sample_rate"), "sample rate")
+        frames = _positive_int(properties.get("frames"), "frame count")
+        duration = _finite_number(properties.get("duration_seconds"), "duration")
+        if abs(duration - frames / sample_rate) > 1e-9:
+            raise ValueError("phrase capture duration does not match its frame clock")
+        if audio.get("bytes") != 44 + frames * 3:
+            raise ValueError("phrase capture byte count does not match PCM24 geometry")
+        _sha256_text(audio.get("sha256"), "phrase capture audio")
+
+        receipt = _mapping(row.get("capture_receipt"), "capture receipt")
+        if set(receipt) != {"schema", "document_sha256", "artifact"}:
+            raise ValueError("phrase capture receipt fields changed")
+        if receipt.get("schema") != "sunofriend.browser-vocal-capture.v1":
+            raise ValueError("phrase capture receipt schema changed")
+        _sha256_text(receipt.get("document_sha256"), "capture receipt")
+        receipt_artifact = _mapping(receipt.get("artifact"), "capture receipt artifact")
+        if set(receipt_artifact) != {"path", "bytes", "sha256"}:
+            raise ValueError("capture receipt artifact record changed")
+        _safe_relative_path(receipt_artifact.get("path"))
+
+        phrase_row = _mapping(row.get("phrase"), "capture phrase")
+        phrase_id = str(phrase_row.get("phrase_id", ""))
+        phrase = phrases.get(phrase_id)
+        if phrase is None or phrase_row != {
+            "phrase_id": phrase_id,
+            "lyrics": phrase["lyrics"],
+            "review_status": "reviewed",
+        }:
+            raise ValueError("phrase capture does not bind a reviewed phrase")
+        counts[phrase_id] = counts.get(phrase_id, 0) + 1
+        if counts[phrase_id] > _MAX_CAPTURES_PER_PHRASE:
+            raise ValueError("too many phrase captures for one phrase")
+
+        placement = _mapping(row.get("placement"), "capture placement")
+        expected_placement_keys = {
+            "source_phrase_start_frame",
+            "source_phrase_end_frame",
+            "pre_guard_frames",
+            "post_guard_frames",
+            "destination_start_seconds",
+            "destination_end_seconds",
+            "destination_start_frame",
+            "destination_end_frame",
+            "capture_song_start_seconds",
+        }
+        if set(placement) != expected_placement_keys:
+            raise ValueError("phrase capture placement fields changed")
+        start = _non_negative_int(
+            placement.get("source_phrase_start_frame"), "source phrase start"
+        )
+        end = _positive_int(
+            placement.get("source_phrase_end_frame"), "source phrase end"
+        )
+        before = _non_negative_int(
+            placement.get("pre_guard_frames"), "pre guard frames"
+        )
+        after = _non_negative_int(
+            placement.get("post_guard_frames"), "post guard frames"
+        )
+        if not 0 <= start < end <= frames or before != start or after != frames - end:
+            raise ValueError("phrase capture source window or guards changed")
+        if before + after <= 0 or before > sample_rate * 5 or after > sample_rate * 5:
+            raise ValueError("phrase capture guards must remain short and bounded")
+        destination_start = _finite_number(
+            placement.get("destination_start_seconds"), "destination start"
+        )
+        destination_end = _finite_number(
+            placement.get("destination_end_seconds"), "destination end"
+        )
+        tolerance = 0.5 / sample_rate + 1e-12
+        if (
+            abs(destination_start - float(phrase["start_seconds"])) > tolerance
+            or abs(destination_end - float(phrase["end_seconds"])) > tolerance
+            or abs((end - start) / sample_rate - (destination_end - destination_start))
+            > tolerance
+        ):
+            raise ValueError("phrase capture destination no longer matches phrase")
+        if placement.get("destination_start_frame") != round(
+            destination_start * sample_rate
+        ) or placement.get("destination_end_frame") != round(
+            destination_end * sample_rate
+        ):
+            raise ValueError("phrase capture destination frame clock changed")
+        capture_start = _finite_number(
+            placement.get("capture_song_start_seconds"), "capture song start"
+        )
+        if abs(capture_start - (destination_start - start / sample_rate)) > tolerance:
+            raise ValueError("phrase capture song placement changed")
+        if row.get("review_status") != "stored_unreviewed" or row.get("authority") != {
+            "review_status": "unreviewed",
+            "selection_authority": "none",
+            "phrase_decision_created": False,
+            "source_map_admission": False,
+        }:
+            raise ValueError("phrase capture cannot claim selection authority")
+
+    lineage = _mapping(document.get("lineage"), "phrase capture lineage")
+    if set(lineage) != {"operation", "parent", "admitted_capture"}:
+        raise ValueError("phrase capture lineage fields changed")
+    if lineage.get("operation") != "admit_vocal_phrase_capture":
+        raise ValueError("phrase capture lineage operation changed")
+    parent = _mapping(lineage.get("parent"), "parent lineage")
+    if set(parent) != {"schema", "document_sha256", "manifest"}:
+        raise ValueError("parent lineage fields changed")
+    if parent.get("schema") != MUSICAL_STATE_SCHEMA:
+        raise ValueError("parent lineage schema changed")
+    _sha256_text(parent.get("document_sha256"), "parent musical state")
+    parent_manifest = _mapping(parent.get("manifest"), "parent manifest")
+    if set(parent_manifest) != {"path", "bytes", "sha256"}:
+        raise ValueError("parent manifest artifact record changed")
+    admitted = _mapping(lineage.get("admitted_capture"), "admitted capture")
+    if set(admitted) != {"schema", "document_sha256", "audio_sha256"}:
+        raise ValueError("admitted capture lineage fields changed")
+    if admitted.get("schema") != "sunofriend.browser-vocal-capture.v1":
+        raise ValueError("admitted capture schema changed")
+    _sha256_text(admitted.get("document_sha256"), "admitted capture")
+    _sha256_text(admitted.get("audio_sha256"), "admitted capture audio")
+
+
+def _validate_phrase_capture_lineage(document: Mapping[str, Any], base: Path) -> None:
+    from .vocal_capture import validate_vocal_capture
+
+    lineage = document["lineage"]
+    parent_record = lineage["parent"]["manifest"]
+    parent_path = _record_path(base, parent_record)
+    parent = validate_musical_state(parent_path, root=base)
+    if parent["document_sha256"] != lineage["parent"]["document_sha256"]:
+        raise ValueError("parent musical-state lineage hash changed")
+
+    current_vocal = document["vocal_performance_state"]
+    parent_vocal = parent["vocal_performance_state"]
+    for key in current_vocal:
+        if key in {"schema", "phrase_captures"}:
+            continue
+        if current_vocal[key] != parent_vocal.get(key):
+            raise ValueError("capture admission changed existing vocal evidence")
+    if any(
+        document.get(key) != parent.get(key)
+        for key in (
+            "schema",
+            "status",
+            "state_scope",
+            "method_natures",
+            "clock",
+            "authorization",
+            "lyrics",
+            "structure",
+            "optional_derived_evidence",
+            "training",
+            "network_used",
+            "effects",
+        )
+    ):
+        raise ValueError("capture admission changed parent musical-state evidence")
+    parent_captures = list(parent_vocal.get("phrase_captures", []))
+    current_captures = current_vocal["phrase_captures"]
+    if current_captures[:-1] != parent_captures:
+        raise ValueError("capture admission changed or reordered prior captures")
+    admitted_row = current_captures[-1]
+    admitted = lineage["admitted_capture"]
+    if (
+        admitted_row["capture_receipt"]["document_sha256"]
+        != admitted["document_sha256"]
+        or admitted_row["audio"]["sha256"] != admitted["audio_sha256"]
+    ):
+        raise ValueError("admitted capture lineage does not match capture roster")
+    receipt_path = _record_path(base, admitted_row["capture_receipt"]["artifact"])
+    receipt = _read_json(receipt_path)
+    validate_vocal_capture(receipt, parent)
+    if receipt["document_sha256"] != admitted["document_sha256"]:
+        raise ValueError("capture receipt lineage hash changed")
+    if receipt["capture"]["source_id"] != admitted_row["source_id"]:
+        raise ValueError("capture receipt source identity changed")
+    if receipt["audio"]["sha256"] != admitted_row["audio"]["sha256"]:
+        raise ValueError("capture receipt audio identity changed")
+    if admitted_row["phrase"] != receipt["phrase"]:
+        raise ValueError("capture receipt phrase binding changed")
+    if admitted_row["placement"] != receipt["placement"]:
+        raise ValueError("capture receipt placement changed")
+    if admitted_row["authority"] != receipt["authority"]:
+        raise ValueError("capture receipt authority changed")
 
 
 def _load_reviewed_timeline(path: Path, canonical_lyrics: str) -> dict[str, Any]:
@@ -425,7 +857,9 @@ def _load_reviewed_timeline(path: Path, canonical_lyrics: str) -> dict[str, Any]
         phrase_words = _words(lyric_text)
         found = _find_words(canonical_words, phrase_words, lyric_position)
         if not phrase_words or found is None:
-            raise ValueError(f"phrase {phrase_id} lyrics are not in canonical lyric order")
+            raise ValueError(
+                f"phrase {phrase_id} lyrics are not in canonical lyric order"
+            )
         lyric_position = found + len(phrase_words)
         ids.add(phrase_id)
         previous_end = end
@@ -469,11 +903,52 @@ def _copy_private(source: Path, destination: Path) -> None:
     os.chmod(destination, 0o600)
 
 
+def _copy_manifest_artifacts(
+    manifest: Mapping[str, Any], source_root: Path, destination_root: Path
+) -> None:
+    seen: set[PurePosixPath] = set()
+    for record in _file_records(manifest):
+        relative = _safe_relative_path(record.get("path"))
+        if relative in seen:
+            continue
+        seen.add(relative)
+        source = (source_root / Path(*relative.parts)).resolve()
+        try:
+            source.relative_to(source_root)
+        except ValueError as exc:
+            raise ValueError("parent musical-state artifact escapes its root") from exc
+        if not source.is_file() or source.is_symlink():
+            raise ValueError("parent musical-state artifact is missing or unsafe")
+        destination = destination_root / Path(*relative.parts)
+        _private_parent(destination, destination_root)
+        _copy_private(source, destination)
+        _verify_copy(destination, record, str(relative))
+
+
+def _private_parent(path: Path, root: Path) -> None:
+    relative_parent = path.parent.relative_to(root)
+    current = root
+    for part in relative_parent.parts:
+        current = current / part
+        current.mkdir(exist_ok=True)
+        os.chmod(current, 0o700)
+
+
 def _verify_copy(copied: Path, source_record: Mapping[str, Any], label: str) -> None:
     if copied.stat().st_size != source_record.get("bytes"):
         raise ValueError(f"{label} changed during import")
     if file_sha256(copied) != source_record.get("sha256"):
         raise ValueError(f"{label} changed during import")
+
+
+def _record_path(base: Path, record: Mapping[str, Any]) -> Path:
+    relative = _safe_relative_path(record.get("path"))
+    path = (base / Path(*relative.parts)).resolve()
+    try:
+        path.relative_to(base)
+    except ValueError as exc:
+        raise ValueError("musical-state artifact escapes project root") from exc
+    return path
 
 
 def _absolute_file_record(path: Path) -> dict[str, Any]:
@@ -532,9 +1007,7 @@ def _reject_absolute_paths(value: Any) -> None:
                     PurePosixPath(text).is_absolute()
                     or PureWindowsPath(text).is_absolute()
                 ):
-                    raise ValueError(
-                        "musical-state manifest contains an absolute path"
-                    )
+                    raise ValueError("musical-state manifest contains an absolute path")
             _reject_absolute_paths(item)
     elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
         for item in value:
@@ -561,6 +1034,69 @@ def _mapping(value: Any, label: str) -> Mapping[str, Any]:
     return value
 
 
+def _positive_int(value: Any, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{label} must be a positive integer")
+    return value
+
+
+def _non_negative_int(value: Any, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{label} must be a non-negative integer")
+    return value
+
+
+def _finite_number(value: Any, label: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{label} must be finite")
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be finite") from exc
+    if not math.isfinite(number):
+        raise ValueError(f"{label} must be finite")
+    return number
+
+
+def _sha256_text(value: Any, label: str) -> str:
+    text = str(value or "")
+    if not re.fullmatch(r"[0-9a-f]{64}", text):
+        raise ValueError(f"{label} must be a lowercase SHA-256")
+    return text
+
+
+def _capture_label(value: Any, fallback: str) -> str:
+    text = fallback if value is None else str(value).strip()
+    if (
+        not text
+        or len(text) > 120
+        or "\n" in text
+        or "\r" in text
+        or "/" in text
+        or "\\" in text
+    ):
+        raise ValueError("vocal phrase capture label must be short path-free text")
+    return text
+
+
+def _vocal_source_ids(state: Mapping[str, Any]) -> set[str]:
+    vocal = _mapping(state.get("vocal_performance_state"), "vocal state")
+    result = {
+        str(row.get("source_id"))
+        for row in vocal.get("takes", [])
+        if isinstance(row, Mapping)
+    }
+    reference = vocal.get("reference")
+    if isinstance(reference, Mapping):
+        result.add(str(reference.get("source_id")))
+    result.update(
+        str(row.get("source_id"))
+        for row in vocal.get("phrase_captures", [])
+        if isinstance(row, Mapping)
+    )
+    return result
+
+
 def _file(value: str | Path | None, label: str) -> Path:
     path = Path(str(value)).expanduser().absolute()
     if not path.is_file() or path.is_symlink():
@@ -579,7 +1115,9 @@ def _words(value: str) -> list[str]:
     return re.findall(r"[A-Za-z0-9]+(?:['’][A-Za-z0-9]+)?", value.casefold())
 
 
-def _find_words(haystack: Sequence[str], needle: Sequence[str], start: int) -> int | None:
+def _find_words(
+    haystack: Sequence[str], needle: Sequence[str], start: int
+) -> int | None:
     maximum = len(haystack) - len(needle)
     for index in range(start, maximum + 1):
         if list(haystack[index : index + len(needle)]) == list(needle):
@@ -592,6 +1130,8 @@ __all__ = [
     "MUSICAL_STATE_SCHEMA",
     "VOCAL_COMP_TIMELINE_SCHEMA",
     "VOCAL_PERFORMANCE_STATE_SCHEMA",
+    "VOCAL_PERFORMANCE_STATE_SCHEMA_V3",
+    "admit_vocal_phrase_capture",
     "create_vocal_musical_state",
     "plan_vocal_musical_state",
     "validate_musical_state",

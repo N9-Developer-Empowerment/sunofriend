@@ -47,6 +47,12 @@ This branch begins at **D+H** and establishes the boundary needed for later
   timeline, immutable vocal takes and an optional reference by content hash;
 - `sunofriend.vocal-performance-state.v2` records source identities and shared
   song coordinates without requiring MIDI or discrete target notes;
+- `sunofriend.browser-vocal-capture.v1` records one short microphone WAV, its
+  preserved guard frames, reviewed phrase destination and browser-processing
+  evidence without selecting it;
+- `sunofriend.vocal-performance-state.v3` admits that exact receipt and WAV
+  into a fresh derived state while retaining the complete v2 parent and every
+  earlier source unchanged;
 - the builder plans before writing, copies sources unchanged into a fresh
   owner-only package, and validates that the package can be reopened without
   its original absolute paths;
@@ -194,10 +200,13 @@ only specified:
   unrendered vocal source map. No pairwise label, join, pitch correction or
   comp was inferred from that choice.
 
-The next vocal increment is a dedicated loopback “Vocal Session” page with a
-whole-song phrase map, immutable pickups, owner-only resumable drafts and
-append-only explicit actions. It reuses the current listening and recorder
-evidence but does not extend the MIDI-oriented Workbench state.
+The dedicated loopback “Vocal Session” page now reopens the reviewed phrase
+map, immutable full takes and admitted phrase-local pickups, with owner-only
+resumable drafts and append-only explicit actions. A pickup is available only
+for its bound phrase and uses its source-local frame window while the source
+map retains the reviewed song destination. Admission itself creates no choice,
+join, correction, render or training label. The next vocal increment is the
+explicit browser save/ingest action and a hash-bound recording cue.
 
 The next remix increment remains **D+H**. It first asks the musician to name and
 confirm an identity anchor for an authorised short excerpt, then creates a

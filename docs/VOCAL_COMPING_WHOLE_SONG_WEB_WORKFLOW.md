@@ -31,7 +31,13 @@ records an explicit source-local window and destination-song placement.
 The path-free `browser-vocal-capture.v1` receipt now enforces that geometry,
 the reviewed phrase and exact cue/audio hashes while keeping the stored capture
 unreviewed and ineligible for selection, rendering, correction or training.
-Admission into a new immutable Vocal Performance State remains the next gate.
+Admission is now implemented as `sunofriend.vocal-performance-state.v3`: it
+copies the exact receipt and WAV into a fresh owner-only state, retains the
+complete parent state and earlier evidence unchanged, and exposes the pickup
+only to its bound phrase. Existing common-zero full takes retain their v2
+decision and source-map shape. The next gate is explicit browser save/ingest
+using a verified cue; microphone recording remains unavailable until that cue
+is admitted rather than borrowed from an adjacent file.
 
 Companion documents:
 
@@ -179,11 +185,12 @@ flow. Playback cannot silently approve them.
 
 ### Common timeline
 
-Every attempt is stored against full-song sample time even when the browser
-downloads a phrase-only WAV. The receipt binds:
+Every phrase pickup keeps its own short source frame clock plus an explicit
+placement on the reviewed song clock. It is not padded to project zero. The
+receipt binds:
 
 - session ID and phrase ID;
-- song-zero frame and exact crop window;
+- the source-local content window and exact reviewed destination;
 - pre-roll and post-roll handles;
 - sample rate, channel count and sample format;
 - cue type and cue gain;
@@ -191,7 +198,7 @@ downloads a phrase-only WAV. The receipt binds:
   settings;
 - microphone label or stable device alias when available;
 - clipping and level descriptors; and
-- hashes for phrase-only and project-zero derivatives.
+- the exact phrase capture hash and any separately authorised derivative.
 
 The cue never enters the recorded vocal. Headphones remain the safe default.
 
