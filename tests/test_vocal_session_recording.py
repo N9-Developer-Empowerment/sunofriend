@@ -626,6 +626,15 @@ def test_browser_records_float32_but_only_explicit_save_posts_pcm24() -> None:
     for setting in ("echoCancellation", "noiseSuppression", "autoGainControl"):
         assert setting in javascript
     assert "encodePcm24Wav" in javascript
+    assert "encodePcm16PreviewWav" in javascript
+    assert "previewBlob: encodePcm16PreviewWav" in javascript
+    assert "URL.createObjectURL(recordedAttempt.previewBlob)" in javascript
+    assert "audio_wav_base64: await blobBase64(recordedAttempt.blob)" in javascript
+    assert "attemptPlayer.load()" in javascript
+    assert "attemptPlayer.onloadedmetadata" in javascript
+    assert "attemptPlayer.onerror" in javascript
+    assert "saveButton.disabled = true" in javascript
+    assert "saveButton.disabled = false" in javascript
     assert 'api("/api/capture"' in javascript
     assert javascript.count('api("/api/capture"') == 1
     assert 'querySelector("#save-recording")' in javascript
