@@ -31,6 +31,33 @@ finite.
 - A result has technical-research-challenger authority only. It cannot select
   music, promote a checkpoint, change the product or justify paid compute.
 
+## Exact Windows result — 20 August 2026
+
+The hardened worker at repository commit
+`c427b3ab0ac8f2d42d6a87e29a29cdc8dba3f8f0` completed one authorised run on
+the Windows RTX 4080 Laptop GPU. No retry, download, private audio or network
+access was used.
+
+- request document SHA-256:
+  `ad68e25e53cd649bd076e5599537f1e9073b6ab968a8583a0b0d6579cde0a676`;
+- result document SHA-256:
+  `9264c0151d0adee587e71147a77eb211e7e6b61a9bfe40e81c4dc52d5d95b05e`;
+- clean and resumed held-out accuracy: `1.0`; shuffled-label accuracy: `0.5`;
+- clean-minus-shuffled advantage: `0.5`;
+- resumed-versus-uninterrupted maximum parameter and optimiser difference:
+  `0.0` at tolerance `1e-7`;
+- 200 clean steps, resume from step 100 to global step 200, and 200 shuffled
+  steps completed;
+- wall time `21.68800000002375` seconds, peak GPU allocation `68,222,976`
+  bytes, peak process RAM `1,113,731,072` bytes and output `42,823` bytes;
+- zero network attempts, zero downloads, zero retries and no warnings.
+
+This proves only the bounded synthetic loader, split, optimisation,
+checkpoint/resume, control and evidence pipeline. It does not train a music
+model, admit a representation, select a vocal or authorise real-data training.
+The returned artifact set must still pass the read-only round-trip verifier
+below before it is archived as portable evidence.
+
 ## Windows worker commands
 
 Run these from a clean checkout after the intended commit has been pushed and
@@ -53,3 +80,73 @@ The request and result JSON are portable and path-free. The local request path,
 output directory and checkpoint files remain execution details on the worker.
 Use a fresh output directory; an existing destination is rejected rather than
 overwritten or retried.
+
+## Verify before returning evidence
+
+Remain on the exact clean commit used to create the request. The verifier is
+read-only: it does not start training, import a checkpoint, install or download
+anything, contact a network service or write a verification file. It validates
+the exact C0 request/result binding, repository commit and tracked files, the
+five-output roster/kinds/media types/shapes, every local artifact byte count and
+SHA-256, finite/resource evidence and the zero-network/zero-retry declarations.
+
+```powershell
+$env:PYTHONPATH = "src"
+$verificationJson = (& python scripts/verify-gpu-canary-round-trip.py `
+  C:\sunofriend-c0\c0-request.json `
+  --artifact-dir C:\sunofriend-c0\c0-result | Out-String)
+if ($LASTEXITCODE -ne 0) {
+  throw "C0 evidence verification failed; do not return or retry the run."
+}
+$verification = $verificationJson | ConvertFrom-Json
+if ($verification.status -ne "verified_technical_evidence_only") {
+  throw "C0 evidence did not receive technical-only verification."
+}
+$verificationJson
+```
+
+By default, the verifier checks the repository containing the verifier. For an
+earlier completed run whose exact commit is preserved in a separate clean
+checkout, run the newer verifier code while explicitly pointing the read-only
+commit check at that preserved checkout:
+
+```powershell
+$verificationJson = (& python scripts/verify-gpu-canary-round-trip.py `
+  C:\sunofriend-c0\c0-request.json `
+  --artifact-dir C:\sunofriend-c0\c0-result `
+  --repository-root C:\path\to\preserved-c427b3a-checkout | Out-String)
+```
+
+`--repository-root` changes only which checkout supplies `HEAD` and tracked-file
+evidence. It does not relax the exact request commit, clean-worktree, artifact or
+authority checks, and its local value is never written into the receipt.
+
+The printed verification receipt contains hashes, byte counts and fixed output
+IDs, but no local paths. Saving that already-produced stdout is optional and is
+separate from the read-only verifier:
+
+```powershell
+$returnDir = "C:\sunofriend-c0\c0-return"
+if (Test-Path $returnDir) {
+  throw "Return directory already exists; do not overwrite it."
+}
+New-Item -ItemType Directory -Path $returnDir | Out-Null
+$verificationJson | Set-Content `
+  -Path "$returnDir\c0-verification.json" -Encoding utf8
+Copy-Item "C:\sunofriend-c0\c0-request.json" $returnDir
+Copy-Item "C:\sunofriend-c0\c0-result\gpu-worker-result.json" $returnDir
+Copy-Item "C:\sunofriend-c0\c0-result\metrics.json" $returnDir
+Copy-Item "C:\sunofriend-c0\c0-result\checkpoint-step-100.pt" $returnDir
+Copy-Item "C:\sunofriend-c0\c0-result\checkpoint-final-uninterrupted.pt" $returnDir
+Copy-Item "C:\sunofriend-c0\c0-result\checkpoint-final-resumed.pt" $returnDir
+Copy-Item "C:\sunofriend-c0\c0-result\checkpoint-final-shuffled.pt" $returnDir
+Get-ChildItem $returnDir | Select-Object Name, Length
+```
+
+Return those eight fixed-name files together. Do not add logs, screenshots,
+machine paths, private notes, credentials or music. On the receiving machine,
+check out the same commit with unchanged tracked files and run the same verifier
+against the returned request and artifact directory. Verification grants only
+technical evidence that this bounded synthetic pipeline ran as declared. It
+does not admit a representation, promote a checkpoint, select music, change the
+product or authorise any private-data training.
