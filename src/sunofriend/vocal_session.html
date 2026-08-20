@@ -62,7 +62,28 @@
           <h2 id="record-title">Preparing the safe cue</h2>
           <p id="record-reason" class="support-copy"></p>
         </div>
-        <button type="button" disabled>Record a new attempt</button>
+        <div class="record-actions">
+          <button id="enable-mic" type="button" disabled>Enable microphone</button>
+          <button id="record-attempt" class="primary-button" type="button" disabled>Record</button>
+          <button id="stop-recording" class="quiet-button" type="button" disabled>Stop &amp; discard</button>
+        </div>
+      </div>
+      <div id="recorder-panel" class="recorder-panel hidden">
+        <div class="meter-row">
+          <span id="record-count">READY</span>
+          <div class="meter-track"><span id="mic-meter"></span></div>
+        </div>
+        <p id="mic-status" class="microcopy">Microphone is not enabled.</p>
+        <p id="record-status" class="support-copy">Use headphones before recording.</p>
+        <div id="recorded-attempt" class="recorded-attempt hidden">
+          <audio id="attempt-player" controls preload="metadata"></audio>
+          <p id="attempt-level" class="microcopy"></p>
+          <div class="record-save-actions">
+            <button id="save-recording" class="primary-button" type="button">Save this recording locally</button>
+            <button id="discard-attempt" class="quiet-button" type="button">Discard</button>
+          </div>
+          <p class="microcopy">Saving admits a new unreviewed source. It does not choose, tune or comp it.</p>
+        </div>
       </div>
     </section>
 

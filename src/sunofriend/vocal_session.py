@@ -121,6 +121,58 @@ class VocalSessionStore:
             raise ValueError("saved vocal session draft claims musical authority")
         return value
 
+    def rebind_non_authoritative_draft(
+        self,
+        previous_session: Mapping[str, Any],
+        next_session: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        """Carry only path-free draft navigation across an additive state.
+
+        The exact previous draft is retained in owner-only history.  Phrase
+        decisions are deliberately excluded from drafts and are never migrated
+        by this operation.
+        """
+
+        previous = self.load_draft(previous_session)
+        if previous is None:
+            return None
+        previous_phrases = [
+            row["phrase_id"] for row in previous_session.get("phrases", [])
+        ]
+        next_phrases = [row["phrase_id"] for row in next_session.get("phrases", [])]
+        if previous_phrases != next_phrases:
+            raise ValueError("draft cannot move across a changed phrase roster")
+        payload = dict(previous["draft"])
+        if _contains_decision_authority(payload):
+            raise ValueError("draft cannot migrate decision authority")
+        history = self.state_dir / "draft-history"
+        history.mkdir(parents=False, exist_ok=True, mode=0o700)
+        os.chmod(history, 0o700)
+        archive = history / (
+            f"draft-{previous_session['binding']['musical_state_sha256']}.json"
+        )
+        if archive.exists():
+            archived = json.loads(archive.read_text(encoding="utf-8"))
+            if archived != previous:
+                raise ValueError("draft history conflicts with retained evidence")
+        else:
+            _atomic_private_json(archive, previous)
+        document: dict[str, Any] = {
+            "schema": VOCAL_SESSION_DRAFT_SCHEMA,
+            "revision": 1,
+            "binding": {
+                "session_id": next_session["session_id"],
+                "musical_state_sha256": next_session["binding"]["musical_state_sha256"],
+            },
+            "draft": payload,
+            "authority": "none",
+            "effects": _zero_effects(),
+            "network_used": False,
+        }
+        document["document_sha256"] = document_sha256(document)
+        _atomic_private_json(self.draft_path, document)
+        return document
+
     def append(
         self, session: Mapping[str, Any], request: Mapping[str, Any]
     ) -> dict[str, Any]:

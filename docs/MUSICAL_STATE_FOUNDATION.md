@@ -85,6 +85,8 @@ The request fixes the process-local deterministic CuBLAS workspace before
 PyTorch starts so the checkpoint comparison is meaningful on CUDA.
 Windows resource receipts use a typed 64-bit process handle and record peak
 working-set bytes through the modern or legacy documented system entry point.
+The exact request, limits and clean-checkout Windows worker commands are in
+[`C0_SYNTHETIC_GPU_CANARY.md`](C0_SYNTHETIC_GPU_CANARY.md).
 
 ## Privacy and authority
 

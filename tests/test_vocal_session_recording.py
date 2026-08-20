@@ -1,0 +1,603 @@
+from __future__ import annotations
+
+import base64
+import hashlib
+import http.client
+from io import BytesIO
+import json
+import os
+from pathlib import Path
+import re
+import threading
+from typing import Any, Mapping
+
+import numpy as np
+import pytest
+import soundfile
+
+from sunofriend.musical_state import (
+    VOCAL_COMP_TIMELINE_SCHEMA,
+    VOCAL_PERFORMANCE_STATE_SCHEMA_V3,
+    create_vocal_musical_state,
+    validate_musical_state,
+)
+from sunofriend.vocal_session_server import create_vocal_session_server
+
+
+SAMPLE_RATE = 8_000
+PRE_GUARD_SECONDS = 0.5
+POST_GUARD_SECONDS = 0.5
+MAX_CAPTURE_JSON_BYTES = 10 * 1024 * 1024
+
+
+class _RecordingHTTP:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.state_root, self.musical_state = _create_musical_state(root)
+        self.persistence_root = root / "session-state"
+        self.capture_output_dir = root / "capture-states"
+        self.server = create_vocal_session_server(
+            self.state_root / "musical-state.json",
+            state_dir=self.persistence_root,
+            recording_cue_source_id="reference-vocal-001",
+            capture_output_dir=self.capture_output_dir,
+            port=0,
+            token="recording-test-token",
+        )
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    @property
+    def token(self) -> str:
+        return self.server.token
+
+    @property
+    def origin(self) -> str:
+        return f"http://127.0.0.1:{self.server.server_port}"
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        body: Mapping[str, Any] | bytes | None = None,
+        *,
+        headers: Mapping[str, str] | None = None,
+    ) -> tuple[int, dict[str, str], bytes]:
+        request_headers = dict(headers or {})
+        payload = body
+        if isinstance(body, Mapping):
+            payload = json.dumps(body).encode("utf-8")
+            request_headers.setdefault("Content-Type", "application/json")
+        connection = http.client.HTTPConnection(
+            "127.0.0.1", self.server.server_port, timeout=10
+        )
+        try:
+            connection.request(
+                method,
+                path,
+                body=payload,
+                headers=request_headers,
+            )
+            response = connection.getresponse()
+            return (
+                response.status,
+                {key.casefold(): value for key, value in response.getheaders()},
+                response.read(),
+            )
+        finally:
+            connection.close()
+
+    def json_request(
+        self,
+        method: str,
+        path: str,
+        body: Mapping[str, Any] | bytes | None = None,
+        *,
+        headers: Mapping[str, str] | None = None,
+    ) -> tuple[int, dict[str, str], dict[str, Any]]:
+        status, response_headers, raw = self.request(
+            method, path, body, headers=headers
+        )
+        return status, response_headers, json.loads(raw)
+
+    def browser_state(self) -> dict[str, Any]:
+        status, _, state = self.json_request("GET", f"/api/session?token={self.token}")
+        assert status == 200
+        return state
+
+    def capture_request(self, *, phrase_id: str = "phrase-001") -> dict[str, Any]:
+        state = self.browser_state()
+        plan = next(
+            row
+            for row in state["recording"]["phrases"]
+            if row["phrase_id"] == phrase_id
+        )
+        wav = _capture_wav(
+            sample_rate=SAMPLE_RATE,
+            frame_count=plan["placement"]["expected_capture_frames"],
+        )
+        return {
+            "expected_musical_state_sha256": state["session"]["binding"][
+                "musical_state_sha256"
+            ],
+            "phrase_id": phrase_id,
+            "capture_id": "attempt-001",
+            "cue_id": plan["cue"]["cue_id"],
+            "cue_asset_sha256": plan["cue"]["audio_sha256"],
+            "audio_wav_base64": base64.b64encode(wav).decode("ascii"),
+            "placement": {
+                key: plan["placement"][key]
+                for key in (
+                    "source_phrase_start_frame",
+                    "source_phrase_end_frame",
+                    "pre_guard_frames",
+                    "post_guard_frames",
+                    "destination_start_seconds",
+                    "destination_end_seconds",
+                )
+            },
+            "actual_processing": {
+                "echo_cancellation": False,
+                "noise_suppression": False,
+                "automatic_gain_control": False,
+                "sample_rate": SAMPLE_RATE,
+                "channel_count": 1,
+            },
+        }
+
+    def save_capture(
+        self, request: Mapping[str, Any]
+    ) -> tuple[int, dict[str, str], dict[str, Any]]:
+        return self.json_request(
+            "POST",
+            f"/api/capture?token={self.token}",
+            request,
+            headers={"Origin": self.origin},
+        )
+
+    def close(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=5)
+
+
+@pytest.fixture
+def recording_http(tmp_path: Path) -> _RecordingHTTP:
+    fixture = _RecordingHTTP(tmp_path)
+    try:
+        yield fixture
+    finally:
+        fixture.close()
+
+
+def test_verified_reference_cue_is_bound_to_each_reviewed_phrase_and_headphones(
+    recording_http: _RecordingHTTP,
+) -> None:
+    fixture = recording_http
+    state = fixture.browser_state()
+    recording = state["recording"]
+
+    assert recording["available"] is True
+    assert recording["headphones_required"] is True
+    assert "headphone" in recording["headphones_message"].casefold()
+    assert recording["requested_processing"] == {
+        "echo_cancellation": False,
+        "noise_suppression": False,
+        "automatic_gain_control": False,
+    }
+    assert recording["encoding"] == {
+        "format": "WAV",
+        "subtype": "PCM_24",
+        "channels": 1,
+        "description": "deterministic_pcm24_projection_of_webaudio_float32",
+    }
+    assert recording["placement_authority"] == (
+        "intended_cue_clock_only_not_verified_microphone_latency"
+    )
+    assert recording["automatic_timing_correction"] is False
+    assert recording["save_url"] == "/api/capture"
+    assert recording["max_json_bytes"] == MAX_CAPTURE_JSON_BYTES
+    assert [row["phrase_id"] for row in recording["phrases"]] == [
+        "phrase-001",
+        "phrase-002",
+    ]
+    for plan, phrase in zip(recording["phrases"], state["session"]["phrases"]):
+        assert plan["cue"]["source_id"] == "reference-vocal-001"
+        assert (
+            plan["cue"]["audio_sha256"]
+            == fixture.musical_state["vocal_performance_state"]["reference"]["audio"][
+                "sha256"
+            ]
+        )
+        assert plan["cue"]["media_url"].startswith("/media/")
+        assert fixture.token not in plan["cue"]["media_url"]
+        assert plan["cue"]["playback_start_seconds"] == pytest.approx(
+            phrase["start_seconds"] - PRE_GUARD_SECONDS
+        )
+        assert plan["cue"]["playback_end_seconds"] == pytest.approx(
+            phrase["end_seconds"] + POST_GUARD_SECONDS
+        )
+        assert plan["placement"]["destination_start_seconds"] == phrase["start_seconds"]
+        assert plan["placement"]["destination_end_seconds"] == phrase["end_seconds"]
+        assert plan["placement"]["pre_guard_frames"] == round(
+            PRE_GUARD_SECONDS * SAMPLE_RATE
+        )
+        assert plan["placement"]["post_guard_frames"] == round(
+            POST_GUARD_SECONDS * SAMPLE_RATE
+        )
+
+    cue_url = recording["phrases"][0]["cue"]["media_url"]
+    status, headers, body = fixture.request(
+        "GET", cue_url, headers={"Range": "bytes=0-31"}
+    )
+    assert status == 206
+    assert len(body) == 32
+    assert headers["cache-control"] == "no-store"
+    assert (
+        "microphone=(self)"
+        in fixture.request("GET", f"/?token={fixture.token}")[1]["permissions-policy"]
+    )
+    assert not _keys_named_path(state)
+    assert str(fixture.root) not in json.dumps(state)
+
+
+def test_recording_opt_in_requires_the_verified_reference_and_capture_output(
+    tmp_path: Path,
+) -> None:
+    state_root, _ = _create_musical_state(tmp_path)
+    manifest = state_root / "musical-state.json"
+    with pytest.raises(ValueError, match="cue.*capture|supplied together"):
+        create_vocal_session_server(
+            manifest,
+            state_dir=tmp_path / "state-a",
+            recording_cue_source_id="reference-vocal-001",
+        )
+    with pytest.raises(ValueError, match="reference|authorised.*AI|cue"):
+        create_vocal_session_server(
+            manifest,
+            state_dir=tmp_path / "state-b",
+            recording_cue_source_id="take-001",
+            capture_output_dir=tmp_path / "captures-b",
+        )
+
+    disabled = create_vocal_session_server(
+        manifest,
+        state_dir=tmp_path / "state-c",
+    )
+    try:
+        assert disabled.browser_state()["recording"]["available"] is False
+    finally:
+        disabled.server_close()
+
+
+def test_capture_save_requires_token_origin_and_is_never_created_by_playback(
+    recording_http: _RecordingHTTP,
+) -> None:
+    fixture = recording_http
+    request = fixture.capture_request()
+    before_state = _tree_snapshot(fixture.persistence_root)
+    before_parent = _tree_snapshot(fixture.state_root)
+    cue_url = fixture.browser_state()["recording"]["phrases"][0]["cue"]["media_url"]
+
+    for _ in range(2):
+        status, _, _ = fixture.request("GET", cue_url)
+        assert status == 200
+    assert _tree_snapshot(fixture.persistence_root) == before_state
+    assert _tree_snapshot(fixture.state_root) == before_parent
+    assert not fixture.capture_output_dir.exists()
+
+    for path, headers in (
+        ("/api/capture", {"Origin": fixture.origin}),
+        (f"/api/capture?token={fixture.token}", {}),
+        (
+            f"/api/capture?token={fixture.token}",
+            {"Origin": "https://attacker.example"},
+        ),
+    ):
+        status, _, payload = fixture.json_request(
+            "POST", path, request, headers=headers
+        )
+        assert status == 403
+        assert "token" in payload["error"] or "origin" in payload["error"].casefold()
+    assert not fixture.capture_output_dir.exists()
+
+
+def test_explicit_save_admits_fresh_v3_and_returns_path_free_unselected_session(
+    recording_http: _RecordingHTTP,
+) -> None:
+    fixture = recording_http
+    request = fixture.capture_request()
+    parent_before = _tree_snapshot(fixture.state_root)
+    parent_sha256 = fixture.musical_state["document_sha256"]
+
+    status, _, payload = fixture.save_capture(request)
+
+    assert status == 201
+    assert payload["admission"]["parent_musical_state_sha256"] == parent_sha256
+    assert payload["admission"]["phrase_id"] == "phrase-001"
+    assert payload["admission"]["source_id"] == "browser-capture-attempt-001"
+    assert payload["admission"]["musical_state_sha256"] != parent_sha256
+    state = payload["state"]
+    assert (
+        state["session"]["binding"]["musical_state_sha256"]
+        == payload["admission"]["musical_state_sha256"]
+    )
+    projected = next(
+        row
+        for row in state["sources"]
+        if row["source_id"] == "browser-capture-attempt-001"
+    )
+    assert projected["source_class"] == "human_vocal_phrase_capture"
+    assert projected["bound_phrase_id"] == "phrase-001"
+    assert projected["playback_start_seconds"] == pytest.approx(PRE_GUARD_SECONDS)
+    assert projected["playback_end_seconds"] == pytest.approx(1.0)
+    assert state["session"]["coverage"]["decision_count"] == 0
+    assert all(row["decision"] is None for row in state["session"]["phrases"])
+    assert not any(state["session"]["effects"].values())
+    assert not _keys_named_path(payload)
+    assert str(fixture.root) not in json.dumps(payload)
+    assert _tree_snapshot(fixture.state_root) == parent_before
+
+    children = [path for path in fixture.capture_output_dir.iterdir() if path.is_dir()]
+    assert len(children) == 1
+    child = children[0]
+    derived = validate_musical_state(child / "musical-state.json", root=child)
+    assert derived["vocal_performance_state"]["schema"] == (
+        VOCAL_PERFORMANCE_STATE_SCHEMA_V3
+    )
+    assert derived["lineage"]["parent"]["document_sha256"] == parent_sha256
+    assert derived["training"]["explicit_labels"] == []
+    assert derived["training"]["training_eligible"] is False
+    assert not any(derived["effects"].values())
+    assert derived["vocal_performance_state"]["explicit_phrase_decisions"] == []
+    assert derived["vocal_performance_state"]["edit_maps"] == []
+    assert derived["vocal_performance_state"]["correction_derivatives"] == []
+    for root in (fixture.persistence_root, fixture.capture_output_dir, child):
+        assert os.stat(root).st_mode & 0o777 == 0o700
+    for path in child.rglob("*"):
+        expected = 0o700 if path.is_dir() else 0o600
+        assert os.stat(path).st_mode & 0o777 == expected
+
+    saved_tree = _tree_snapshot(fixture.capture_output_dir)
+    status, _, payload = fixture.save_capture(request)
+    assert status in {400, 409}
+    assert any(
+        reason in payload["error"]
+        for reason in ("identity changed", "exists", "source_id")
+    )
+    assert _tree_snapshot(fixture.capture_output_dir) == saved_tree
+
+
+def test_capture_save_fails_closed_when_explicit_decision_already_exists(
+    recording_http: _RecordingHTTP,
+) -> None:
+    fixture = recording_http
+    request = fixture.capture_request()
+    status, _, _ = fixture.json_request(
+        "POST",
+        f"/api/decision?token={fixture.token}",
+        {"phrase_id": "phrase-001", "outcome": "record_again"},
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 201
+    original_events = fixture.server.store.events(
+        fixture.server.store.current_session(fixture.musical_state)["session_id"]
+    )
+
+    status, _, payload = fixture.save_capture(request)
+
+    assert status in {400, 409}
+    assert "decision" in payload["error"].casefold()
+    assert (
+        fixture.server.store.events(
+            fixture.server.store.current_session(fixture.musical_state)["session_id"]
+        )
+        == original_events
+    )
+    assert not fixture.capture_output_dir.exists()
+    assert (
+        fixture.server.musical_state["document_sha256"]
+        == fixture.musical_state["document_sha256"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    (
+        (
+            lambda request: request.update({"audio_wav_base64": "not base64!"}),
+            "base64|audio|WAV",
+        ),
+        (
+            lambda request: request.update(
+                {
+                    "audio_wav_base64": base64.b64encode(
+                        _capture_wav(
+                            sample_rate=SAMPLE_RATE,
+                            frame_count=12_000,
+                            subtype="PCM_16",
+                        )
+                    ).decode("ascii")
+                }
+            ),
+            "PCM_24|PCM24|subtype",
+        ),
+        (
+            lambda request: request["placement"].update(
+                {"pre_guard_frames": request["placement"]["pre_guard_frames"] + 1}
+            ),
+            "guard|frame|geometry",
+        ),
+        (
+            lambda request: request.update({"project_zero_padding": True}),
+            "field|project.zero|padding|request",
+        ),
+    ),
+    ids=("invalid-base64", "pcm16", "guard-drift", "project-zero-field"),
+)
+def test_capture_save_rejects_invalid_encoding_geometry_or_project_zero_padding(
+    recording_http: _RecordingHTTP,
+    mutate: Any,
+    message: str,
+) -> None:
+    fixture = recording_http
+    request = fixture.capture_request()
+    mutate(request)
+
+    status, _, payload = fixture.save_capture(request)
+
+    assert status == 400
+    assert re.search(message, payload["error"], re.IGNORECASE)
+    assert not fixture.capture_output_dir.exists()
+
+
+def test_capture_request_body_and_duration_are_bounded(
+    recording_http: _RecordingHTTP,
+) -> None:
+    fixture = recording_http
+    oversized = fixture.capture_request()
+    oversized["audio_wav_base64"] = "A" * (MAX_CAPTURE_JSON_BYTES + 1)
+    with pytest.raises(ValueError, match="audio_wav_base64"):
+        fixture.server.admit_capture(oversized)
+
+    request = fixture.capture_request()
+    full_song_frames = round(2.5 * SAMPLE_RATE)
+    request["audio_wav_base64"] = base64.b64encode(
+        _capture_wav(sample_rate=SAMPLE_RATE, frame_count=full_song_frames)
+    ).decode("ascii")
+    request["placement"].update(
+        {
+            "source_phrase_start_frame": round(0.6 * SAMPLE_RATE),
+            "source_phrase_end_frame": round(1.1 * SAMPLE_RATE),
+            "pre_guard_frames": round(0.6 * SAMPLE_RATE),
+            "post_guard_frames": round(1.4 * SAMPLE_RATE),
+        }
+    )
+    status, _, payload = fixture.save_capture(request)
+    assert status == 400
+    assert "bounded" in payload["error"] or "guard" in payload["error"]
+    assert not fixture.capture_output_dir.exists()
+
+
+def test_browser_records_float32_but_only_explicit_save_posts_pcm24() -> None:
+    source = Path(__file__).parents[1] / "src" / "sunofriend" / "vocal_session.js"
+    page = Path(__file__).parents[1] / "src" / "sunofriend" / "vocal_session.html"
+    javascript = source.read_text(encoding="utf-8")
+    html = page.read_text(encoding="utf-8")
+
+    assert "navigator.mediaDevices.getUserMedia" in javascript
+    for setting in ("echoCancellation", "noiseSuppression", "autoGainControl"):
+        assert setting in javascript
+    assert "encodePcm24Wav" in javascript
+    assert 'api("/api/capture"' in javascript
+    assert javascript.count('api("/api/capture"') == 1
+    assert 'querySelector("#save-recording")' in javascript
+    assert 'querySelector("#record-attempt")' in javascript
+    assert 'querySelector("#stop-recording")' in javascript
+    assert "Save this recording" in html
+    assert 'id="save-recording"' in html
+    assert 'id="record-attempt"' in html
+    assert 'id="stop-recording"' in html
+    assert "headphones" in html.casefold()
+    assert "localStorage" not in javascript
+
+
+def _create_musical_state(root: Path) -> tuple[Path, dict[str, Any]]:
+    root.mkdir(parents=True, exist_ok=True)
+    takes = root / "takes"
+    takes.mkdir()
+    seconds = 2.5
+    time = np.arange(round(SAMPLE_RATE * seconds), dtype=np.float64) / SAMPLE_RATE
+    for index, frequency in enumerate((196.0, 220.0), 1):
+        soundfile.write(
+            takes / f"attempt-{index:02d}.wav",
+            (0.1 * np.sin(2.0 * np.pi * frequency * time)).astype(np.float32),
+            SAMPLE_RATE,
+            subtype="PCM_24",
+        )
+    reference = root / "reference.wav"
+    soundfile.write(
+        reference,
+        (0.1 * np.sin(2.0 * np.pi * 233.08 * time)).astype(np.float32),
+        SAMPLE_RATE,
+        subtype="PCM_24",
+    )
+    lyrics = root / "lyrics.txt"
+    lyrics.write_text("One phrase\nSecond phrase\n", encoding="utf-8")
+    timeline = root / "timeline.json"
+    timeline.write_text(
+        json.dumps(
+            {
+                "schema": VOCAL_COMP_TIMELINE_SCHEMA,
+                "status": "reviewed",
+                "phrases": [
+                    {
+                        "phrase_id": "phrase-001",
+                        "start_seconds": 0.6,
+                        "end_seconds": 1.1,
+                        "lyrics": "One phrase",
+                    },
+                    {
+                        "phrase_id": "phrase-002",
+                        "start_seconds": 1.2,
+                        "end_seconds": 1.7,
+                        "lyrics": "Second phrase",
+                    },
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    state_root = root / "musical-state"
+    state = create_vocal_musical_state(
+        takes,
+        out_dir=state_root,
+        lyrics=lyrics,
+        phrase_timeline=timeline,
+        reference_vocal=reference,
+        rights_category="owned",
+        processing_chain="dry",
+        bpm=96.0,
+        confirm_common_recorded_zero=True,
+        confirm_timeline_reviewed=True,
+    )
+    return state_root, state
+
+
+def _capture_wav(
+    *, sample_rate: int, frame_count: int, subtype: str = "PCM_24"
+) -> bytes:
+    time = np.arange(frame_count, dtype=np.float64) / sample_rate
+    audio = (0.08 * np.sin(2.0 * np.pi * 210.0 * time)).astype(np.float32)
+    output = BytesIO()
+    soundfile.write(output, audio, sample_rate, format="WAV", subtype=subtype)
+    return output.getvalue()
+
+
+def _tree_snapshot(root: Path) -> dict[str, tuple[int, int, str]]:
+    if not root.exists():
+        return {}
+    result = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            payload = path.read_bytes()
+            result[path.relative_to(root).as_posix()] = (
+                path.stat().st_mode & 0o777,
+                path.stat().st_size,
+                hashlib.sha256(payload).hexdigest(),
+            )
+    return result
+
+
+def _keys_named_path(value: Any) -> bool:
+    if isinstance(value, Mapping):
+        return any(
+            "path" in str(key).casefold() or _keys_named_path(item)
+            for key, item in value.items()
+        )
+    if isinstance(value, list):
+        return any(_keys_named_path(item) for item in value)
+    return False
