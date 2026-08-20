@@ -562,6 +562,36 @@ function encodePcm24Wav(samples, sampleRate) {
   return new Blob([buffer], {type: "audio/wav"});
 }
 
+function encodePcm16PreviewWav(samples, sampleRate) {
+  const dataBytes = samples.length * 2;
+  const buffer = new ArrayBuffer(44 + dataBytes);
+  const view = new DataView(buffer);
+  const writeText = (offset, text) => {
+    for (let index = 0; index < text.length; index += 1) view.setUint8(offset + index, text.charCodeAt(index));
+  };
+  writeText(0, "RIFF");
+  view.setUint32(4, 36 + dataBytes, true);
+  writeText(8, "WAVE");
+  writeText(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeText(36, "data");
+  view.setUint32(40, dataBytes, true);
+  let offset = 44;
+  for (const sample of samples) {
+    const clamped = Math.max(-1, Math.min(1, sample));
+    const value = clamped < 0 ? Math.round(clamped * 32768) : Math.round(clamped * 32767);
+    view.setInt16(offset, value, true);
+    offset += 2;
+  }
+  return new Blob([buffer], {type: "audio/wav"});
+}
+
 function analyseSamples(samples) {
   let peak = 0;
   let sum = 0;
@@ -606,6 +636,7 @@ function stopRecording(discard = false) {
     phraseId: row.phrase_id,
     captureId: `attempt-${randomHex(20)}`,
     blob: encodePcm24Wav(samples, sampleRate),
+    previewBlob: encodePcm16PreviewWav(samples, sampleRate),
     preGuardFrames,
     phraseStartFrame: preGuardFrames,
     phraseEndFrame: preGuardFrames + phraseFrames,
@@ -614,13 +645,31 @@ function stopRecording(discard = false) {
     metrics,
   };
   captureChunks = [];
-  attemptObjectUrl = URL.createObjectURL(recordedAttempt.blob);
-  document.querySelector("#attempt-player").src = attemptObjectUrl;
+  attemptObjectUrl = URL.createObjectURL(recordedAttempt.previewBlob);
+  const attemptPlayer = document.querySelector("#attempt-player");
+  const saveButton = document.querySelector("#save-recording");
+  saveButton.disabled = true;
+  attemptPlayer.onloadedmetadata = () => {
+    if (Number.isFinite(attemptPlayer.duration) && attemptPlayer.duration > 0) {
+      saveButton.disabled = false;
+      setRecorderStatus(metrics.clipped
+        ? "Attempt captured, but it may be clipping. Listen before saving."
+        : "Attempt captured. Listen, then save or discard it.", metrics.clipped);
+      return;
+    }
+    setRecorderStatus("The microphone signal was captured, but its listening preview has no duration. Please discard it and try again.", true);
+  };
+  attemptPlayer.onerror = () => {
+    saveButton.disabled = true;
+    setRecorderStatus("The microphone signal was captured, but the listening preview could not be loaded. Please discard it and try again.", true);
+  };
+  attemptPlayer.src = attemptObjectUrl;
+  attemptPlayer.load();
   document.querySelector("#attempt-level").textContent =
     `Peak ${Number.isFinite(metrics.peakDb) ? metrics.peakDb.toFixed(1) : "−∞"} dBFS · RMS ${Number.isFinite(metrics.rmsDb) ? metrics.rmsDb.toFixed(1) : "−∞"} dBFS${metrics.clipped ? " · possible clipping" : ""}. This is a safety check, not a musical score.`;
   document.querySelector("#recorded-attempt").classList.remove("hidden");
   document.querySelector("#record-attempt").disabled = false;
-  setRecorderStatus(metrics.clipped ? "Attempt captured, but it may be clipping. Listen before saving." : "Attempt captured. Listen, then save or discard it.", metrics.clipped);
+  setRecorderStatus("Preparing the captured attempt for playback…");
 }
 
 function randomHex(length) {
@@ -634,6 +683,8 @@ function discardRecordedAttempt() {
   attemptObjectUrl = null;
   recordedAttempt = null;
   const attemptPlayer = document.querySelector("#attempt-player");
+  attemptPlayer.onloadedmetadata = null;
+  attemptPlayer.onerror = null;
   attemptPlayer.pause();
   attemptPlayer.removeAttribute("src");
   attemptPlayer.load();
