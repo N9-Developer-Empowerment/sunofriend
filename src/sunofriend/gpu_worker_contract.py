@@ -228,7 +228,49 @@ def validate_gpu_worker_result(
             request=request_document,
             result=document,
         )
+    if request_document.get("task_kind") == "pairwise_vocal_ranker":
+        _validate_offline_pairwise_result_envelope(
+            document,
+            request=request_document,
+            returned_outputs=returned_outputs,
+        )
     return document
+
+
+def _validate_offline_pairwise_result_envelope(
+    result: Mapping[str, Any],
+    *,
+    request: Mapping[str, Any],
+    returned_outputs: Mapping[str, Mapping[str, Any]],
+) -> None:
+    """Keep the pairwise-vocal boundary safe even via the generic validator."""
+
+    environment = _require_safe_mapping(result.get("environment"), "environment")
+    if (
+        environment.get("network_used") is not False
+        or environment.get("network_attempts") != 0
+        or environment.get("downloads_used") is not False
+        or environment.get("deterministic_algorithms") is not True
+        or environment.get("cublas_workspace_config")
+        != request["execution_policy"].get("cublas_workspace_config")
+    ):
+        raise ValueError(
+            "pairwise vocal GPU result must retain offline deterministic execution"
+        )
+    evidence = _require_safe_mapping(
+        result.get("training_evidence"), "pairwise vocal training evidence"
+    )
+    if (
+        evidence.get("synthetic_only") is not True
+        or evidence.get("network_attempts") != 0
+        or evidence.get("retries") != 0
+    ):
+        raise ValueError(
+            "pairwise vocal GPU evidence must be synthetic, offline and zero-retry"
+        )
+    output_bytes = sum(int(row["bytes"]) for row in returned_outputs.values())
+    if result["resources"].get("output_bytes") != output_bytes:
+        raise ValueError("pairwise vocal GPU output byte receipt changed")
 
 
 def _validate_request_fields(document: Mapping[str, Any]) -> None:
