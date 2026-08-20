@@ -25,7 +25,13 @@ from .separation_review_transport import parse_file_range
 from .source_receipt import canonical_json_bytes
 from .vocal_capture import create_vocal_capture
 from .vocal_phrase_decision import create_phrase_decision
-from .vocal_session import VocalSessionDraftConflictError, VocalSessionStore
+from .vocal_session import (
+    VocalSessionDraftConflictError,
+    VocalSessionStore,
+    build_vocal_session,
+    build_vocal_session_transition_request,
+    create_vocal_session_transition,
+)
 
 
 _MAXIMUM_JSON_REQUEST_BYTES = 64 * 1024
@@ -125,10 +131,6 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
         if self.capture_output_dir is None or self.recording_cue_source_id is None:
             raise ValueError("vocal session recording is not configured")
         session = self.store.current_session(self.musical_state)
-        if session["coverage"]["decision_count"]:
-            raise VocalSessionCaptureConflictError(
-                "recording is blocked after phrase decisions; start a fresh reviewed state instead"
-            )
         allowed = {
             "expected_musical_state_sha256",
             "phrase_id",
@@ -139,7 +141,14 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
             "placement",
             "actual_processing",
         }
+        has_decisions = bool(session["coverage"]["decision_count"])
+        if has_decisions:
+            allowed.add("transition")
         if set(request) != allowed:
+            if has_decisions and "transition" not in request:
+                raise VocalSessionCaptureConflictError(
+                    "an explicit state transition is required after phrase decisions"
+                )
             raise ValueError("vocal capture request fields changed")
         phrase_id = _text(request.get("phrase_id"), "phrase_id", 128)
         if (
@@ -157,6 +166,19 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
         )
         if phrase is None:
             raise ValueError("vocal capture phrase is unknown")
+        transition_request: Mapping[str, Any] | None = None
+        parent_decisions = [
+            event["decision"] for event in self.store.events(session["session_id"])
+        ]
+        if has_decisions:
+            transition_request = _mapping(request.get("transition"), "transition")
+            expected_transition = build_vocal_session_transition_request(
+                session, phrase_id
+            )
+            if dict(transition_request) != expected_transition:
+                raise VocalSessionCaptureConflictError(
+                    "the explicit state transition does not match the exact current decisions"
+                )
         capture_id = _text(request.get("capture_id"), "capture_id", 128)
         encoded = _text(
             request.get("audio_wav_base64"),
@@ -263,14 +285,26 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
                 label=f"Recorded attempt for {phrase_id}",
             )
         previous_session = session
+        next_session = build_vocal_session(admitted)
+        transition = None
+        if transition_request is not None:
+            transition, revalidated = create_vocal_session_transition(
+                self.musical_state,
+                admitted,
+                parent_decisions,
+                transition_request,
+            )
+            self.store.apply_transition(
+                previous_session, next_session, transition, revalidated
+            )
+            next_session = self.store.current_session(admitted)
         self.musical_state_path = child / "musical-state.json"
         self.musical_state_root = child
         self.musical_state = admitted
         self._recording_reference()
         self._refresh_media()
-        next_session = self.store.current_session(self.musical_state)
         self.store.rebind_non_authoritative_draft(previous_session, next_session)
-        return {
+        result = {
             "admission": {
                 "parent_musical_state_sha256": previous_session["binding"][
                     "musical_state_sha256"
@@ -282,6 +316,9 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
             },
             "state": self.browser_state(),
         }
+        if transition is not None:
+            result["transition"] = transition
+        return result
 
     @property
     def url(self) -> str:
@@ -340,14 +377,6 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
                 "available": False,
                 "reason": "A hash-bound AI/reference cue is required before recording.",
             }
-        if session["coverage"]["decision_count"]:
-            return {
-                "available": False,
-                "reason": (
-                    "This state already contains phrase decisions. Start a fresh reviewed "
-                    "state before admitting another recording."
-                ),
-            }
         reference = self._recording_reference()
         capability = self.media_capability_by_source[str(reference["source_id"])]
         sample_rate = int(reference["audio_properties"]["sample_rate"])
@@ -382,14 +411,25 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
                         "destination_start_seconds": phrase["start_seconds"],
                         "destination_end_seconds": phrase["end_seconds"],
                     },
+                    "transition": build_vocal_session_transition_request(
+                        session, phrase["phrase_id"]
+                    ),
                 }
             )
+        requires_transition = bool(session["coverage"]["decision_count"])
         return {
             "available": True,
             "reason": (
                 "Use headphones. The verified AI/reference vocal is a timing and phrasing "
                 "cue only; Save does not choose the attempt."
+                + (
+                    " Saving now also requires an explicit transition: the target phrase "
+                    "is reopened and only unchanged decisions are revalidated."
+                    if requires_transition
+                    else ""
+                )
             ),
+            "transition_required": requires_transition,
             "headphones_required": True,
             "headphones_message": "Wear headphones so the reference cue does not leak into the microphone.",
             "requested_processing": dict(_REQUESTED_MICROPHONE_PROCESSING),
