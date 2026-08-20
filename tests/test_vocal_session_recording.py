@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sqlite3
 import threading
 from typing import Any, Mapping
 
@@ -21,6 +22,7 @@ from sunofriend.musical_state import (
     create_vocal_musical_state,
     validate_musical_state,
 )
+from sunofriend.source_receipt import document_sha256
 from sunofriend.vocal_session_server import create_vocal_session_server
 
 
@@ -105,7 +107,9 @@ class _RecordingHTTP:
         assert status == 200
         return state
 
-    def capture_request(self, *, phrase_id: str = "phrase-001") -> dict[str, Any]:
+    def capture_request(
+        self, *, phrase_id: str = "phrase-001", include_transition: bool = False
+    ) -> dict[str, Any]:
         state = self.browser_state()
         plan = next(
             row
@@ -116,7 +120,7 @@ class _RecordingHTTP:
             sample_rate=SAMPLE_RATE,
             frame_count=plan["placement"]["expected_capture_frames"],
         )
-        return {
+        request = {
             "expected_musical_state_sha256": state["session"]["binding"][
                 "musical_state_sha256"
             ],
@@ -144,6 +148,9 @@ class _RecordingHTTP:
                 "channel_count": 1,
             },
         }
+        if include_transition:
+            request["transition"] = plan["transition"]
+        return request
 
     def save_capture(
         self, request: Mapping[str, Any]
@@ -401,6 +408,136 @@ def test_capture_save_fails_closed_when_explicit_decision_already_exists(
     )
 
 
+def test_explicit_transition_revalidates_only_unchanged_decisions(
+    recording_http: _RecordingHTTP,
+) -> None:
+    fixture = recording_http
+    status, _, decision_payload = fixture.json_request(
+        "POST",
+        f"/api/decision?token={fixture.token}",
+        {
+            "phrase_id": "phrase-001",
+            "outcome": "human_take",
+            "source_id": "take-001",
+            "notes": "Keep this exact take choice if its identity is unchanged.",
+        },
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 201
+    parent_session = decision_payload["state"]["session"]
+    parent_decision = parent_session["phrases"][0]["decision"]
+    parent_events = fixture.server.store.events(parent_session["session_id"])
+
+    browser_state = fixture.browser_state()
+    assert browser_state["recording"]["available"] is True
+    assert browser_state["recording"]["transition_required"] is True
+    request = fixture.capture_request(phrase_id="phrase-002", include_transition=True)
+    transition_request = request["transition"]
+    assert transition_request["expected_decisions"] == [
+        {"phrase_id": "phrase-001", **parent_decision}
+    ]
+
+    status, _, payload = fixture.save_capture(request)
+
+    assert status == 201
+    transition = payload["transition"]
+    assert transition["status"] == "complete_explicit_transition"
+    assert transition["request"] == {
+        "schema": transition_request["schema"],
+        "canonical_sha256": document_sha256(transition_request),
+    }
+    assert transition["reopened_phrase"]["phrase_id"] == "phrase-002"
+    assert transition["reopened_phrase"]["selection_authority"] == "none"
+    assert transition["authority"] == {
+        "explicit_transition_confirmed": True,
+        "silent_decision_migration_permitted": False,
+        "target_phrase_reopened": True,
+        "unchanged_decisions_revalidated": True,
+        "playback_or_draft_authority": "none",
+    }
+    assert transition["training"] == {
+        "pairwise_labels": [],
+        "inferred_labels": [],
+        "training_eligible": False,
+    }
+    assert transition["effects"] == {
+        "capture_admitted": True,
+        "target_phrase_reopened": True,
+        "unchanged_decisions_revalidated": True,
+        "audio_comp_rendered": False,
+        "join_created": False,
+        "pitch_correction_applied": False,
+        "timing_correction_applied": False,
+        "training_label_created": False,
+    }
+    lineage = transition["decision_lineage"]
+    assert len(lineage) == 1
+    assert (
+        lineage[0]["parent_decision_document_sha256"]
+        == parent_decision["decision_document_sha256"]
+    )
+    assert lineage[0]["disposition"] == "explicitly_revalidated"
+    assert lineage[0]["selected_source_id"] == "take-001"
+    assert (
+        lineage[0]["selected_source_sha256"]
+        == parent_decision["selected_source_sha256"]
+    )
+    assert (
+        lineage[0]["child_decision_document_sha256"]
+        != parent_decision["decision_document_sha256"]
+    )
+    child_session = payload["state"]["session"]
+    assert child_session["coverage"]["decision_count"] == 1
+    assert child_session["phrases"][0]["decision"] == {
+        **parent_decision,
+        "decision_document_sha256": lineage[0]["child_decision_document_sha256"],
+    }
+    assert child_session["phrases"][1]["decision"] is None
+    assert fixture.server.store.events(parent_session["session_id"]) == parent_events
+    assert fixture.server.store.transitions() == [transition]
+    database = fixture.persistence_root / "vocal-session.sqlite3"
+    with sqlite3.connect(database) as connection:
+        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+            connection.execute("DELETE FROM vocal_session_transitions")
+
+
+def test_explicit_transition_reopens_target_and_tampering_fails_before_write(
+    recording_http: _RecordingHTTP,
+) -> None:
+    fixture = recording_http
+    status, _, decision_payload = fixture.json_request(
+        "POST",
+        f"/api/decision?token={fixture.token}",
+        {"phrase_id": "phrase-001", "outcome": "record_again"},
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 201
+    parent_session = decision_payload["state"]["session"]
+    request = fixture.capture_request(include_transition=True)
+    tampered = json.loads(json.dumps(request))
+    tampered["transition"]["expected_decisions"][0]["decision_document_sha256"] = (
+        "0" * 64
+    )
+
+    status, _, payload = fixture.save_capture(tampered)
+
+    assert status == 409
+    assert "exact current decisions" in payload["error"]
+    assert not fixture.capture_output_dir.exists()
+    assert fixture.server.store.transitions() == []
+
+    status, _, payload = fixture.save_capture(request)
+
+    assert status == 201
+    transition = payload["transition"]
+    assert transition["decision_lineage"][0]["disposition"] == ("explicitly_reopened")
+    assert transition["decision_lineage"][0]["child_decision_document_sha256"] is None
+    child_session = payload["state"]["session"]
+    assert child_session["coverage"]["decision_count"] == 0
+    assert child_session["phrases"][0]["decision"] is None
+    assert fixture.server.store.events(parent_session["session_id"])
+
+
 @pytest.mark.parametrize(
     ("mutate", "message"),
     (
@@ -494,6 +631,8 @@ def test_browser_records_float32_but_only_explicit_save_posts_pcm24() -> None:
     assert 'querySelector("#save-recording")' in javascript
     assert 'querySelector("#record-attempt")' in javascript
     assert 'querySelector("#stop-recording")' in javascript
+    assert "payload.transition = phrasePlan.transition" in javascript
+    assert "Earlier decisions remain immutable" in javascript
     assert "Save this recording" in html
     assert 'id="save-recording"' in html
     assert 'id="record-attempt"' in html

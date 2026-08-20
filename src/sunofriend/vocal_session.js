@@ -124,7 +124,9 @@ function render() {
   document.querySelector("#ai-fallback").classList.toggle("hidden", !ai);
   document.querySelector("#use-human").disabled = !isHumanSourceForPhrase(source(activeSourceId), row.phrase_id);
 
-  document.querySelector("#record-title").textContent = appState.recording.available ? "Ready to record" : "Cue required before recording";
+  document.querySelector("#record-title").textContent = appState.recording.available
+    ? (appState.recording.transition_required ? "Ready for an explicit new recording round" : "Ready to record")
+    : "Cue required before recording";
   document.querySelector("#record-reason").textContent = appState.recording.reason || "";
   document.querySelector("#enable-mic").disabled = !appState.recording.available || Boolean(microphoneStream);
   document.querySelector("#record-attempt").disabled = !appState.recording.available || !microphoneStream || recording;
@@ -487,37 +489,45 @@ async function blobBase64(blob) {
 
 async function saveRecordedAttempt() {
   if (!recordedAttempt || recordedAttempt.phraseId !== activePhraseId) return;
-  if (!window.confirm("Save this recording as a new unreviewed phrase source? This does not choose or correct it.")) return;
+  const transitionRequired = Boolean(appState.recording.transition_required);
+  const confirmation = transitionRequired
+    ? "Start an explicit new recording round and save this unreviewed source? The target phrase will reopen. Earlier decisions remain immutable; only choices whose phrase and source hashes are unchanged will be revalidated."
+    : "Save this recording as a new unreviewed phrase source? This does not choose or correct it.";
+  if (!window.confirm(confirmation)) return;
   const button = document.querySelector("#save-recording");
   button.disabled = true;
   try {
     const phrasePlan = appState.recording.phrases.find((item) => item.phrase_id === recordedAttempt.phraseId);
+    const payload = {
+      expected_musical_state_sha256: appState.session.binding.musical_state_sha256,
+      phrase_id: recordedAttempt.phraseId,
+      capture_id: recordedAttempt.captureId,
+      cue_id: phrasePlan.cue.cue_id,
+      cue_asset_sha256: phrasePlan.cue.audio_sha256,
+      audio_wav_base64: await blobBase64(recordedAttempt.blob),
+      placement: {
+        source_phrase_start_frame: recordedAttempt.phraseStartFrame,
+        source_phrase_end_frame: recordedAttempt.phraseEndFrame,
+        pre_guard_frames: recordedAttempt.preGuardFrames,
+        post_guard_frames: recordedAttempt.postGuardFrames,
+        destination_start_seconds: phrasePlan.placement.destination_start_seconds,
+        destination_end_seconds: phrasePlan.placement.destination_end_seconds,
+      },
+      actual_processing: recordedAttempt.actualProcessing,
+    };
+    if (transitionRequired) payload.transition = phrasePlan.transition;
     const result = await api("/api/capture", {
       method: "POST",
-      body: JSON.stringify({
-        expected_musical_state_sha256: appState.session.binding.musical_state_sha256,
-        phrase_id: recordedAttempt.phraseId,
-        capture_id: recordedAttempt.captureId,
-        cue_id: phrasePlan.cue.cue_id,
-        cue_asset_sha256: phrasePlan.cue.audio_sha256,
-        audio_wav_base64: await blobBase64(recordedAttempt.blob),
-        placement: {
-          source_phrase_start_frame: recordedAttempt.phraseStartFrame,
-          source_phrase_end_frame: recordedAttempt.phraseEndFrame,
-          pre_guard_frames: recordedAttempt.preGuardFrames,
-          post_guard_frames: recordedAttempt.postGuardFrames,
-          destination_start_seconds: phrasePlan.placement.destination_start_seconds,
-          destination_end_seconds: phrasePlan.placement.destination_end_seconds,
-        },
-        actual_processing: recordedAttempt.actualProcessing,
-      }),
+      body: JSON.stringify(payload),
     });
     discardRecordedAttempt();
     appState = result.state;
     activeSourceId = result.admission.source_id;
     draftNotes = {...(appState.draft?.draft?.notes_by_phrase || draftNotes)};
     render();
-    showNotice("Recording saved locally as an unreviewed phrase source. No take was selected.");
+    showNotice(result.transition
+      ? "New round saved. The target phrase is open; unchanged earlier decisions were explicitly revalidated. No take was selected."
+      : "Recording saved locally as an unreviewed phrase source. No take was selected.");
   } catch (error) {
     showNotice(error.message, true);
     setRecorderStatus(`Attempt was not saved: ${error.message}`, true);

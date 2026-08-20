@@ -46,10 +46,22 @@ Listening, stopping, discarding and unsaved attempts remain zero-write and
 zero-authority. The placement records the intended cue clock only: it is not a
 claim that browser/device latency has been measured or corrected.
 
-This first recording increment intentionally blocks further capture after an
-explicit phrase decision, because admitting a new source changes the Musical
-State identity. A later session transition must explicitly rebind or revisit
-decisions; the implementation will not silently migrate musical authority.
+The browser now supports an explicit iterative transition when a new capture is
+saved after phrase decisions already exist. The confirmation binds the exact
+parent Musical State and exact ordered decision hashes. The capture creates a
+fresh child state, reopens its target phrase, and recreates only other decisions
+whose reviewed phrase geometry, selected source ID and selected source SHA-256
+still validate unchanged. The original decisions remain immutable in their
+parent session and the owner-only append-only transition ledger records each
+parent-to-child decision hash. A missing, stale or altered transition fails
+before the capture directory is created. This is explicit revalidation, not a
+silent migration or a claim that the singer listened again.
+
+The transition still creates no comp render, join, correction or training
+label. Playback, unsaved attempts and form drafts have no transition or musical
+authority. The current increment supports additive browser phrase captures
+only; changed lyrics, phrase timing, reference identity, imported takes or
+source audio require a separate review workflow rather than this transition.
 
 Companion documents:
 
@@ -432,6 +444,11 @@ exports/resolutions create authoritative decisions.
 
 Acceptance: a singer can cover a complete song over multiple sessions and see
 which phrases still need work without inspecting folders or a DAW.
+
+Current status: the local page, owner-only drafts, additive phrase capture and
+explicit capture-round transition are implemented. Each transition reopens the
+recorded phrase and preserves exact immutable decision lineage; it does not
+render an assembled vocal.
 
 ### W2 — explicit phrase decisions
 

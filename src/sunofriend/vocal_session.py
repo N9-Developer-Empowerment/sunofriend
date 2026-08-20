@@ -14,12 +14,16 @@ from datetime import datetime, timezone
 
 from .musical_state import MUSICAL_STATE_SCHEMA, validate_musical_state
 from .source_receipt import canonical_json_bytes, document_sha256
-from .vocal_phrase_decision import validate_phrase_decision
+from .vocal_phrase_decision import create_phrase_decision, validate_phrase_decision
 
 
 VOCAL_SESSION_SCHEMA = "sunofriend.vocal-comp-session.v1"
 VOCAL_SESSION_DRAFT_SCHEMA = "sunofriend.vocal-comp-session-draft.v1"
 VOCAL_SESSION_EVENT_SCHEMA = "sunofriend.vocal-comp-session-event.v1"
+VOCAL_SESSION_TRANSITION_REQUEST_SCHEMA = (
+    "sunofriend.vocal-comp-session-transition-request.v1"
+)
+VOCAL_SESSION_TRANSITION_SCHEMA = "sunofriend.vocal-comp-session-transition.v1"
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _DRAFT_KEYS = frozenset(
@@ -192,17 +196,7 @@ class VocalSessionStore:
         phrase_ids = {row["phrase_id"] for row in session.get("phrases", [])}
         if decision.get("phrase", {}).get("phrase_id") not in phrase_ids:
             raise ValueError("phrase decision refers to an unknown phrase")
-        event: dict[str, Any] = {
-            "schema": VOCAL_SESSION_EVENT_SCHEMA,
-            "event_id": str(uuid.uuid4()),
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "event_type": "phrase_decision",
-            "session_id": session["session_id"],
-            "musical_state_sha256": state_sha,
-            "decision_document_sha256": expected_hash,
-            "decision": dict(decision),
-        }
-        event["event_document_sha256"] = document_sha256(event)
+        event = _decision_event(session, decision)
         encoded = canonical_json_bytes(event).decode("utf-8")
         with self._connect() as connection:
             connection.execute(
@@ -217,6 +211,98 @@ class VocalSessionStore:
             )
         self._secure_database_files()
         return event
+
+    def apply_transition(
+        self,
+        previous_session: Mapping[str, Any],
+        next_session: Mapping[str, Any],
+        transition: Mapping[str, Any],
+        revalidated_decisions: Sequence[Mapping[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Atomically append a completed transition and its revalidated choices."""
+
+        document = dict(transition)
+        if document.get("schema") != VOCAL_SESSION_TRANSITION_SCHEMA:
+            raise ValueError("unsupported vocal session transition schema")
+        expected_hash = str(document.get("document_sha256", ""))
+        unsigned = dict(document)
+        unsigned.pop("document_sha256", None)
+        if expected_hash != document_sha256(unsigned):
+            raise ValueError("vocal session transition document SHA-256 does not match")
+        binding = document.get("binding")
+        if binding != {
+            "parent_session_id": previous_session["session_id"],
+            "parent_musical_state_sha256": previous_session["binding"][
+                "musical_state_sha256"
+            ],
+            "child_session_id": next_session["session_id"],
+            "child_musical_state_sha256": next_session["binding"][
+                "musical_state_sha256"
+            ],
+        }:
+            raise ValueError("vocal session transition binding changed")
+        expected_parent_hashes = [
+            event["decision_document_sha256"]
+            for event in self.events(previous_session["session_id"])
+        ]
+        if [
+            row["parent_decision_document_sha256"]
+            for row in document.get("decision_lineage", [])
+        ] != expected_parent_hashes:
+            raise ValueError("transition does not bind the exact parent decisions")
+        if self.events(next_session["session_id"]):
+            raise ValueError("transition child session already contains decisions")
+        events = [
+            _decision_event(next_session, decision)
+            for decision in revalidated_decisions
+        ]
+        expected_child_hashes = [
+            row.get("child_decision_document_sha256")
+            for row in document.get("decision_lineage", [])
+            if row.get("disposition") == "explicitly_revalidated"
+        ]
+        if [
+            event["decision_document_sha256"] for event in events
+        ] != expected_child_hashes:
+            raise ValueError("transition revalidated-decision lineage changed")
+        encoded_transition = canonical_json_bytes(document).decode("utf-8")
+        with self._connect() as connection:
+            if connection.execute(
+                "SELECT 1 FROM vocal_session_transitions WHERE child_session_id = ?",
+                (next_session["session_id"],),
+            ).fetchone():
+                raise ValueError("transition child session already has lineage")
+            for event in events:
+                connection.execute(
+                    "INSERT INTO vocal_session_events "
+                    "(event_id, session_id, event_type, event_json) VALUES (?, ?, ?, ?)",
+                    (
+                        event["event_id"],
+                        event["session_id"],
+                        event["event_type"],
+                        canonical_json_bytes(event).decode("utf-8"),
+                    ),
+                )
+            connection.execute(
+                "INSERT INTO vocal_session_transitions "
+                "(transition_id, parent_session_id, child_session_id, transition_json) "
+                "VALUES (?, ?, ?, ?)",
+                (
+                    document["transition_id"],
+                    previous_session["session_id"],
+                    next_session["session_id"],
+                    encoded_transition,
+                ),
+            )
+        self._secure_database_files()
+        return events
+
+    def transitions(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT transition_json FROM vocal_session_transitions ORDER BY sequence"
+            ).fetchall()
+        return [json.loads(row[0]) for row in rows]
 
     def events(self, session_id: str) -> list[dict[str, Any]]:
         with self._connect() as connection:
@@ -258,6 +344,23 @@ class VocalSessionStore:
                 BEGIN
                     SELECT RAISE(ABORT, 'append-only event store');
                 END;
+                CREATE TABLE IF NOT EXISTS vocal_session_transitions (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                    transition_id TEXT NOT NULL UNIQUE,
+                    parent_session_id TEXT NOT NULL,
+                    child_session_id TEXT NOT NULL UNIQUE,
+                    transition_json TEXT NOT NULL
+                );
+                CREATE TRIGGER IF NOT EXISTS vocal_session_transitions_no_update
+                BEFORE UPDATE ON vocal_session_transitions
+                BEGIN
+                    SELECT RAISE(ABORT, 'append-only transition store');
+                END;
+                CREATE TRIGGER IF NOT EXISTS vocal_session_transitions_no_delete
+                BEFORE DELETE ON vocal_session_transitions
+                BEGIN
+                    SELECT RAISE(ABORT, 'append-only transition store');
+                END;
                 """
             )
         self._secure_database_files()
@@ -265,6 +368,183 @@ class VocalSessionStore:
     def _secure_database_files(self) -> None:
         for path in self.state_dir.glob("vocal-session.sqlite3*"):
             os.chmod(path, 0o600)
+
+
+def build_vocal_session_transition_request(
+    session: Mapping[str, Any], phrase_id: str
+) -> dict[str, Any] | None:
+    """Build the exact explicit request needed to cross a decided state."""
+
+    if session.get("schema") != VOCAL_SESSION_SCHEMA:
+        raise ValueError("transition request requires a vocal session")
+    if phrase_id not in {row["phrase_id"] for row in session.get("phrases", [])}:
+        raise ValueError("transition request phrase is unknown")
+    decisions = [
+        {
+            "phrase_id": row["phrase_id"],
+            **dict(row["decision"]),
+        }
+        for row in session["phrases"]
+        if row.get("decision") is not None
+    ]
+    if not decisions:
+        return None
+    return {
+        "schema": VOCAL_SESSION_TRANSITION_REQUEST_SCHEMA,
+        "action": "admit_capture_reopen_phrase_revalidate_unchanged",
+        "parent_musical_state_sha256": session["binding"]["musical_state_sha256"],
+        "reopen_phrase_id": phrase_id,
+        "expected_decisions": decisions,
+        "confirmation": (
+            "explicitly_reopen_target_and_revalidate_only_unchanged_decisions"
+        ),
+    }
+
+
+def create_vocal_session_transition(
+    parent_musical_state: Mapping[str, Any],
+    child_musical_state: Mapping[str, Any],
+    parent_decisions: Sequence[Mapping[str, Any]],
+    request: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Create explicit lineage plus exact child-state decisions.
+
+    The target phrase is reopened. Every other prior decision is recreated only
+    after its phrase geometry, selected source ID and selected source SHA-256
+    validate unchanged in the additive child state.
+    """
+
+    parent = validate_musical_state(parent_musical_state)
+    child = validate_musical_state(child_musical_state)
+    validated_parent = [
+        validate_phrase_decision(decision, parent) for decision in parent_decisions
+    ]
+    parent_session = build_vocal_session(parent, validated_parent)
+    reopen_phrase_id = str(request.get("reopen_phrase_id", ""))
+    expected_request = build_vocal_session_transition_request(
+        parent_session, reopen_phrase_id
+    )
+    if expected_request is None or dict(request) != expected_request:
+        raise ValueError("an exact explicit vocal session transition is required")
+    if (
+        child.get("lineage", {}).get("operation") != "admit_vocal_phrase_capture"
+        or child.get("lineage", {}).get("parent", {}).get("document_sha256")
+        != parent["document_sha256"]
+    ):
+        raise ValueError("transition child is not an additive capture from this parent")
+    if child["structure"] != parent["structure"]:
+        raise ValueError("transition cannot cross changed phrase geometry or lyrics")
+
+    parent_sources = {
+        row["source_id"]: row for row in build_vocal_session(parent)["sources"]
+    }
+    child_sources = {
+        row["source_id"]: row for row in build_vocal_session(child)["sources"]
+    }
+    if any(
+        child_sources.get(source_id) != row for source_id, row in parent_sources.items()
+    ):
+        raise ValueError("transition cannot cross a changed prior source identity")
+    admitted_capture = child["vocal_performance_state"]["phrase_captures"][-1]
+    if admitted_capture["phrase"]["phrase_id"] != reopen_phrase_id:
+        raise ValueError("transition must reopen the phrase receiving the capture")
+
+    revalidated: list[dict[str, Any]] = []
+    lineage: list[dict[str, Any]] = []
+    for decision in validated_parent:
+        phrase_id = decision["phrase"]["phrase_id"]
+        if phrase_id == reopen_phrase_id:
+            lineage.append(
+                {
+                    "phrase_id": phrase_id,
+                    "parent_decision_document_sha256": decision["document_sha256"],
+                    "disposition": "explicitly_reopened",
+                    "child_decision_document_sha256": None,
+                    "outcome": decision["outcome"],
+                    "selected_source_id": decision["selected_source_id"],
+                    "selected_source_sha256": decision["selected_source_sha256"],
+                    "validation": "parent_decision_retained_as_immutable_lineage",
+                }
+            )
+            continue
+        review = decision["review"]
+        child_decision = create_phrase_decision(
+            child,
+            phrase_id,
+            decision["outcome"],
+            source_id=(
+                decision["selected_source_id"]
+                if decision["outcome"] == "human_take"
+                else None
+            ),
+            notes=review["notes"],
+            reviewed_at=review["reviewed_at"],
+            review_evidence_sha256=review["evidence_sha256"],
+        )
+        if (
+            child_decision["selected_source_id"],
+            child_decision["selected_source_sha256"],
+        ) != (
+            decision["selected_source_id"],
+            decision["selected_source_sha256"],
+        ):
+            raise ValueError("transition selected source identity changed")
+        revalidated.append(child_decision)
+        lineage.append(
+            {
+                "phrase_id": phrase_id,
+                "parent_decision_document_sha256": decision["document_sha256"],
+                "disposition": "explicitly_revalidated",
+                "child_decision_document_sha256": child_decision["document_sha256"],
+                "outcome": decision["outcome"],
+                "selected_source_id": decision["selected_source_id"],
+                "selected_source_sha256": decision["selected_source_sha256"],
+                "validation": "phrase_geometry_and_selected_source_identity_unchanged",
+            }
+        )
+
+    document: dict[str, Any] = {
+        "schema": VOCAL_SESSION_TRANSITION_SCHEMA,
+        "status": "complete_explicit_transition",
+        "transition_id": str(uuid.uuid4()),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "method_natures": ["D", "H"],
+        "action": request["action"],
+        "request": {
+            "schema": request["schema"],
+            "canonical_sha256": document_sha256(request),
+        },
+        "binding": {
+            "parent_session_id": parent_session["session_id"],
+            "parent_musical_state_sha256": parent["document_sha256"],
+            "child_session_id": build_vocal_session(child)["session_id"],
+            "child_musical_state_sha256": child["document_sha256"],
+        },
+        "reopened_phrase": {
+            "phrase_id": reopen_phrase_id,
+            "admitted_source_id": admitted_capture["source_id"],
+            "admitted_source_sha256": admitted_capture["audio"]["sha256"],
+            "selection_authority": "none",
+        },
+        "decision_lineage": lineage,
+        "authority": {
+            "explicit_transition_confirmed": True,
+            "silent_decision_migration_permitted": False,
+            "target_phrase_reopened": True,
+            "unchanged_decisions_revalidated": True,
+            "playback_or_draft_authority": "none",
+        },
+        "training": {
+            "pairwise_labels": [],
+            "inferred_labels": [],
+            "training_eligible": False,
+        },
+        "effects": _transition_effects(),
+        "network_used": False,
+    }
+    document["document_sha256"] = document_sha256(document)
+    _reject_paths(document)
+    return document, revalidated
 
 
 def build_vocal_session(
@@ -490,6 +770,34 @@ def _contains_decision_authority(value: Any) -> bool:
     return False
 
 
+def _decision_event(
+    session: Mapping[str, Any], decision: Mapping[str, Any]
+) -> dict[str, Any]:
+    state_sha = session.get("binding", {}).get("musical_state_sha256")
+    if decision.get("binding", {}).get("musical_state_sha256") != state_sha:
+        raise ValueError("phrase decision binds another musical state hash")
+    expected_hash = str(decision.get("document_sha256", ""))
+    unsigned = dict(decision)
+    unsigned.pop("document_sha256", None)
+    if expected_hash != document_sha256(unsigned):
+        raise ValueError("phrase decision document SHA-256 does not match")
+    phrase_ids = {row["phrase_id"] for row in session.get("phrases", [])}
+    if decision.get("phrase", {}).get("phrase_id") not in phrase_ids:
+        raise ValueError("phrase decision refers to an unknown phrase")
+    event: dict[str, Any] = {
+        "schema": VOCAL_SESSION_EVENT_SCHEMA,
+        "event_id": str(uuid.uuid4()),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "event_type": "phrase_decision",
+        "session_id": session["session_id"],
+        "musical_state_sha256": state_sha,
+        "decision_document_sha256": expected_hash,
+        "decision": dict(decision),
+    }
+    event["event_document_sha256"] = document_sha256(event)
+    return event
+
+
 def _atomic_private_json(path: Path, document: Mapping[str, Any]) -> None:
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
@@ -535,12 +843,29 @@ def _zero_effects() -> dict[str, bool]:
     }
 
 
+def _transition_effects() -> dict[str, bool]:
+    return {
+        "capture_admitted": True,
+        "target_phrase_reopened": True,
+        "unchanged_decisions_revalidated": True,
+        "audio_comp_rendered": False,
+        "join_created": False,
+        "pitch_correction_applied": False,
+        "timing_correction_applied": False,
+        "training_label_created": False,
+    }
+
+
 __all__ = [
     "VOCAL_SESSION_DRAFT_SCHEMA",
     "VOCAL_SESSION_EVENT_SCHEMA",
     "VOCAL_SESSION_SCHEMA",
+    "VOCAL_SESSION_TRANSITION_REQUEST_SCHEMA",
+    "VOCAL_SESSION_TRANSITION_SCHEMA",
     "VocalSessionDraftConflictError",
     "VocalSessionStore",
     "build_vocal_session",
+    "build_vocal_session_transition_request",
+    "create_vocal_session_transition",
     "validate_vocal_session",
 ]
