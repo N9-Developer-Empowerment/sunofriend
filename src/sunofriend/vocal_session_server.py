@@ -851,7 +851,7 @@ class _VocalSessionHandler(BaseHTTPRequestHandler):
         self.send_header(
             "Content-Security-Policy",
             "default-src 'self'; script-src 'self'; style-src 'self'; "
-            "media-src 'self'; connect-src 'self'; img-src 'self' data:; "
+            "media-src 'self' blob:; connect-src 'self'; img-src 'self' data:; "
             "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
             "form-action 'none'",
         )
