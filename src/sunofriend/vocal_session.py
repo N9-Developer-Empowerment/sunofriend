@@ -851,13 +851,19 @@ def _decision_summary(decision: Mapping[str, Any] | None) -> dict[str, Any] | No
 
 def _source_projection(source: Mapping[str, Any], source_class: str) -> dict[str, Any]:
     audio = source["audio"]
-    return {
+    projection = {
         "source_id": source["source_id"],
         "source_class": source_class,
         "label": source.get("label", source["source_id"]),
         "audio_sha256": audio["sha256"],
         "audio_bytes": audio["bytes"],
     }
+    eligible = source.get("eligible_phrase_ids")
+    if eligible is not None:
+        projection["eligible_phrase_ids"] = list(eligible)
+        if len(eligible) == 1:
+            projection["bound_phrase_id"] = eligible[0]
+    return projection
 
 
 def _capture_source_projection(source: Mapping[str, Any]) -> dict[str, Any]:

@@ -48,6 +48,8 @@ def test_source_playback_waits_for_metadata_before_seeking() -> None:
     assert metadata >= 0, "playSource must wait for loadedmetadata"
     assert seek >= 0, "playSource must seek to the reviewed phrase start"
     assert metadata < seek, "loadedmetadata must be awaited before currentTime is set"
+    assert 'item.source_class === "human_vocal_phrase_capture"' in playback
+    assert "Boolean(item.bound_phrase_id)" not in playback
 
 
 def test_saved_decision_view_offers_reopen_and_record_new_attempt() -> None:
@@ -96,3 +98,11 @@ def test_large_song_navigation_has_status_filters_and_next_open_phrase() -> None
     assert 'id="next-open-phrase"' in HTML
     assert "function selectNextOpenPhrase" in JAVASCRIPT
     assert 'querySelector("#next-open-phrase")' in JAVASCRIPT
+
+
+def test_phrase_specific_common_zero_take_is_not_shown_on_other_phrases() -> None:
+    """A padded pickup must not masquerade as a complete-song candidate."""
+
+    source_filter = _function_body("isHumanSourceForPhrase", next_name="formatTime")
+    assert "eligible_phrase_ids" in source_filter
+    assert "includes(phraseId)" in source_filter

@@ -513,6 +513,9 @@ def _selected_source(
             raise ValueError("human_take requires source_id")
         for take in vocal["takes"]:
             if take["source_id"] == source_id:
+                eligible = take.get("eligible_phrase_ids")
+                if eligible is not None and phrase_id not in eligible:
+                    raise ValueError("human take is bound to another phrase")
                 return {
                     "source_id": source_id,
                     "source_class": "human_vocal_take",
@@ -592,6 +595,12 @@ def _source_geometry(
             "source_end_seconds": end_frame / sample_rate,
         }
     phrase = _phrase(state, phrase_id)
+    for take in vocal["takes"]:
+        if take["source_id"] == source_id:
+            eligible = take.get("eligible_phrase_ids")
+            if eligible is not None and phrase_id not in eligible:
+                raise ValueError("human take is bound to another phrase")
+            break
     return {
         "source_start_seconds": phrase["start_seconds"],
         "source_end_seconds": phrase["end_seconds"],
