@@ -30,13 +30,14 @@ async function loadCleanRouteHandler() {
     "utf8",
   );
   const block = template.match(
-    /FunctionCode: \|\n(?<code>(?: {8}.+(?:\n|$))+)/,
+    /FunctionCode:(?: !Sub)? \|\n(?<code>(?: {8}.+(?:\n|$))+)/,
   );
   assert.ok(block?.groups?.code, "CloudFront function code was not found");
   const code = block.groups.code
     .split("\n")
     .map((line) => line.replace(/^ {8}/, ""))
-    .join("\n");
+    .join("\n")
+    .replaceAll("${DomainName}", "sunofriend.com");
   const handler = vm.runInNewContext(`${code}\nhandler;`);
   assert.equal(typeof handler, "function");
   return handler;
@@ -83,6 +84,23 @@ test("rewrites clean website routes to their static index files", async () => {
     rewrite("/_next/static/chunks/app.js"),
     "/_next/static/chunks/app.js",
   );
+
+  const wwwRedirect = handler({
+    request: {
+      uri: "/demo/",
+      headers: { host: { value: "www.sunofriend.com" } },
+      querystring: { a: { value: "b" } },
+    },
+  });
+  assert.equal(wwwRedirect.statusCode, 301);
+  assert.equal(
+    wwwRedirect.headers.location.value,
+    "https://sunofriend.com/demo/?a=b",
+  );
+  const apex = handler({
+    request: { uri: "/stems", headers: { host: { value: "sunofriend.com" } } },
+  });
+  assert.equal(apex.uri, "/stems/index.html");
 });
 
 test("server-renders an approachable skill-first musician page", async () => {
@@ -1390,7 +1408,9 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(page, /SoftwareApplication/);
   assert.match(layout, /publisher: "Unsigned Media Ltd"/);
   assert.match(layout, /openGraph/);
-  assert.match(layout, /\/og\.png/);
+  assert.match(layout, /\/og\.(png|jpg)/);
+  assert.match(layout, /icon: "\/favicon\.ico"/);
+  assert.match(layout, /apple: "\/apple-touch-icon\.png"/);
   assert.match(robots, /Allow: \//);
   assert.match(robots, /sunofriend\.com\/sitemap\.xml/);
   assert.match(sitemap, /sunofriend\.com\/for-agents/);
@@ -1416,6 +1436,7 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
     /CleanRouteFunction\.FunctionMetadata\.FunctionARN/,
   );
   assert.match(template, /AWS::CloudFront::OriginAccessControl/);
+  assert.match(template, /statusCode: 301/);
   assert.match(template, /BlockPublicAcls: true/);
   assert.match(template, /SSEAlgorithm: AES256/);
   assert.match(template, /AlternateDomainName/);

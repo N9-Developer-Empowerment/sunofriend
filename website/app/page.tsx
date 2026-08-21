@@ -120,7 +120,7 @@ export default function Home() {
             <b>LOCAL OPT-IN SEPARATION →</b>
           </Link>
           <Image
-            src="/brand/sunofriend-listener-banner.png"
+            src="/brand/sunofriend-listener-banner.webp"
             alt="A waveform becoming the Sunofriend mark and editable MIDI notes"
             width={1672}
             height={941}
@@ -372,7 +372,7 @@ export default function Home() {
             </div>
           </div>
           <Image
-            src="/examples/out-of-place.png"
+            src="/examples/out-of-place.webp"
             alt="Out of Place, a Sunofriend musical interpolation"
             width={1254}
             height={1254}
@@ -507,7 +507,7 @@ export default function Home() {
       <footer>
         <div className="footer-brand">
           <Image
-            src="/brand/sunofriend-logo.png"
+            src="/brand/sunofriend-logo.webp"
             alt=""
             aria-hidden="true"
             width={1254}

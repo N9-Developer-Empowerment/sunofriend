@@ -3,7 +3,7 @@ import Link from "next/link";
 import { links, separationResearch } from "../../content";
 
 export const metadata: Metadata = {
-  title: "Experimental local stem separation — Sunofriend",
+  title: "Experimental local stem separation",
   description:
     "Public local two-stem and explicit SCNet core-four previews, with private six-role research and model-free recovery evidence kept clearly separate.",
   alternates: { canonical: "/research/separation/" },

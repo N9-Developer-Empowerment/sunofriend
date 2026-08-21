@@ -37,8 +37,8 @@ export const metadata: Metadata = {
   creator: "Unsigned Media Ltd",
   publisher: "Unsigned Media Ltd",
   icons: {
-    icon: "/brand/sunofriend-logo.png",
-    apple: "/brand/sunofriend-logo.png",
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
   openGraph: {
     type: "website",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     siteName: "Sunofriend",
     images: [
       {
-        url: "/og.png",
+        url: "/og.jpg",
         width: 1200,
         height: 630,
         alt: "Sunofriend — सुनो means listen; listen deeper, create further; not affiliated with Suno Inc.",
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     title: "Sunofriend — Hear the song. Change the parts.",
     description:
       "Use the Sunofriend skill with a local coding agent: authorised stems in; editable MIDI, listening WAV and a starter ZIP out.",
-    images: ["/og.png"],
+    images: ["/og.jpg"],
   },
 };
 

@@ -95,11 +95,30 @@ Resources:
       AutoPublish: true
       Name: !Sub "${AWS::StackName}-clean-routes"
       FunctionConfig:
-        Comment: Serve static index files for extensionless website routes.
+        Comment: Serve static index files for extensionless routes and 301 the www alternate domain to the apex domain.
         Runtime: cloudfront-js-2.0
-      FunctionCode: |
+      FunctionCode: !Sub |
         function handler(event) {
           var request = event.request;
+          var headers = request.headers || {};
+          var host = (headers.host && headers.host.value) || '';
+          if (host === 'www.${DomainName}' || host === 'www.${DomainName}:443' || host === 'www.${DomainName}.') {
+            var query = request.querystring || {};
+            var keys = Object.keys(query);
+            var qs = '';
+            if (keys.length > 0) {
+              qs = '?' + keys.map(function (key) {
+                return key + '=' + encodeURIComponent(query[key].value || '');
+              }).join('&');
+            }
+            return {
+              statusCode: 301,
+              statusDescription: 'Moved Permanently',
+              headers: {
+                location: { value: 'https://${DomainName}' + request.uri + qs }
+              }
+            };
+          }
           var uri = request.uri;
           if (uri.charAt(uri.length - 1) === '/') {
             request.uri = uri + 'index.html';
