@@ -70,6 +70,46 @@ split-disjoint; reversed copies of the same unordered pair are rejected. Its
 status remains `training_ineligible` and it grants no execution or checkpoint
 promotion authority even if provisional count thresholds are reached.
 
+### Private A/B label collection
+
+`sunofriend.remix_pairwise_session` and
+`scripts/private-remix-pairwise-session.py` implement the first efficient
+owner-label collection surface. The loopback-only page presents the unchanged
+control and two challengers as neutral A/B versions. Their display order is
+derived from a bound presentation seed; the saved label maps the display order
+back to the exact request, result and audio hashes.
+
+Playback and dwell create no evidence. Saving requires a separate explicit
+confirmation that control, A and B were heard, an outcome, identity judgement
+for both challengers, one to four bounded reasons, and explicit admission for
+owner-local training. The resulting label is immutable and owner-only, but it
+still has `training_eligible=false`, `selected_for_product=false` and no
+training, checkpoint or release authority. The server verifies exact audio
+bytes before every playback, accepts writes only from the same localhost
+origin, and refuses a duplicate label for the same pair.
+
+This interface removes a major collection bottleneck, but it does not fabricate
+the missing corpus. A real session can open only after an owner registry,
+controlled variant set, unchanged control and two exact challenger WAVs exist.
+The launcher therefore requires the complete Musical State, owner registry,
+identity state and variant set rather than trusting loose audio filenames:
+
+```text
+python scripts/private-remix-pairwise-session.py \
+  --musical-state MUSICAL_STATE.json \
+  --owner-registry OWNER_REGISTRY.json \
+  --identity-state REMIX_IDENTITY.json \
+  --variant-set CONTROLLED_VARIANTS.json \
+  --control-audio SOURCE_CONTROL.wav \
+  --variant-audio VARIANT_ID_A=CHALLENGER_A.wav \
+  --variant-audio VARIANT_ID_B=CHALLENGER_B.wav \
+  --state-dir PRIVATE_REVIEW_STATE
+```
+
+All documents and audio are revalidated before the page opens. The displayed
+names remain only `Version A` and `Version B`; underlying variant IDs and
+recipes are retained in evidence but do not bias the listening screen.
+
 `sunofriend.remix_feature_contract` also creates a reproducible transparent
 metadata baseline directly from the exact gain-envelope recipes. It binds six
 finite operation features per variant—duration, point count, minimum and mean
