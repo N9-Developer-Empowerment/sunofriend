@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 import json
 from pathlib import Path
+import re
 import stat
 import sys
 from threading import Thread
@@ -169,6 +170,25 @@ def test_anchor_media_is_rechecked_and_page_separates_playback_from_confirmation
         except HTTPError as exc:
             assert exc.code == 409
         assert not (tmp_path / "state" / "CONFIRMED").exists()
+
+
+def test_page_asset_urls_carry_the_session_token_like_a_browser_request(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    server = _server(fixture, tmp_path / "state")
+    with _running(server):
+        html = _get_bytes(server, "/").decode()
+        asset_paths = re.findall(
+            r'(?:href|src)="(/remix_anchor_session\.(?:css|js)[^"]*)"', html
+        )
+
+        assert len(asset_paths) == 2
+        assert all(f"token={server.token}" in path for path in asset_paths)
+        for path in asset_paths:
+            with urlopen(f"http://127.0.0.1:{server.server_port}{path}") as response:
+                assert response.status == 200
+                assert response.read()
 
 
 def test_anchor_session_refuses_unsynchronised_audio(tmp_path: Path) -> None:

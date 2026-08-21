@@ -15,7 +15,7 @@ import secrets
 import stat
 import tempfile
 from typing import Any, Mapping
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 import webbrowser
 
 from .remix_anchor_preflight import (
@@ -316,7 +316,6 @@ class _RemixAnchorHandler(BaseHTTPRequestHandler):
         if not self._begin(parsed, mutation=False):
             return
         assets = {
-            "/": ("remix_anchor_session.html", "text/html; charset=utf-8"),
             "/remix_anchor_session.js": (
                 "remix_anchor_session.js",
                 "text/javascript; charset=utf-8",
@@ -326,6 +325,9 @@ class _RemixAnchorHandler(BaseHTTPRequestHandler):
                 "text/css; charset=utf-8",
             ),
         }
+        if parsed.path == "/":
+            self._page(head_only=head_only)
+            return
         if parsed.path in assets:
             self._asset(*assets[parsed.path], head_only=head_only)
             return
@@ -362,6 +364,29 @@ class _RemixAnchorHandler(BaseHTTPRequestHandler):
     def _asset(self, name: str, content_type: str, *, head_only: bool) -> None:
         payload = Path(__file__).with_name(name).read_bytes()
         self._bytes(HTTPStatus.OK, payload, content_type, head_only=head_only)
+
+    def _page(self, *, head_only: bool) -> None:
+        token = quote(self.server.token, safe="")
+        payload = (
+            Path(__file__)
+            .with_name("remix_anchor_session.html")
+            .read_text(encoding="utf-8")
+            .replace(
+                'href="/remix_anchor_session.css"',
+                f'href="/remix_anchor_session.css?token={token}"',
+            )
+            .replace(
+                'src="/remix_anchor_session.js"',
+                f'src="/remix_anchor_session.js?token={token}"',
+            )
+            .encode("utf-8")
+        )
+        self._bytes(
+            HTTPStatus.OK,
+            payload,
+            "text/html; charset=utf-8",
+            head_only=head_only,
+        )
 
     def _media(self, record: Mapping[str, Any], *, head_only: bool) -> None:
         path = Path(str(record["private_path"]))
