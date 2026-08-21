@@ -10,7 +10,11 @@ import pytest
 from sunofriend.audio_formats import file_sha256
 from sunofriend.gpu_worker_contract import build_gpu_worker_result
 from sunofriend.source_receipt import canonical_json_bytes, document_sha256
-from sunofriend.vocal_pairwise_gpu_canary import build_pairwise_gpu_canary_request
+from sunofriend.vocal_pairwise_gpu_canary import (
+    GPU_RESULT_EXECUTION_ATTEMPT_SCHEMA,
+    build_pairwise_gpu_canary_request,
+    build_pairwise_gpu_pretraining_failure,
+)
 from sunofriend.vocal_pairwise_gpu_verifier import (
     OUTPUT_FILENAMES,
     VERIFICATION_SCHEMA,
@@ -113,6 +117,59 @@ def test_round_trip_is_read_only_path_free_and_recomputes_checkpoint_evidence(
     )
 
 
+def test_round_trip_verifies_fresh_attempt_and_prior_zero_execution_lineage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository, commit = _repository(tmp_path)
+    request_path, artifact_dir, checkpoints = _round_trip(
+        tmp_path, commit, name="fresh-attempt", execution_attempt_id="5" * 32
+    )
+    monkeypatch.setattr(
+        verifier_module,
+        "_load_checkpoint_weights_only",
+        lambda path: checkpoints[path.name],
+    )
+
+    verification = verify_pairwise_gpu_canary_round_trip(
+        request_path,
+        artifact_dir=artifact_dir,
+        repository_root=repository,
+    )
+
+    request = json.loads(request_path.read_text(encoding="utf-8"))
+    failure = request["execution_attempt"]["prior_failure"]
+    assert verification["execution_attempt"] == {
+        "execution_attempt_id": "5" * 32,
+        "maximum_training_executions": 1,
+        "prior_failure_document_sha256": failure["document_sha256"],
+    }
+    assert verification["checks"]["execution_attempt_and_lineage"] is True
+
+
+def test_round_trip_rejects_result_from_a_different_execution_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository, commit = _repository(tmp_path)
+    request_path, artifact_dir, checkpoints = _round_trip(
+        tmp_path, commit, name="attempt-mismatch", execution_attempt_id="6" * 32
+    )
+    monkeypatch.setattr(
+        verifier_module,
+        "_load_checkpoint_weights_only",
+        lambda path: checkpoints[path.name],
+    )
+    result_path = artifact_dir / "gpu-worker-result.json"
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    result["execution_attempt"]["execution_attempt_id"] = "7" * 32
+    _rehash(result)
+    result_path.write_bytes(canonical_json_bytes(result))
+
+    with pytest.raises(ValueError, match="execution attempt"):
+        verify_pairwise_gpu_canary_round_trip(
+            request_path, artifact_dir=artifact_dir, repository_root=repository
+        )
+
+
 def test_verifier_rejects_extra_tampered_and_path_leaking_artifacts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -210,9 +267,27 @@ def test_verifier_rejects_checkpoint_identity_metrics_and_repository_changes(
 
 
 def _round_trip(
-    tmp_path: Path, commit: str, *, name: str = "round-trip"
+    tmp_path: Path,
+    commit: str,
+    *,
+    name: str = "round-trip",
+    execution_attempt_id: str | None = None,
 ) -> tuple[Path, Path, dict[str, dict[str, Any]]]:
-    request = build_pairwise_gpu_canary_request(commit)
+    legacy = build_pairwise_gpu_canary_request(commit)
+    failure = (
+        build_pairwise_gpu_pretraining_failure(
+            legacy,
+            failure_stage="cli_argument_validation",
+            failure_code="missing-out-dir",
+        )
+        if execution_attempt_id is not None
+        else None
+    )
+    request = build_pairwise_gpu_canary_request(
+        commit,
+        execution_attempt_id=execution_attempt_id,
+        prior_failure_receipt=failure,
+    )
     request_path = tmp_path / f"{name}-request.json"
     request_path.write_bytes(canonical_json_bytes(request))
     artifact_dir = tmp_path / f"{name}-artifacts"
@@ -312,6 +387,15 @@ def _round_trip(
             "retries": 0,
         },
     )
+    if execution_attempt_id is not None:
+        result["execution_attempt"] = {
+            "schema": GPU_RESULT_EXECUTION_ATTEMPT_SCHEMA,
+            "execution_attempt_id": execution_attempt_id,
+            "training_execution_index": 1,
+            "maximum_training_executions": 1,
+            "prior_failure_document_sha256": failure["document_sha256"],
+        }
+        _rehash(result)
     (artifact_dir / "gpu-worker-result.json").write_bytes(canonical_json_bytes(result))
     return request_path, artifact_dir, checkpoints
 

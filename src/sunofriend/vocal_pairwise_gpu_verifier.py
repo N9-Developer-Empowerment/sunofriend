@@ -10,12 +10,11 @@ import subprocess
 from typing import Any, Mapping
 
 from .audio_formats import file_sha256
-from .gpu_worker_contract import validate_gpu_worker_request
 from .source_receipt import document_sha256
 from .vocal_pairwise_canary import build_synthetic_pairwise_fixture
 from .vocal_pairwise_gpu_canary import (
     GPU_EXPERIMENT_ID,
-    build_pairwise_gpu_canary_request,
+    validate_pairwise_gpu_canary_request,
     validate_pairwise_gpu_result,
 )
 
@@ -50,13 +49,10 @@ def verify_pairwise_gpu_canary_round_trip(
 ) -> dict[str, Any]:
     """Verify one returned synthetic CUDA canary without training or writing."""
 
-    request = validate_gpu_worker_request(
+    request = validate_pairwise_gpu_canary_request(
         _read_json_document(Path(request_path), "vocal pairwise GPU request")
     )
-    expected_request = build_pairwise_gpu_canary_request(
-        str(request["repository_commit"])
-    )
-    if request != expected_request or request.get("experiment_id") != GPU_EXPERIMENT_ID:
+    if request.get("experiment_id") != GPU_EXPERIMENT_ID:
         raise ValueError("vocal pairwise request is not the exact supported contract")
 
     root = Path(artifact_dir).expanduser().absolute()
@@ -144,6 +140,17 @@ def verify_pairwise_gpu_canary_round_trip(
             "product_changed": False,
         },
     }
+    attempt = request.get("execution_attempt")
+    if attempt is not None:
+        prior_failure = attempt["prior_failure"]
+        verification["execution_attempt"] = {
+            "execution_attempt_id": attempt["execution_attempt_id"],
+            "maximum_training_executions": 1,
+            "prior_failure_document_sha256": (
+                prior_failure["document_sha256"] if prior_failure is not None else None
+            ),
+        }
+        verification["checks"]["execution_attempt_and_lineage"] = True
     _reject_absolute_path_strings(verification)
     verification["document_sha256"] = document_sha256(verification)
     return verification

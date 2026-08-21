@@ -94,6 +94,366 @@ Companion documents:
 - [Current ranked-evidence pilot](VOCAL_COMPING_PILOT.md)
 - [Product and technical design](VOCAL_COMPING_DESIGN.md)
 
+## Whole-song interface audit — 21 August 2026
+
+The current local Vocal Session is a useful phrase pilot, but it is not yet the
+interface for completing a hundred-phrase song. The recent pilot exposed the
+right product boundary: evidence discipline must sit underneath a fast,
+reversible singing loop rather than make every listen or recording feel like a
+permanent engineering decision.
+
+### What the current page now gets right
+
+- **Play** and **Use** are separate actions.
+- **Record a new attempt** starts the recording workflow; it no longer saves a
+  terminal `record_again` decision.
+- A saved phrase decision can be explicitly reopened without deleting its
+  append-only history.
+- Human sources can be restricted to their exact eligible phrase.
+- The exact reference vocal can be heard at phrase, surrounding-range and
+  session-song scope.
+- **Next phrase needing me** and open/all/decided filters avoid rescanning the
+  phrase list from the beginning.
+- Playback, drafts, discarded recordings and microphone setup remain
+  zero-authority.
+
+### What still prevents whole-song use
+
+1. **A saved capture immediately grows a new Musical State.** This is correct
+   for admitting a source that may enter a comp, but too expensive for every
+   rejected or provisional recording.
+2. **A phrase source choice is immediately authoritative.** A singer needs a
+   reversible working comp first, followed by one clear section checkpoint.
+3. **Wider playback is not yet a comp.** A short phrase capture can only play
+   its own local window. Phrase, section and song modes must place it into the
+   backing and the carried-forward vocal around it.
+4. **The usable base is external evidence rather than a first-class playback
+   layer.** The singer should be able to keep most of the base and replace one
+   phrase without rebuilding or silently migrating its prior decisions.
+5. **The map does not yet group real song sections or expose a fast recording
+   queue.** A radius around the current phrase is not the same as Verse 1 or a
+   chorus.
+6. **There are no keyboard controls or recording auto-advance.** Mouse-only
+   repetition is unnecessarily slow over a complete song.
+7. **Draft saves can race.** Whole-song drafts need a serial, coalescing save
+   queue and explicit recovery from a revision conflict.
+8. **The UI has no true working-comp history.** The append-only authoritative
+   history exists, but the singer also needs a simple account of current draft,
+   last checkpoint and reopened phrases.
+
+These are the next product increments. They do not require pitch correction or
+a trained model.
+
+## Singer-facing whole-song workspace
+
+The default screen should use ordinary recording language and show technical
+evidence only on request.
+
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│ The Heart Sees   Verse 1   18 / 104 ready   Saved locally   History      │
+├──────────────────┬───────────────────────────────────┬───────────────────┤
+│ SONG MAP         │ CURRENT PHRASE                    │ RECORD / ATTEMPTS │
+│                  │                                   │                   │
+│ Verse 1          │ And tell myself those             │ Hear original     │
+│  ✓ comforting…   │ comforting lies                   │ ● Record           │
+│  • heart sees…   │                                   │                   │
+│  ! truth…        │ Phrase | Verse | Song             │ Attempt 4         │
+│                  │ Original | Working comp | Backing │ Play in context   │
+│ Chorus 1         │                                   │ Use in draft      │
+│  …               │ [transport / simple waveform]     │ Keep and next     │
+│                  │                                   │                   │
+│ Needs me (12)    │ Note: stronger final word         │ Earlier attempts  │
+├──────────────────┴───────────────────────────────────┴───────────────────┤
+│ Working draft saved · 7 phrases ready to checkpoint · Next phrase       │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Song map
+
+Group phrases by reviewed section labels. When section labels do not yet
+exist, show a neutral contiguous **Range** rather than inventing Verse or
+Chorus. The singer-facing states should remain small:
+
+- **Needs recording**;
+- **Has attempts**;
+- **Working choice**;
+- **Saved choice**; and
+- **Needs attention**.
+
+More exact internal states such as stale source, reopened decision, unreviewed
+join and source-integrity failure belong in a details drawer. Progress should
+show both `working choices` and `saved choices`; neither recordings nor
+playback increase progress.
+
+### Current phrase
+
+Keep the canonical lyric large. Show the previous and next phrase dimly for
+entry and breath context. The primary controls form two independent switches:
+
+| Scope | Meaning |
+| --- | --- |
+| **Phrase** | Current phrase with configurable pre/post-roll |
+| **Section** | Exact reviewed Verse/Chorus/Range containing it |
+| **Song** | Complete song clock |
+
+| Sound | Meaning |
+| --- | --- |
+| **Original** | Exact full mix or authorised reference presentation |
+| **Working comp** | Current reversible choices, with the carried base elsewhere |
+| **Current attempt** | Active candidate placed into the same context |
+| **Backing** | Instrumental only |
+| **Vocal only** | Working vocal without backing |
+
+The page must use the same selected scope when switching sounds so A/B
+comparisons do not restart at different positions. **Original / Working A-B**
+is the most important comparison. Every composite is labelled **audition only**
+until an explicit render is authorised.
+
+### Record and attempts
+
+Microphone permission is requested once per browser session. The ordinary loop
+is:
+
+1. **Hear original** or **Hear working comp**.
+2. Press **Record**; the page plays the chosen pre-roll cue.
+3. Recording stops after the reviewed phrase plus its retained handle, or the
+   singer presses **Stop**.
+4. The new attempt appears immediately with **Replay solo**, **Replay in
+   context**, **Retry**, **Keep**, **Use in draft**, and **Keep and next**.
+5. **Keep** stores an unreviewed local candidate. It does not choose it.
+6. **Use in draft** changes only the reversible working comp.
+7. **Keep and next** advances to the next phrase in the active queue.
+
+Do not make the newest take look preferred merely because it is newest. Do not
+require the singer to answer a permanent-decision confirmation after every
+recording.
+
+## Interaction and authority state model
+
+The interface needs five deliberately separate layers.
+
+| Layer | Examples | Mutable? | Musical authority |
+| --- | --- | --- | --- |
+| Browser interaction | playhead, loop, active attempt, meter | temporary | none |
+| Autosaved working draft | active phrase, queue, notes, working source per phrase | yes | none |
+| Candidate vault | kept browser WAV, receipt, phrase placement | append-only | source evidence only |
+| Section/song checkpoint | exact phrase decisions and reopen lineage | append-only | explicit source choice |
+| Render/correction/training | source map, render approval, correction map, A/B labels | separate artifacts | only its declared scope |
+
+The draft may contain an `audition_source_id` but never a field named or treated
+as a final selected source. The page should say **Working choice** until the
+singer presses **Save section choices** or **Save song choices**.
+
+### Candidate vault
+
+Kept recordings should first enter an owner-only candidate vault bound to the
+exact phrase, audio hash, capture receipt and placement. They become playable
+immediately but do not create a new Musical State. Rejected candidates remain
+available in history and can be archived from the main tray without deletion.
+
+At checkpoint time, admit only the exact sources used by the confirmed phrase
+choices. One state transition can then bind the section's selected captures and
+revalidate unchanged decisions explicitly. This prevents hundreds of
+provisional attempts from creating hundreds of state roots and avoids treating
+the current sixteen-admitted-captures-per-phrase ceiling as a recording limit.
+
+### Base-comp carry-forward
+
+A reviewed usable base is an immutable, hash-bound playback and source-map
+input. Starting a continuation creates a fresh working draft with:
+
+- the exact base audio/review/source-map hashes;
+- every covered phrase shown as **Carried from usable base**;
+- zero silently migrated phrase decisions;
+- unresolved later phrases clearly open; and
+- one action, **Keep current base**, available per covered phrase.
+
+Replacing one phrase changes the working draft only. At checkpoint, the singer
+sees a concise summary such as:
+
+> Save 7 carried base choices and 1 new recording for Verse 1; leave 2 phrases
+> open.
+
+If lyrics, phrase geometry, source identity or base hash changes, carry-forward
+fails closed and asks for review. Listening time, old defaults and matching
+filenames never revalidate a choice.
+
+### Explicit selection, reopen and history
+
+- **Use in draft** is immediate and reversible.
+- **Save section choices** is explicit and binds one exact draft revision.
+- **Reopen phrase** retains the earlier decision and shows why it was reopened.
+- **Record replacement** may reopen a saved phrase and enter the recorder in
+  one guided flow, but the new recording remains unselected.
+- **History** shows `working draft`, `last saved decision`, `reopened`, and
+  `newer attempt available` in plain language. Technical hashes stay behind
+  **Details**.
+- Reopening several phrases should be a batch action from a section summary,
+  not repeated modal dialogs.
+
+## Navigation for 100+ phrases
+
+Queues are views, not authority. Provide **Needs me**, **Needs recording**,
+**Has attempts**, **Working choices**, **Reopened**, **Saved choices**, and
+section-specific queues. Auto-advance follows the active queue and wraps only
+after telling the singer.
+
+Keyboard shortcuts supplement visible buttons; they are never required:
+
+| Key | Action |
+| --- | --- |
+| `Space` | Play/pause the current scope and sound |
+| `J` / `K` or down/up | Next/previous phrase in the active queue |
+| `Shift-J` / `Shift-K` | Next/previous section |
+| `O` | Original |
+| `W` | Working comp |
+| `B` | Backing |
+| `[` / `]` | Previous/next attempt |
+| `R` | Record the active phrase |
+| `Esc` | Stop playback or cancel the unsaved recording |
+| `S` | Keep the current recording locally; still no source choice |
+| `U` | Use the active attempt in the working draft |
+| `Cmd/Ctrl-Enter` | Open the section checkpoint summary |
+
+Shortcuts are disabled while typing, during a confirmation, or when their
+action is unsafe. No single unmodified key creates an authoritative decision,
+render, correction or training label.
+
+## Failure and recovery behaviour
+
+- **Browser closed before Keep:** explain that the unsaved take is gone; the
+  last kept candidate and draft remain.
+- **Interrupted Keep:** write capture audio and receipt atomically; show the
+  attempt only after both verify.
+- **Draft revision conflict:** serialize saves, coalesce later edits, fetch the
+  current revision and present a local/server comparison instead of discarding
+  either copy.
+- **Server stopped:** keep the page read-only, show the exact restart command
+  and do not imply that pending changes were saved.
+- **Microphone denied or disconnected:** retain the song position and offer a
+  retry without resetting attempts.
+- **Clipping, silence or early stop:** retain the take for replay when possible,
+  label the observable problem and let the singer decide whether to keep it.
+- **Browser/device latency unknown:** say placement follows the intended cue
+  clock. Store a later reviewed nudge separately; do not claim automatic timing
+  correction.
+- **Source hash changed:** disable its playback/selection, preserve the old
+  decision in history and require explicit recovery.
+- **Large candidate count:** collapse older attempts and page their metadata;
+  do not load every WAV into memory.
+- **Crash during checkpoint/render:** publish nothing until the complete
+  receipt and artifact set pass round-trip validation.
+
+## Deterministic logic, model inference and model training
+
+The first usable whole-song workflow is primarily deterministic. Model work can
+run in parallel without blocking it.
+
+| Capability | Nature | Product authority |
+| --- | --- | --- |
+| Phrase/section navigation, queues, shortcuts | Deterministic UI | none |
+| Hash checks, capture geometry, level/clipping checks | Deterministic analysis | evidence only |
+| Candidate vault, draft, checkpoints, reopen history | Deterministic state logic plus explicit human action | scoped human authority |
+| Original/backing/working-comp audition plan | Deterministic audio placement/mix | audition only |
+| Source map, join challengers and dry render | Deterministic rendering after explicit approval | render only |
+| STT/phonetic matching | Frozen model inference | uncertain alignment evidence only |
+| Continuous F0, voicing and target-relative evidence | Frozen model inference plus deterministic comparison | evidence only |
+| Candidate ranker or global comp proposal | Trained/frozen model inference | proposal only; never selection |
+| Singer-specific pairwise ranker updates | Model training on explicit A/B labels | checkpoint candidate only |
+| Gentle pitch correction | Later bounded signal/model operation | separate correction approval |
+
+Ordinary take choices are not pairwise training labels. Playback, dwell,
+retries, newest-take position and working-draft choices must never be inferred
+as training preference. Training can start in parallel on explicit A/B labels,
+with song-disjoint evaluation and shuffled-label controls, while the UI ships
+deterministic recording and comp audition increments.
+
+## Interface precedents
+
+The proposed workspace follows established comping interactions without
+copying a complete DAW. These sources are product documentation rather than
+claims about Sunofriend's current implementation.
+
+| Product precedent | Pattern retained for Sunofriend |
+| --- | --- |
+| [Logic Pro take folders and saved comps](https://support.apple.com/guide/logicpro/create-and-save-comps-lgcpb193382e/mac) and [comp-boundary editing](https://support.apple.com/guide/logicpro/edit-comps-lgcpb19217b1/10.7/mac/11.0) | Show the assembled result above immutable takes, make joins visible and keep recoverable comp revisions. |
+| [Logic Pro punch recording](https://support.apple.com/guide/logicpro/punch-in-and-out-of-audio-recordings-lgcpb19bfd0d/10.7/mac/11.0) | Predefine the musical window and play lead-in context so the singer can concentrate on performing. |
+| [Pro Tools Reference Guide](https://resources.avid.com/SupportFiles/PT/Pro_Tools_Reference_Guide_2025.12.pdf) | Keep alternate performances separate from the clearly named destination, **Current comp**. |
+| [Studio One layers](https://support.presonus.com/hc/en-us/articles/210044123-Studio-One-What-are-Layers-and-how-do-I-use-them-in-Studio-One) | Selecting or hearing a layer does not promote it; promotion is a separate action. |
+| [Ableton Live comping](https://www.ableton.com/en/manual/comping/) | Retain exact source provenance, separate audition from copy-to-main-lane, and prepare short reviewable join fades. |
+| [REAPER fixed-lane comping](https://www.reaper.fm/userguide.php) | Preserve originals, collapse inactive lanes and support alternative comp versions. |
+| [BandLab composite recording](https://help.bandlab.com/hc/en-us/articles/48566287349017-Understanding-Composite-Recording) | Use a phrase as the parent of several mobile-friendly takes, while deliberately rejecting automatic latest-take selection and browser-only persistence. |
+
+The consistent lesson is that professional speed comes from a stable target
+comp, rapid take navigation and reversible promotion—not from silently making
+the latest recording authoritative. Sunofriend adds stronger provenance and
+explicit-review boundaries underneath that familiar interaction.
+
+## Revised staged implementation
+
+### Stage A — reliable fast recording queue
+
+- Retain the repaired Play/Use/Record/Reopen controls.
+- Add keyboard navigation, auto-advance and a serialized draft-save queue.
+- Make reviewed section labels or neutral ranges first-class.
+- Keep the reference/original and microphone available without repeated setup.
+
+Deliverable: record and keep ten consecutive phrase attempts without leaving
+the page or creating any source decision.
+
+### Stage B — candidate vault and working choices
+
+- Store kept attempts outside the canonical Musical State until checkpoint.
+- Add reversible **Use in draft**, archive and attempt paging.
+- Add exact usable-base binding and **Carried from usable base** states.
+- Preserve zero-authority drafts and immutable capture receipts.
+
+Deliverable: replace one phrase in an existing two-phrase usable base, reload
+the page and recover the same working audition without migrated decisions.
+
+### Stage C — real context playback
+
+- Bind exact full mix/backing assets as non-selectable audition sources.
+- Build one path-free audition plan for the scope/sound matrix.
+- Place phrase captures at exact song destinations while retaining base or AI
+  context outside them.
+- Add Original/Working A-B and vocal-only/backing modes.
+
+Deliverable: hear a new pickup inside the phrase, section and song without
+creating a rendered artifact or source decision.
+
+### Stage D — section checkpoints and scalable history
+
+- Confirm several working choices in one section summary.
+- Admit only used vault sources and record exact decision lineage.
+- Add batch reopen and concise current/previous history.
+- Load long phrase/candidate lists incrementally.
+
+Deliverable: checkpoint one verse with a mixture of carried base, new human
+recordings and deliberately open phrases.
+
+### Stage E — joins and dry comp
+
+- Propose deterministic safe-boundary challengers from retained handles.
+- Review each source switch in local context.
+- Render section previews and then the complete dry vocal from exact reviewed
+  decisions and separate render approval.
+
+Deliverable: reproducible dry vocal and edit map suitable for GarageBand,
+without pitch correction.
+
+### Parallel model lane
+
+- Continue frozen STT/F0 evidence and explicit A/B label collection.
+- Train and evaluate the small pairwise ranker independently of UI delivery.
+- Introduce ranker/global-proposal inference only after it beats deterministic
+  and frozen baselines on composition-disjoint material.
+- Keep scores hidden by default and require human acceptance of every proposal.
+
+The UI stages must continue to produce usable song iterations even if the
+trained model never clears its evaluation gate.
+
 ## Product decision
 
 The recommended whole-song workflow is **a broad human base performance plus

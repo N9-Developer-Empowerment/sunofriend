@@ -30,8 +30,14 @@ from sunofriend.vocal_pairwise_label import (
     validate_vocal_pairwise_label,
 )
 from sunofriend.vocal_pairwise_gpu_canary import (
+    GPU_EXECUTION_ATTEMPT_SCHEMA,
     GPU_EXPERIMENT_ID,
+    GPU_PRETRAINING_FAILURE_SCHEMA,
+    GPU_RESULT_EXECUTION_ATTEMPT_SCHEMA,
     build_pairwise_gpu_canary_request,
+    build_pairwise_gpu_pretraining_failure,
+    validate_pairwise_gpu_canary_request,
+    validate_pairwise_gpu_pretraining_failure,
     validate_pairwise_gpu_result,
 )
 from sunofriend.vocal_training_snapshot import (
@@ -364,6 +370,94 @@ def test_cuda_request_is_exact_synthetic_offline_and_resource_bounded() -> None:
     assert request == build_pairwise_gpu_canary_request("a" * 40)
 
 
+def test_cuda_request_supports_one_fresh_attempt_with_zero_execution_lineage() -> None:
+    legacy = build_pairwise_gpu_canary_request("a" * 40)
+    first_attempt = build_pairwise_gpu_canary_request(
+        "a" * 40, execution_attempt_id="8" * 32
+    )
+    assert first_attempt["execution_attempt"]["prior_failure"] is None
+    assert validate_pairwise_gpu_canary_request(first_attempt) == first_attempt
+    failure = build_pairwise_gpu_pretraining_failure(
+        legacy,
+        failure_stage="cli_argument_validation",
+        failure_code="missing-out-dir",
+    )
+    request = build_pairwise_gpu_canary_request(
+        "a" * 40,
+        execution_attempt_id="1" * 32,
+        prior_failure_receipt=failure,
+    )
+
+    assert failure["schema"] == GPU_PRETRAINING_FAILURE_SCHEMA
+    assert failure["prior_request_document_sha256"] == legacy["document_sha256"]
+    assert failure["prior_execution_attempt_id"] is None
+    assert failure["evidence"] == {
+        "training_executions": 0,
+        "optimisation_steps": 0,
+        "artifacts_created": False,
+        "result_document_created": False,
+        "network_attempts": 0,
+        "downloads": 0,
+        "automatic_retries": 0,
+    }
+    assert failure["authority"]["authorizes_new_execution"] is False
+    assert request["execution_attempt"] == {
+        "schema": GPU_EXECUTION_ATTEMPT_SCHEMA,
+        "execution_attempt_id": "1" * 32,
+        "maximum_training_executions": 1,
+        "prior_failure": failure,
+    }
+    assert request["execution_policy"]["maximum_retries"] == 0
+    assert request["document_sha256"] != legacy["document_sha256"]
+    assert validate_pairwise_gpu_pretraining_failure(failure) == failure
+    assert validate_pairwise_gpu_canary_request(request) == request
+
+
+def test_cuda_execution_attempt_and_prior_failure_reject_forgery() -> None:
+    legacy = build_pairwise_gpu_canary_request("a" * 40)
+    with pytest.raises(ValueError, match="attempt ID"):
+        build_pairwise_gpu_canary_request("a" * 40, execution_attempt_id="not-a-nonce")
+    with pytest.raises(ValueError, match="requires an execution attempt"):
+        build_pairwise_gpu_canary_request(
+            "a" * 40,
+            prior_failure_receipt=build_pairwise_gpu_pretraining_failure(
+                legacy,
+                failure_stage="request_preflight",
+                failure_code="request-rejected",
+            ),
+        )
+
+    failure = build_pairwise_gpu_pretraining_failure(
+        legacy,
+        failure_stage="cli_argument_validation",
+        failure_code="missing-out-dir",
+    )
+    forged_failure = deepcopy(failure)
+    forged_failure["evidence"]["training_executions"] = 1
+    _rehash(forged_failure)
+    with pytest.raises(ValueError, match="zero training"):
+        validate_pairwise_gpu_pretraining_failure(forged_failure)
+
+    request = build_pairwise_gpu_canary_request(
+        "a" * 40,
+        execution_attempt_id="2" * 32,
+        prior_failure_receipt=failure,
+    )
+    forged_attempt = deepcopy(request)
+    forged_attempt["execution_attempt"]["maximum_training_executions"] = 2
+    _rehash(forged_attempt)
+    with pytest.raises(ValueError, match="exactly one execution"):
+        validate_pairwise_gpu_canary_request(forged_attempt)
+
+    forged_lineage = deepcopy(request)
+    forged_lineage["execution_attempt"]["prior_failure"]["failure_code"] = (
+        "different-failure"
+    )
+    _rehash(forged_lineage)
+    with pytest.raises(ValueError, match="hash does not match"):
+        validate_pairwise_gpu_canary_request(forged_lineage)
+
+
 def test_cuda_result_contract_binds_full_checkpoint_roster_and_rejects_tampering() -> (
     None
 ):
@@ -464,6 +558,87 @@ def test_cuda_result_contract_binds_full_checkpoint_roster_and_rejects_tampering
     _rehash(forged_timing)
     with pytest.raises(ValueError, match="timing|arm"):
         validate_pairwise_gpu_result(forged_timing, request=request)
+
+
+def test_cuda_result_binds_exact_execution_attempt_and_failure_lineage() -> None:
+    legacy = build_pairwise_gpu_canary_request("a" * 40)
+    failure = build_pairwise_gpu_pretraining_failure(
+        legacy,
+        failure_stage="cli_argument_validation",
+        failure_code="missing-out-dir",
+    )
+    request = build_pairwise_gpu_canary_request(
+        "a" * 40,
+        execution_attempt_id="3" * 32,
+        prior_failure_receipt=failure,
+    )
+    outputs = [
+        {
+            "output_id": row["output_id"],
+            "kind": row["kind"],
+            "media_type": row["media_type"],
+            "shape": row["shape"],
+            "sha256": f"{index + 1:x}" * 64,
+            "bytes": 128 + index,
+        }
+        for index, row in enumerate(request["expected_outputs"])
+    ]
+    acceptance = {
+        "clean_accuracy_at_least_0_85": True,
+        "clean_advantage_at_least_0_20": True,
+        "resume_equivalence_at_most_1e_7": True,
+    }
+    result = build_gpu_worker_result(
+        request=request,
+        status="complete",
+        environment={
+            "gpu": "synthetic-test-device",
+            "cuda_runtime": "test",
+            "network_used": False,
+            "network_attempts": 0,
+            "downloads_used": False,
+            "deterministic_algorithms": True,
+            "cublas_workspace_config": ":4096:8",
+        },
+        outputs=outputs,
+        timings={"wall_seconds": 1.0, "optimisation_steps": 300, "arms": 3},
+        resources={
+            "peak_gpu_bytes": 1024,
+            "peak_ram_bytes": 2048,
+            "output_bytes": sum(row["bytes"] for row in outputs),
+        },
+        training_evidence={
+            "synthetic_only": True,
+            "clean_heldout_accuracy": 0.95,
+            "shuffled_heldout_accuracy": 0.5,
+            "resume_parameter_difference": 0.0,
+            "resume_optimiser_difference": 0.0,
+            "acceptance": acceptance,
+            "network_attempts": 0,
+            "retries": 0,
+        },
+    )
+    result["execution_attempt"] = {
+        "schema": GPU_RESULT_EXECUTION_ATTEMPT_SCHEMA,
+        "execution_attempt_id": "3" * 32,
+        "training_execution_index": 1,
+        "maximum_training_executions": 1,
+        "prior_failure_document_sha256": failure["document_sha256"],
+    }
+    _rehash(result)
+    assert validate_pairwise_gpu_result(result, request=request) == result
+
+    forged = deepcopy(result)
+    forged["execution_attempt"]["execution_attempt_id"] = "4" * 32
+    _rehash(forged)
+    with pytest.raises(ValueError, match="execution attempt"):
+        validate_pairwise_gpu_result(forged, request=request)
+
+    missing = deepcopy(result)
+    missing.pop("execution_attempt")
+    _rehash(missing)
+    with pytest.raises(ValueError, match="execution attempt"):
+        validate_pairwise_gpu_result(missing, request=request)
 
 
 def _label(

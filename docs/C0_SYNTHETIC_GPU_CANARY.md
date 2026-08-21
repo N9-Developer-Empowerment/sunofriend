@@ -31,6 +31,16 @@ finite.
 - A result has technical-research-challenger authority only. It cannot select
   music, promote a checkpoint, change the product or justify paid compute.
 
+The newer vocal-pairwise canary retains compatibility with its completed
+legacy evidence but gives every new execution a one-attempt identity. A
+pretraining failure may be linked only through a hash-bound path-free receipt
+which records zero training, outputs, network, downloads and automatic
+retries. The receipt itself grants no new execution. A separately reviewed
+request embeds a fresh attempt ID and the complete prior-failure receipt while
+continuing to declare one maximum training execution and zero retries. See
+[`VOCAL_PAIRWISE_TRAINING.md`](VOCAL_PAIRWISE_TRAINING.md) for the exact
+recorder, request, runner and verifier commands.
+
 ## Exact Windows result — 20 August 2026
 
 The hardened worker at repository commit
