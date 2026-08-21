@@ -87,6 +87,14 @@ def _result(output: Path, request: dict) -> dict:
                     "to": "conformer.pos_conv_embed.conv.parametrizations.weight.original1",
                 },
             ],
+            "batch_norm_counter_migration": {
+                "keys": list(canary_module._BATCH_NORM_COUNTER_KEYS),
+                "count": 18,
+                "from_dtype": "float32",
+                "to_dtype": "int64",
+                "exact_value": 95_489,
+                "meaning": "batch_norm_bookkeeping_only_not_learned_weight",
+            },
             "local_config_only": True,
             "frozen_eval": True,
         },
@@ -277,3 +285,45 @@ def test_network_guard_denies_and_records_lookup_without_network() -> None:
             socket.getaddrinfo("example.invalid", 443)
     assert len(attempts) == 1
     assert socket.getaddrinfo is original
+
+
+def test_batch_norm_counter_migration_is_exact_and_bookkeeping_only() -> None:
+    class Tensor:
+        shape = ()
+
+        def __init__(self, dtype: str, value: float) -> None:
+            self.dtype = dtype
+            self.value = value
+
+        def item(self) -> float:
+            return self.value
+
+        def to(self, *, dtype: str) -> "Tensor":
+            return Tensor(dtype, self.value)
+
+    class Torch:
+        float32 = "float32"
+        int64 = "int64"
+
+        @staticmethod
+        def isfinite(value: Tensor) -> bool:
+            return value.value == value.value
+
+    state = {
+        key: Tensor(Torch.float32, 95_489.0)
+        for key in canary_module._BATCH_NORM_COUNTER_KEYS
+    }
+    expected = {
+        key: Tensor(Torch.int64, 0.0) for key in canary_module._BATCH_NORM_COUNTER_KEYS
+    }
+    migrated, evidence = canary_module._migrate_exact_batch_norm_counters(
+        state, expected, Torch
+    )
+    assert evidence["count"] == 18
+    assert evidence["meaning"] == "batch_norm_bookkeeping_only_not_learned_weight"
+    assert {value.dtype for value in migrated.values()} == {Torch.int64}
+
+    changed = dict(state)
+    changed[canary_module._BATCH_NORM_COUNTER_KEYS[0]] = Tensor(Torch.float32, 95_488.0)
+    with pytest.raises(ValueError, match="BatchNorm counter changed"):
+        canary_module._migrate_exact_batch_norm_counters(changed, expected, Torch)

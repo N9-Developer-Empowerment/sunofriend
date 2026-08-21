@@ -34,6 +34,17 @@ _LAYER_INDEX = 7
 _FEATURE_DIMENSION = 1_024
 _EXPECTED_FEATURE_FRAMES = 50
 _CHECKPOINT_SHA256 = "68392eee13d34c2941b3761934abb6b1e67b2e9df498695bda2ea5c1087d4b96"
+_BATCH_NORM_COUNTER_KEYS = (
+    *(
+        f"conv.conv.{layer}.bn{batch_norm}.num_batches_tracked"
+        for layer in range(2)
+        for batch_norm in range(1, 4)
+    ),
+    *(
+        f"conformer.layers.{layer}.conv_module.batch_norm.num_batches_tracked"
+        for layer in range(12)
+    ),
+)
 
 
 def create_musicfm_synthetic_canary_request(
@@ -223,6 +234,7 @@ def validate_musicfm_synthetic_canary_result(
             "state_tensor_count",
             "strict_key_shape_dtype_match",
             "state_key_migrations",
+            "batch_norm_counter_migration",
             "local_config_only",
             "frozen_eval",
         }
@@ -245,6 +257,15 @@ def validate_musicfm_synthetic_canary_result(
                 "to": "conformer.pos_conv_embed.conv.parametrizations.weight.original1",
             },
         ]
+        or loader.get("batch_norm_counter_migration")
+        != {
+            "keys": list(_BATCH_NORM_COUNTER_KEYS),
+            "count": 18,
+            "from_dtype": "float32",
+            "to_dtype": "int64",
+            "exact_value": 95_489,
+            "meaning": "batch_norm_bookkeeping_only_not_learned_weight",
+        }
         or loader.get("local_config_only") is not True
         or loader.get("frozen_eval") is not True
     ):
@@ -564,6 +585,9 @@ def _load_restricted_model(
         state[key[6:]] = tensor
     expected = model.state_dict()
     state, migrations = _migrate_legacy_weight_norm_keys(state, expected)
+    state, counter_migration = _migrate_exact_batch_norm_counters(
+        state, expected, torch
+    )
     for key, tensor in state.items():
         reference = expected[key]
         if tensor.shape != reference.shape or tensor.dtype != reference.dtype:
@@ -582,6 +606,7 @@ def _load_restricted_model(
             "state_tensor_count": len(state),
             "strict_key_shape_dtype_match": True,
             "state_key_migrations": migrations,
+            "batch_norm_counter_migration": counter_migration,
             "local_config_only": True,
             "frozen_eval": True,
         },
@@ -676,6 +701,37 @@ def _migrate_legacy_weight_norm_keys(
     if set(migrated) != set(expected):
         raise ValueError("MusicFM checkpoint key migration changed")
     return migrated, migrations
+
+
+def _migrate_exact_batch_norm_counters(
+    state: Mapping[str, Any], expected: Mapping[str, Any], torch: Any
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Cast only the exact pinned checkpoint's non-learned BN counters."""
+
+    migrated = dict(state)
+    for key in _BATCH_NORM_COUNTER_KEYS:
+        source = migrated.get(key)
+        target = expected.get(key)
+        if (
+            source is None
+            or target is None
+            or tuple(source.shape) != ()
+            or tuple(target.shape) != ()
+            or source.dtype != torch.float32
+            or target.dtype != torch.int64
+            or not bool(torch.isfinite(source))
+            or float(source.item()) != 95_489.0
+        ):
+            raise ValueError(f"MusicFM BatchNorm counter changed: {key}")
+        migrated[key] = source.to(dtype=target.dtype)
+    return migrated, {
+        "keys": list(_BATCH_NORM_COUNTER_KEYS),
+        "count": len(_BATCH_NORM_COUNTER_KEYS),
+        "from_dtype": "float32",
+        "to_dtype": "int64",
+        "exact_value": 95_489,
+        "meaning": "batch_norm_bookkeeping_only_not_learned_weight",
+    }
 
 
 def _validate_artifact_records(value: Any) -> None:
