@@ -128,6 +128,9 @@ sunofriend = [
     "vocal_session.html",
     "vocal_session.css",
     "vocal_session.js",
+    "remix_anchor_session.html",
+    "remix_anchor_session.css",
+    "remix_anchor_session.js",
 ]
 
 [tool.pytest.ini_options]
