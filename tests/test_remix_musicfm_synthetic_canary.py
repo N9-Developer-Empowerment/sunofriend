@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 from pathlib import Path
+import socket
 import subprocess
 import sys
 
@@ -76,6 +77,16 @@ def _result(output: Path, request: dict) -> dict:
             "checkpoint_sha256": "68392eee13d34c2941b3761934abb6b1e67b2e9df498695bda2ea5c1087d4b96",
             "state_tensor_count": 500,
             "strict_key_shape_dtype_match": True,
+            "state_key_migrations": [
+                {
+                    "from": "conformer.pos_conv_embed.conv.weight_g",
+                    "to": "conformer.pos_conv_embed.conv.parametrizations.weight.original0",
+                },
+                {
+                    "from": "conformer.pos_conv_embed.conv.weight_v",
+                    "to": "conformer.pos_conv_embed.conv.parametrizations.weight.original1",
+                },
+            ],
             "local_config_only": True,
             "frozen_eval": True,
         },
@@ -228,3 +239,41 @@ def test_loader_source_uses_local_config_and_restricted_checkpoint_only() -> Non
     assert "model.requires_grad_(False)" in source
     assert '"HF_HUB_OFFLINE": "1"' in source
     assert '"TRANSFORMERS_OFFLINE": "1"' in source
+
+
+def test_checkpoint_key_migration_is_exactly_legacy_weight_norm_only() -> None:
+    current = {
+        "unchanged": object(),
+        "conformer.pos_conv_embed.conv.parametrizations.weight.original0": object(),
+        "conformer.pos_conv_embed.conv.parametrizations.weight.original1": object(),
+    }
+    legacy = {
+        "unchanged": current["unchanged"],
+        "conformer.pos_conv_embed.conv.weight_g": object(),
+        "conformer.pos_conv_embed.conv.weight_v": object(),
+    }
+    migrated, evidence = canary_module._migrate_legacy_weight_norm_keys(legacy, current)
+    assert set(migrated) == set(current)
+    assert evidence == [
+        {
+            "from": "conformer.pos_conv_embed.conv.weight_g",
+            "to": "conformer.pos_conv_embed.conv.parametrizations.weight.original0",
+        },
+        {
+            "from": "conformer.pos_conv_embed.conv.weight_v",
+            "to": "conformer.pos_conv_embed.conv.parametrizations.weight.original1",
+        },
+    ]
+    with pytest.raises(ValueError, match="key roster"):
+        canary_module._migrate_legacy_weight_norm_keys(
+            {**legacy, "extra": object()}, current
+        )
+
+
+def test_network_guard_denies_and_records_lookup_without_network() -> None:
+    original = socket.getaddrinfo
+    with canary_module._deny_network() as attempts:
+        with pytest.raises(RuntimeError, match="network access is denied"):
+            socket.getaddrinfo("example.invalid", 443)
+    assert len(attempts) == 1
+    assert socket.getaddrinfo is original

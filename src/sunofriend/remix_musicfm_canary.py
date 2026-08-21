@@ -222,6 +222,7 @@ def validate_musicfm_synthetic_canary_result(
             "checkpoint_sha256",
             "state_tensor_count",
             "strict_key_shape_dtype_match",
+            "state_key_migrations",
             "local_config_only",
             "frozen_eval",
         }
@@ -233,6 +234,17 @@ def validate_musicfm_synthetic_canary_result(
         or not isinstance(loader.get("state_tensor_count"), int)
         or loader["state_tensor_count"] <= 0
         or loader.get("strict_key_shape_dtype_match") is not True
+        or loader.get("state_key_migrations")
+        != [
+            {
+                "from": "conformer.pos_conv_embed.conv.weight_g",
+                "to": "conformer.pos_conv_embed.conv.parametrizations.weight.original0",
+            },
+            {
+                "from": "conformer.pos_conv_embed.conv.weight_v",
+                "to": "conformer.pos_conv_embed.conv.parametrizations.weight.original1",
+            },
+        ]
         or loader.get("local_config_only") is not True
         or loader.get("frozen_eval") is not True
     ):
@@ -551,8 +563,7 @@ def _load_restricted_model(
             raise ValueError("MusicFM checkpoint state changed")
         state[key[6:]] = tensor
     expected = model.state_dict()
-    if set(state) != set(expected):
-        raise ValueError("MusicFM checkpoint key roster changed")
+    state, migrations = _migrate_legacy_weight_norm_keys(state, expected)
     for key, tensor in state.items():
         reference = expected[key]
         if tensor.shape != reference.shape or tensor.dtype != reference.dtype:
@@ -570,6 +581,7 @@ def _load_restricted_model(
             "checkpoint_sha256": asset_records["assets/pretrained_fma.pt"]["sha256"],
             "state_tensor_count": len(state),
             "strict_key_shape_dtype_match": True,
+            "state_key_migrations": migrations,
             "local_config_only": True,
             "frozen_eval": True,
         },
@@ -633,6 +645,37 @@ def _deny_network() -> Iterator[list[str]]:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = value
+
+
+def _migrate_legacy_weight_norm_keys(
+    state: Mapping[str, Any], expected: Mapping[str, Any]
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    """Admit only PyTorch's exact old-to-new weight-norm key rename."""
+
+    migrated = dict(state)
+    missing = set(expected) - set(migrated)
+    unexpected = set(migrated) - set(expected)
+    legacy_to_current = {
+        "conformer.pos_conv_embed.conv.weight_g": (
+            "conformer.pos_conv_embed.conv.parametrizations.weight.original0"
+        ),
+        "conformer.pos_conv_embed.conv.weight_v": (
+            "conformer.pos_conv_embed.conv.parametrizations.weight.original1"
+        ),
+    }
+    if not missing and not unexpected:
+        return migrated, []
+    if missing != set(legacy_to_current.values()) or unexpected != set(
+        legacy_to_current
+    ):
+        raise ValueError("MusicFM checkpoint key roster changed")
+    migrations = []
+    for old, new in legacy_to_current.items():
+        migrated[new] = migrated.pop(old)
+        migrations.append({"from": old, "to": new})
+    if set(migrated) != set(expected):
+        raise ValueError("MusicFM checkpoint key migration changed")
+    return migrated, migrations
 
 
 def _validate_artifact_records(value: Any) -> None:
