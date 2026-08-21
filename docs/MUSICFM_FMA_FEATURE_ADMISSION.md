@@ -107,3 +107,6 @@ modifying or reusing the working Demucs environment.
 
 The next plan-only step is to resolve the complete transitive wheel roster,
 hashes, byte ceiling and licence metadata. It downloads and installs nothing.
+The retained runtime plan is bound to commit
+`d1f559fe417916d22a7ee0aba26676fcc9b46abb` and has document SHA-256
+`fc728a03d7525425a67f42924eadaabd17aeb1ee28b34e894250e09d6c123b83`.
