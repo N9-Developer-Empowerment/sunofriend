@@ -1,7 +1,8 @@
 # MusicFM-FMA frozen-feature admission
 
-Status: exact public metadata pinned; checkpoint access, runtime installation,
-model loading, inference and private-audio access are not authorised.
+Status: exact public metadata and static artifact evidence complete; runtime
+installation, model loading, inference and private-audio access are not
+authorised.
 
 ## Decision
 
@@ -38,8 +39,28 @@ Wav2Vec2-Conformer configuration. That must be replaced by an exact local,
 hash-pinned configuration so an offline run cannot fetch implicitly. The
 checkpoint is a PyTorch pickle wrapper; it must be statically inspected and
 loaded only with `weights_only=True`, exact key/shape/dtype validation and
-network denial. The statistics file still needs its actual local SHA-256, and
-the complete runtime needs a dependency lock.
+network denial. Static artifact inspection is now complete, but the complete
+runtime still needs a source manifest and dependency lock before any import or
+load may occur.
+
+The approved evidence-only gate subsequently established:
+
+- statistics SHA-256
+  `5416e468018bae68c6231d4cbb2b11f0d11c04e6437881505ae427a3f8344904`;
+- Conformer configuration SHA-256
+  `7a63cb5706c9a37483f1973a3c226d54eb504ce15cf62cb52637019540c8a75d`;
+- static-evidence document SHA-256
+  `99f1c24d44a3f08d68d614e4878c1cc0c05f1e941e071cbb9a3f5e9c7aeaf846`;
+- runtime-blocked readiness document SHA-256
+  `699515e32ce70fc20e5f1f528f988ad6746e01d89580b436e644ec0f8ffbc2a9`;
+- 66 ZIP members and one 108,293-byte protocol-2 pickle metadata stream; and
+- exactly five declared pickle globals, with no unresolved stack globals or
+  trailing bytes.
+
+The inspection ran under OS network denial. It parsed archive metadata and
+pickle opcodes only; it did not read tensor-storage payloads, deserialize the
+checkpoint, import MusicFM, call `torch.load`, open audio or run inference.
+The exact three-file round trip passed.
 
 The published MIT metadata and Creative-Commons corpus description are useful
 evidence, not a guarantee that every training-data or downstream-use question
@@ -48,12 +69,12 @@ feature manifest.
 
 ## Separate gates
 
-1. Explicitly approve a capped evidence-only download of the exact checkpoint,
-   statistics and required configuration. This grants no installation, load,
-   inference or audio access.
-2. Inspect all artifacts without unrestricted deserialisation and create the
-   hash-locked runtime plan.
-3. Separately approve installation into a new isolated runtime and import-only
+1. The capped evidence-only download and static inspection are complete.
+2. Create the hash-locked runtime source and dependency plan. Upstream publishes
+   no requirements lock; static imports identify `torch`, `torchaudio`,
+   `transformers` and `einops` as the direct runtime packages.
+3. Separately approve dependency download and installation into a new isolated
+   runtime, followed by import-only
    inspection under network denial.
 4. Separately approve one deterministic synthetic feature extraction. Require
    exact repeat features, finite float32 output, fixed shape/clock and a 12 GB

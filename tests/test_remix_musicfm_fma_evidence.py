@@ -12,8 +12,10 @@ import pytest
 import sunofriend.remix_musicfm_fma_evidence as evidence_module
 from sunofriend.remix_musicfm_fma import create_musicfm_fma_admission_plan
 from sunofriend.remix_musicfm_fma_evidence import (
+    assess_musicfm_fma_readiness,
     inspect_musicfm_fma_static_evidence,
     validate_musicfm_fma_static_evidence,
+    validate_musicfm_fma_readiness,
     verify_musicfm_fma_static_evidence_round_trip,
 )
 from sunofriend.source_receipt import document_sha256
@@ -133,3 +135,40 @@ def test_round_trip_rejects_extra_file_and_symlink(
     statistics.symlink_to(config)
     with pytest.raises(ValueError):
         verify_musicfm_fma_static_evidence_round_trip(tmp_path, _plan(), evidence)
+
+
+def test_readiness_advances_only_to_runtime_evidence_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkpoint, statistics, config = _fixture(tmp_path, monkeypatch)
+    evidence = inspect_musicfm_fma_static_evidence(
+        _plan(),
+        checkpoint_path=checkpoint,
+        statistics_path=statistics,
+        conformer_config_path=config,
+    )
+    readiness = assess_musicfm_fma_readiness(_plan(), evidence)
+
+    assert readiness["status"] == "static_evidence_complete_runtime_blocked"
+    assert readiness["gates"]["checkpoint_static_inspection_complete"] is True
+    assert readiness["gates"]["checkpoint_deserialized"] is False
+    assert readiness["ready_for_model_load"] is False
+    assert readiness["ready_for_feature_extraction"] is False
+    assert readiness["ready_for_training"] is False
+    assert readiness["next_gate"]["upstream_requirements_lock_published"] is False
+    assert readiness["next_gate"]["expected_direct_runtime_packages"] == [
+        "torch",
+        "torchaudio",
+        "transformers",
+        "einops",
+    ]
+    assert all(value is False for value in readiness["authority"].values())
+    assert all(value is False for value in readiness["effects"].values())
+    assert validate_musicfm_fma_readiness(readiness, _plan(), evidence) == readiness
+
+    changed = deepcopy(readiness)
+    changed["authority"]["model_load_authorized"] = True
+    changed.pop("document_sha256")
+    changed["document_sha256"] = document_sha256(changed)
+    with pytest.raises(ValueError, match="evidence or authority"):
+        validate_musicfm_fma_readiness(changed, _plan(), evidence)
