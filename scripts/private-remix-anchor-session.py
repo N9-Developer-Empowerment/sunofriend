@@ -28,7 +28,7 @@ def main() -> int:
             "relationship a controlled remix must preserve."
         )
     )
-    parser.add_argument("--musical-state", required=True)
+    parser.add_argument("--project-state", required=True)
     parser.add_argument("--source-control", required=True)
     parser.add_argument("--separation-estimate", required=True)
     parser.add_argument("--source-estimate-id", required=True)
@@ -36,14 +36,20 @@ def main() -> int:
     parser.add_argument("--state-dir", required=True)
     parser.add_argument("--identity-state-id", required=True)
     parser.add_argument("--registry-id", required=True)
-    parser.add_argument("--composition-id", required=True)
-    parser.add_argument("--group-id", required=True)
+    parser.add_argument(
+        "--composition-id",
+        help="Legacy vocal-state compatibility only; source states already bind this ID",
+    )
+    parser.add_argument(
+        "--group-id",
+        help="Legacy vocal-state compatibility only; source states already bind this ID",
+    )
     parser.add_argument("--title", default="Define what must stay recognisable")
     parser.add_argument("--port", type=int, default=8767)
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
     server = create_remix_anchor_server(
-        _document(args.musical_state),
+        _document(args.project_state),
         source_control=args.source_control,
         separation_estimate=args.separation_estimate,
         source_estimate_id=args.source_estimate_id,

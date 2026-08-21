@@ -20,6 +20,14 @@ from sunofriend.remix_anchor_preflight import (
     validate_remix_anchor_confirmation,
     validate_remix_anchor_preflight_state,
 )
+from sunofriend.remix_source_anchor import (
+    REMIX_SOURCE_ANCHOR_CONFIRMATION_SCHEMA,
+    validate_remix_source_anchor_confirmation,
+    validate_remix_source_anchor_preflight,
+    validate_remix_source_identity_state,
+    validate_remix_source_owner_registry,
+)
+from sunofriend.remix_source_state import create_remix_source_state
 from sunofriend.remix_anchor_session import (
     REMIX_ANCHOR_SESSION_SCHEMA,
     create_remix_anchor_server,
@@ -27,6 +35,7 @@ from sunofriend.remix_anchor_session import (
 from sunofriend.remix_identity import (
     validate_remix_identity_state,
 )
+from sunofriend.remix_delta import inspect_remix_audio
 from sunofriend.remix_learning_contract import validate_remix_owner_registry
 
 
@@ -174,6 +183,65 @@ def test_anchor_session_refuses_unsynchronised_audio(tmp_path: Path) -> None:
         _server(fixture, tmp_path / "state")
 
 
+def test_source_state_session_creates_v1_anchor_without_vocal_evidence(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    source = fixture["source_path"]
+    source_state = create_remix_source_state(
+        state_id="owner-source-001",
+        composition_id="composition-source-001",
+        group_id="recording-source-001",
+        source_control=inspect_remix_audio(source),
+        rights_category="owned",
+        source_start_seconds=191.0,
+        source_end_seconds=195.0,
+        owner_local_training_approved=True,
+    )
+    fixture["state"] = source_state
+    server = create_remix_anchor_server(
+        source_state,
+        source_control=source,
+        separation_estimate=fixture["estimate_path"],
+        source_estimate_id="grouped-other-estimate-001",
+        estimated_role="grouped other estimate",
+        state_dir=tmp_path / "source-state-session",
+        identity_state_id="identity-source-001",
+        registry_id="registry-source-001",
+        token="s" * 40,
+    )
+    with _running(server):
+        state = _get_json(server, "/api/session")
+        assert state["project_state"] == {
+            "schema": "sunofriend.remix-source-state.v0",
+            "document_sha256": source_state["document_sha256"],
+        }
+        with _post(server, _payload(source_state)) as response:
+            saved = json.loads(response.read())
+        assert (
+            saved["confirmation"]["schema"] == REMIX_SOURCE_ANCHOR_CONFIRMATION_SCHEMA
+        )
+
+    confirmed = tmp_path / "source-state-session" / "CONFIRMED"
+    pending = _read(confirmed / "anchor-preflight.json")
+    identity = _read(confirmed / "remix-identity-state.json")
+    registry = _read(confirmed / "owner-registry.json")
+    receipt = _read(confirmed / "anchor-confirmation.json")
+    assert validate_remix_source_anchor_preflight(pending, source_state) == pending
+    assert validate_remix_source_identity_state(identity, source_state) == identity
+    assert (
+        validate_remix_source_owner_registry(registry, source_state, identity)
+        == registry
+    )
+    assert (
+        validate_remix_source_anchor_confirmation(
+            receipt, pending, source_state, identity, registry
+        )
+        == receipt
+    )
+    assert "lyrics" not in json.dumps(source_state)
+
+
 def _fixture(root: Path) -> dict:
     root.chmod(0o700)
     rate = 8_000
@@ -210,7 +278,7 @@ def _server(fixture: dict, state_dir: Path):
 
 def _payload(state: dict) -> dict:
     return {
-        "expected_musical_state_sha256": state["document_sha256"],
+        "expected_project_state_sha256": state["document_sha256"],
         "explicitly_heard": {
             "source_control": True,
             "separation_estimate": True,

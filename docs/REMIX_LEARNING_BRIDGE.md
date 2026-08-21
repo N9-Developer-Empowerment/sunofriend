@@ -142,7 +142,14 @@ the canary. Real audio remains a future explicit operation.
 
 ### Private anchor confirmation
 
-`sunofriend.remix_anchor_preflight`, `sunofriend.remix_anchor_session` and
+The vocal Musical State contract must not be padded with invented lyrics or
+takes for remix work. `sunofriend.remix_source_state` therefore binds an owned,
+bounded source excerpt, exact audio clock and owner-local training permission
+without any vocal fields. `sunofriend.remix_source_anchor` adds versioned v1
+identity and registry documents while leaving every legacy v0 document
+byte-for-byte unchanged.
+
+`sunofriend.remix_anchor_session` and
 `scripts/private-remix-anchor-session.py` implement the missing first owner
 action before variants are made. The calm loopback page presents one exact
 source control and one synchronized separation estimate. The owner hears both,
@@ -157,17 +164,26 @@ checkpoint or select audio for the product. The next deterministic variant
 preparation and A/B review therefore remain distinct, reviewable steps.
 
 ```text
+python scripts/create-remix-source-state.py \
+  --source-control SOURCE_CONTROL.wav \
+  --state-id SOURCE_STATE_ID \
+  --composition-id COMPOSITION_ID \
+  --group-id RECORDING_GROUP_ID \
+  --source-start-seconds SOURCE_START \
+  --source-end-seconds SOURCE_END \
+  --rights-category owned \
+  --confirm-owner-local-training \
+  --out REMIX_SOURCE_STATE.json
+
 python scripts/private-remix-anchor-session.py \
-  --musical-state MUSICAL_STATE.json \
+  --project-state REMIX_SOURCE_STATE.json \
   --source-control SOURCE_CONTROL.wav \
   --separation-estimate TARGET_ESTIMATE.wav \
   --source-estimate-id TARGET_ESTIMATE_ID \
   --estimated-role "grouped other estimate" \
   --state-dir PRIVATE_ANCHOR_STATE \
   --identity-state-id IDENTITY_STATE_ID \
-  --registry-id OWNER_REGISTRY_ID \
-  --composition-id COMPOSITION_ID \
-  --group-id RECORDING_GROUP_ID
+  --registry-id OWNER_REGISTRY_ID
 ```
 
 The server rechecks exact bytes before every playback, requires a same-origin
@@ -242,7 +258,8 @@ The smallest honest training run is blocked by evidence, not GPU capacity.
 Sunofriend still does not yet have:
 
 1. a real owner-reviewed controlled variant set—the implemented contracts have
-   only synthetic test fixtures so far;
+   only synthetic test fixtures so far; the new source-state/anchor v1 bridge
+   deliberately stops before a v1 request or render;
 2. controlled challenger sets for multiple owner-authorised compositions;
 3. owner-confirmed registry entries and explicit pairwise labels across those
    compositions;
