@@ -23,16 +23,19 @@ from sunofriend.source_receipt import canonical_json_bytes  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("setup_receipt", type=Path)
+    parser.add_argument("--repository-commit")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     raw = args.setup_receipt.read_bytes()
-    commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+    commit = args.repository_commit
+    if commit is None:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
     request = create_musicfm_synthetic_canary_request(
         repository_commit=commit,
         setup_receipt_sha256=hashlib.sha256(raw).hexdigest(),
