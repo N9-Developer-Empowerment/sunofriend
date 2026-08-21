@@ -9,6 +9,7 @@ import json
 import math
 import os
 from pathlib import Path
+import random
 import re
 import socket
 import sys
@@ -106,6 +107,9 @@ def run_musicfm_synthetic_canary(
         device = torch.device("cuda")
         if not torch.cuda.is_available():
             raise RuntimeError("CUDA is required for the Windows MusicFM canary")
+        torch.use_deterministic_algorithms(True)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
         model = model.to(device)
         waveform = _synthetic_waveform(torch).to(device)
         with torch.inference_mode():
@@ -237,6 +241,9 @@ def validate_musicfm_synthetic_canary_result(
     if (
         not isinstance(environment, Mapping)
         or set(environment) != {"torch_version", "cuda_version", "device_name"}
+        or environment.get("torch_version") != "2.7.1+cu128"
+        or environment.get("cuda_version") != "12.8"
+        or environment.get("device_name") != "NVIDIA GeForce RTX 4080 Laptop GPU"
         or any(
             not isinstance(environment.get(key), str)
             or not environment[key]
@@ -517,7 +524,7 @@ def _load_restricted_model(
             self.conformer = conformer.Wav2Vec2ConformerEncoder(config)
             self.linear = nn.Linear(1_024, 4096)
             self.loss = nn.CrossEntropyLoss()
-            torch.manual_seed(142)
+            random.seed(142)
             self.cls_token = nn.Parameter(torch.randn(1_024))
 
         def get_latent(self, waveform: Any, layer_ix: int = 12) -> Any:
