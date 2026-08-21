@@ -67,6 +67,14 @@ split-disjoint; reversed copies of the same unordered pair are rejected. Its
 status remains `training_ineligible` and it grants no execution or checkpoint
 promotion authority even if provisional count thresholds are reached.
 
+`sunofriend.remix_feature_contract` also creates a reproducible transparent
+metadata baseline directly from the exact gain-envelope recipes. It binds six
+finite operation features per variant—duration, point count, minimum and mean
+gain delta, absolute delta area and maximum slope—to the snapshot, request,
+result and output-audio hashes. This uses no model and decodes no audio. Its
+readiness document names the remaining real-model blockers without granting
+execution authority.
+
 ## Remaining evidence and implementation
 
 The smallest honest training run is blocked by evidence, not GPU capacity.
@@ -77,7 +85,8 @@ Sunofriend still does not yet have:
 2. controlled challenger sets for multiple owner-authorised compositions;
 3. owner-confirmed registry entries and explicit pairwise labels across those
    compositions;
-4. an admitted frozen feature extractor and exact feature manifest;
+4. an admitted frozen audio feature extractor and exact feature manifest (the
+   transparent operation-feature baseline is now implemented);
 5. song- and composition-disjoint train, validation and test evidence that
    passes the provisional snapshot gate;
 6. remix-specific deterministic, metadata-only, frozen-linear and shuffled
