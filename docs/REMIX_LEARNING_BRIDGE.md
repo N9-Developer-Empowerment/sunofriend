@@ -1,8 +1,10 @@
 # Remix learning bridge
 
 Status: evidence contracts, an exact MusicFM-FMA admission plan and static
-checkpoint evidence are implemented; runtime admission and the real training
-runner remain gated. No trained remix model is admitted by this document.
+checkpoint evidence are implemented. The Windows runtime plan now pins source
+and direct wheel candidates, but the transitive dependency closure, runtime
+admission and real training runner remain gated. No trained remix model is
+admitted by this document.
 
 ## Decision
 
