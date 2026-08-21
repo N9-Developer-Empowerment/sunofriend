@@ -985,22 +985,66 @@ def _copy_manifest_artifacts(
     manifest: Mapping[str, Any], source_root: Path, destination_root: Path
 ) -> None:
     seen: set[PurePosixPath] = set()
-    for record in _file_records(manifest):
-        relative = _safe_relative_path(record.get("path"))
-        if relative in seen:
+    pending: list[Mapping[str, Any]] = [manifest]
+    visited_manifests: set[str] = set()
+    while pending:
+        current = pending.pop()
+        current_sha256 = str(current.get("document_sha256", ""))
+        if current_sha256 in visited_manifests:
             continue
-        seen.add(relative)
-        source = (source_root / Path(*relative.parts)).resolve()
+        visited_manifests.add(current_sha256)
+        if len(visited_manifests) > _MAX_PHRASE_CAPTURES + 1:
+            raise ValueError("parent musical-state lineage is too deep")
+
+        for record in _file_records(current):
+            relative = _safe_relative_path(record.get("path"))
+            if relative in seen:
+                continue
+            seen.add(relative)
+            source = (source_root / Path(*relative.parts)).resolve()
+            try:
+                source.relative_to(source_root)
+            except ValueError as exc:
+                raise ValueError(
+                    "parent musical-state artifact escapes its root"
+                ) from exc
+            if not source.is_file() or source.is_symlink():
+                raise ValueError(
+                    f"parent musical-state artifact is missing or unsafe: {relative}"
+                )
+            destination = destination_root / Path(*relative.parts)
+            _private_parent(destination, destination_root)
+            _copy_private(source, destination)
+            _verify_copy(destination, record, str(relative))
+
+        lineage = current.get("lineage")
+        if not isinstance(lineage, Mapping):
+            continue
+        parent = lineage.get("parent")
+        if not isinstance(parent, Mapping):
+            continue
+        parent_record = parent.get("manifest")
+        if not isinstance(parent_record, Mapping):
+            continue
+        parent_relative = _safe_relative_path(parent_record.get("path"))
+        parent_path = (source_root / Path(*parent_relative.parts)).resolve()
         try:
-            source.relative_to(source_root)
+            parent_path.relative_to(source_root)
         except ValueError as exc:
-            raise ValueError("parent musical-state artifact escapes its root") from exc
-        if not source.is_file() or source.is_symlink():
-            raise ValueError("parent musical-state artifact is missing or unsafe")
-        destination = destination_root / Path(*relative.parts)
-        _private_parent(destination, destination_root)
-        _copy_private(source, destination)
-        _verify_copy(destination, record, str(relative))
+            raise ValueError("parent musical-state lineage escapes its root") from exc
+        if not parent_path.is_file() or parent_path.is_symlink():
+            raise ValueError(
+                f"parent musical-state artifact is missing or unsafe: {parent_relative}"
+            )
+        if parent_path.stat().st_size != parent_record.get("bytes"):
+            raise ValueError(
+                f"parent musical-state artifact size changed: {parent_relative}"
+            )
+        if file_sha256(parent_path) != parent_record.get("sha256"):
+            raise ValueError(
+                f"parent musical-state artifact hash changed: {parent_relative}"
+            )
+        pending.append(_read_json(parent_path))
 
 
 def _private_parent(path: Path, root: Path) -> None:
