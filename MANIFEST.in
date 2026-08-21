@@ -23,3 +23,6 @@ include src/sunofriend/workbench_master_review.js
 include src/sunofriend/vocal_session.html
 include src/sunofriend/vocal_session.css
 include src/sunofriend/vocal_session.js
+include src/sunofriend/remix_anchor_session.html
+include src/sunofriend/remix_anchor_session.css
+include src/sunofriend/remix_anchor_session.js

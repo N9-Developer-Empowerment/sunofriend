@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Define a remix anchor</title>
+  <link rel="stylesheet" href="/remix_anchor_session.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">CONTROLLED REMIX · STEP 1</p>
+      <h1 id="title">Define what must stay recognisable</h1>
+      <p class="lede">Hear the original and the editable-part estimate, then describe the musical relationship Sunofriend must preserve.</p>
+    </header>
+
+    <section class="card">
+      <p class="eyebrow">LISTEN FIRST</p>
+      <h2>Compare the musical context</h2>
+      <div class="plays">
+        <button type="button" data-play="source">Hear original context</button>
+        <button type="button" data-play="estimate">Hear editable-part estimate</button>
+        <button type="button" id="stop">Stop</button>
+      </div>
+      <audio id="player" controls preload="metadata"></audio>
+      <div class="heard">
+        <label><input id="heard-source" type="checkbox"> I heard the original context</label>
+        <label><input id="heard-estimate" type="checkbox"> I heard the editable-part estimate</label>
+      </div>
+      <p class="quiet">Listening alone saves nothing and chooses nothing.</p>
+    </section>
+
+    <section class="card" id="anchor-card">
+      <p class="eyebrow">YOUR MUSICAL ANCHOR</p>
+      <h2>What must remain recognisable?</h2>
+      <label class="field">Musical relationship
+        <select id="anchor-kind"></select>
+      </label>
+      <label class="field">Describe it in your own words
+        <input id="owner-label" maxlength="240" placeholder="For example: keep the repeating accompaniment hook recognisable">
+      </label>
+      <div class="window">
+        <label class="field">Starts at (seconds)
+          <input id="start-seconds" type="number" min="0" step="0.001" placeholder="0.000">
+        </label>
+        <label class="field">Ends at (seconds)
+          <input id="end-seconds" type="number" min="0" step="0.001" placeholder="8.000">
+        </label>
+      </div>
+      <p id="duration" class="quiet"></p>
+      <div class="promise">Sunofriend will treat this relationship as something the remix must keep recognisable. This does not render, choose or train anything.</div>
+      <button type="button" id="confirm" class="primary">Confirm this musical anchor</button>
+      <p id="status" role="status"></p>
+    </section>
+
+    <section class="card boundary">
+      <p class="eyebrow">NOT HAPPENING YET</p>
+      <p>No remix render, A/B preference, model training, checkpoint promotion or product selection.</p>
+    </section>
+  </main>
+  <script src="/remix_anchor_session.js"></script>
+</body>
+</html>

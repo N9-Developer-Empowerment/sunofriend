@@ -1,10 +1,12 @@
 # Remix learning bridge
 
-Status: evidence contracts, an exact MusicFM-FMA admission plan and static
-checkpoint evidence are implemented. The Windows runtime plan now pins source
-and direct wheel candidates, but the transitive dependency closure, runtime
-admission and real training runner remain gated. No trained remix model is
-admitted by this document.
+Status: the evidence contracts, isolated MusicFM-FMA Windows runtime and
+synthetic frozen-feature canary are implemented and independently verified.
+The pinned model produced two byte-identical `[1, 50, 1024]` float32 feature
+arrays at 25 Hz from generated audio on the RTX machine. This verifies the
+frozen extractor, not a remix model: private-audio extraction, real labels and
+real remix-ranker training remain gated. No trained remix model is admitted by
+this document.
 
 ## Decision
 
@@ -130,6 +132,47 @@ the two frozen-feature passes to be byte-identical.
 `scripts/verify-remix-musicfm-synthetic-canary.py` verifies the path-free result
 and retained artifact bytes without reopening the model or any audio.
 
+That separate gate has now passed on the authorised Windows RTX machine. The
+isolated runtime contains the exact 26-package closure and pinned MusicFM-FMA
+checkpoint; the restricted weights-only loader admitted the exact checkpoint
+compatibility boundary, and the independent verifier confirmed deterministic,
+finite, byte-identical synthetic features. No private audio, network access,
+downloads, optimisation, model-weight changes or product ranking occurred in
+the canary. Real audio remains a future explicit operation.
+
+### Private anchor confirmation
+
+`sunofriend.remix_anchor_preflight`, `sunofriend.remix_anchor_session` and
+`scripts/private-remix-anchor-session.py` implement the missing first owner
+action before variants are made. The calm loopback page presents one exact
+source control and one synchronized separation estimate. The owner hears both,
+names the motif, bass movement, harmony, groove or structural relationship that
+must remain recognisable, marks its exact time window, and presses a separate
+confirmation button.
+
+Playback and dwell create no evidence. Confirmation produces an owner-only,
+hash-bound preflight document, remix identity state, owner registry and receipt.
+It does not render a remix, create an A/B label, start training, promote a
+checkpoint or select audio for the product. The next deterministic variant
+preparation and A/B review therefore remain distinct, reviewable steps.
+
+```text
+python scripts/private-remix-anchor-session.py \
+  --musical-state MUSICAL_STATE.json \
+  --source-control SOURCE_CONTROL.wav \
+  --separation-estimate TARGET_ESTIMATE.wav \
+  --source-estimate-id TARGET_ESTIMATE_ID \
+  --estimated-role "grouped other estimate" \
+  --state-dir PRIVATE_ANCHOR_STATE \
+  --identity-state-id IDENTITY_STATE_ID \
+  --registry-id OWNER_REGISTRY_ID \
+  --composition-id COMPOSITION_ID \
+  --group-id RECORDING_GROUP_ID
+```
+
+The server rechecks exact bytes before every playback, requires a same-origin
+token for confirmation and refuses a second confirmation in the same session.
+
 ### Private A/B label collection
 
 `sunofriend.remix_pairwise_session` and
@@ -203,9 +246,9 @@ Sunofriend still does not yet have:
 2. controlled challenger sets for multiple owner-authorised compositions;
 3. owner-confirmed registry entries and explicit pairwise labels across those
    compositions;
-4. an admitted frozen audio feature extractor and exact feature manifest (the
-   transparent operation-feature baseline and MusicFM-FMA no-effects admission
-   plan are now implemented; see `MUSICFM_FMA_FEATURE_ADMISSION.md`);
+4. an exact real-audio feature manifest—the frozen MusicFM-FMA extractor has
+   passed its synthetic Windows canary, but private owner audio has not yet been
+   admitted or processed;
 5. song- and composition-disjoint train, validation and test evidence that
    passes the provisional snapshot gate;
 6. remix-specific baselines over real held-out labels (the constant,
