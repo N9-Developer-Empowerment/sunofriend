@@ -87,6 +87,22 @@ a remix. Run the local reference with
 `scripts/run-remix-ranker-canary.py`. This does not remove any real-data or
 frozen-feature admission gate below.
 
+The separately authorised native-Windows setup handoff is
+`scripts/setup-remix-musicfm-fma-windows.ps1`. It requires the retained pip
+report, runtime-resolution receipt and a hash/size/URL asset manifest. It
+refuses an existing destination, verifies all 26 wheels and the pinned
+1,316,802,154-byte checkpoint, inspects wheel METADATA licence fields, creates
+a fresh Python 3.11 venv and installs only from the verified cache with
+`--no-index --no-deps`. Setup never imports MusicFM or loads the checkpoint.
+Restricted loading and the synthetic feature canary remain a separate gate.
+The repository-owned
+`scripts/build-remix-musicfm-windows-install-lock.py` generates the exact
+commit-bound install lock and asset manifest from the retained native Windows
+resolver evidence. The PowerShell handoff calls
+`scripts/validate-remix-musicfm-windows-setup-inputs.py` before creating its
+fresh destination or making a network request; callers must execute that
+handoff directly rather than reproduce its schema checks externally.
+
 ### Private A/B label collection
 
 `sunofriend.remix_pairwise_session` and
