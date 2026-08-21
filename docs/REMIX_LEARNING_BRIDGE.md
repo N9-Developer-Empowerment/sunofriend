@@ -118,6 +118,12 @@ serialization rename for the positional convolution: legacy `weight_g` and
 `weight_v` become `parametrizations.weight.original0` and `original1`. Any
 other missing or unexpected checkpoint key still stops the canary before
 feature extraction.
+The pinned checkpoint also stores its exact 18 BatchNorm
+`num_batches_tracked` counters as scalar float32 values of 95,489, whereas
+current PyTorch represents those non-learned bookkeeping counters as int64.
+The loader admits only those 18 exact names, scalar shapes, dtypes and values
+and records their float32-to-int64 conversion. Learned weights and running
+statistics remain exact-dtype loads.
 `scripts/verify-remix-musicfm-synthetic-canary.py` verifies the path-free result
 and retained artifact bytes without reopening the model or any audio.
 
