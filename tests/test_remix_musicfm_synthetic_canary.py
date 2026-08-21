@@ -3,6 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 import pytest
@@ -15,6 +17,10 @@ from sunofriend.remix_musicfm_canary import (
     verify_musicfm_synthetic_canary_round_trip,
 )
 from sunofriend.source_receipt import canonical_json_bytes, document_sha256
+
+
+ROOT = Path(__file__).parents[1]
+REQUEST_BUILDER = ROOT / "scripts" / "create-remix-musicfm-synthetic-canary-request.py"
 
 
 def _request() -> dict:
@@ -120,6 +126,30 @@ def test_request_is_exact_path_free_synthetic_only_and_no_training() -> None:
     }
     assert request["authority"]["training_execution_authorized"] is False
     assert request["authority"]["product_ordering_changed"] is False
+
+
+def test_request_builder_accepts_exact_commit_without_nested_git(
+    tmp_path: Path,
+) -> None:
+    receipt = tmp_path / "setup-receipt.json"
+    output = tmp_path / "request.json"
+    receipt.write_text('{"technical":"setup"}', encoding="utf-8")
+    subprocess.run(
+        [
+            sys.executable,
+            str(REQUEST_BUILDER),
+            str(receipt),
+            "--repository-commit",
+            "8" * 40,
+            "--out",
+            str(output),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+    request = json.loads(output.read_text(encoding="utf-8"))
+    assert request["repository_commit"] == "8" * 40
+    assert validate_musicfm_synthetic_canary_request(request) == request
 
 
 @pytest.mark.parametrize(
