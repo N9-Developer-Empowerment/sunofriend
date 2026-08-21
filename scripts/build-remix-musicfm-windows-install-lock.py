@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -46,7 +47,13 @@ def main() -> int:
         path = args.out_dir / name
         with path.open("xb") as handle:
             handle.write(canonical_json_bytes(document))
-        path.chmod(0o600)
+            handle.flush()
+            os.fsync(handle.fileno())
+        # Windows uses owner ACLs rather than POSIX mode bits; applying a Unix
+        # 0600 mode to a OneDrive-backed handoff can make the next process lose
+        # access.  Keep the explicit owner-only mode on POSIX only.
+        if os.name != "nt":
+            path.chmod(0o600)
     return 0
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -40,7 +41,8 @@ def main() -> int:
     args.out.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     with args.out.open("xb") as handle:
         handle.write(canonical_json_bytes(request))
-    args.out.chmod(0o600)
+    if os.name != "nt":
+        args.out.chmod(0o600)
     return 0
 
 

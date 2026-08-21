@@ -51,7 +51,11 @@ for ($i=0; $i -lt 26; $i++) {
     if ($null -eq $entry) { throw "Wheel lacks METADATA: $name" }
     $reader = New-Object IO.StreamReader($entry.Open())
     try { $metadata = $reader.ReadToEnd() } finally { $reader.Dispose() }
-    $licences += [pscustomobject]@{ filename=$name; metadata_sha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($metadata))).ToLowerInvariant()); licence_lines=@($metadata -split "`n" | Where-Object { $_ -match '^(License|Classifier: License)' }) }
+    $metadataHasher = [Security.Cryptography.SHA256]::Create()
+    try {
+      $metadataHash = ([BitConverter]::ToString($metadataHasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($metadata)))).Replace('-', '').ToLowerInvariant()
+    } finally { $metadataHasher.Dispose() }
+    $licences += [pscustomobject]@{ filename=$name; metadata_sha256=$metadataHash; licence_lines=@($metadata -split "`n" | Where-Object { $_ -match '^(License|Classifier: License)' }) }
   } finally { $zip.Dispose() }
 }
 
