@@ -52,7 +52,10 @@ def _native_evidence() -> tuple[bytes, bytes]:
             "version": "1",
             "environment": {
                 "platform_system": "Windows",
-                "python_version": "3.11.16",
+                "platform_machine": "AMD64",
+                "python_version": "3.11",
+                "python_full_version": "3.11.16",
+                "implementation_version": "3.11.16",
             },
             "install": installs,
         },

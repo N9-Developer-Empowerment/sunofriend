@@ -103,6 +103,18 @@ resolver evidence. The PowerShell handoff calls
 fresh destination or making a network request; callers must execute that
 handoff directly rather than reproduce its schema checks externally.
 
+After setup succeeds, `scripts/create-remix-musicfm-synthetic-canary-request.py`
+binds one canary request to the exact commit and setup receipt. The request
+allows one CUDA execution with no retry, network, download, private audio or
+training. `scripts/run-remix-musicfm-synthetic-canary.py` constructs the model
+from the pinned local configuration, loads the exact checkpoint with
+`weights_only=True`, requires an exact state-key/shape/dtype match, freezes the
+model in evaluation mode and extracts layer-7 features twice from a generated
+two-second 24 kHz waveform. The expected result is exactly 50 by 1,024 finite
+float32 feature values per batch item with byte-identical repeats.
+`scripts/verify-remix-musicfm-synthetic-canary.py` verifies the path-free result
+and retained artifact bytes without reopening the model or any audio.
+
 ### Private A/B label collection
 
 `sunofriend.remix_pairwise_session` and

@@ -440,7 +440,10 @@ def _report(raw: bytes) -> Mapping[str, Any]:
         raise ValueError("unsupported native Windows pip report")
     if (
         environment.get("platform_system") != "Windows"
-        or environment.get("python_version") != "3.11.16"
+        or environment.get("platform_machine") != "AMD64"
+        or environment.get("python_version") != "3.11"
+        or environment.get("python_full_version") != "3.11.16"
+        or environment.get("implementation_version") != "3.11.16"
     ):
         raise ValueError("native Windows resolver platform changed")
     return report
