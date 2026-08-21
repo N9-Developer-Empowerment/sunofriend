@@ -124,6 +124,9 @@ current PyTorch represents those non-learned bookkeeping counters as int64.
 The loader admits only those 18 exact names, scalar shapes, dtypes and values
 and records their float32-to-int64 conversion. Learned weights and running
 statistics remain exact-dtype loads.
+The CUDA canary sets `CUBLAS_WORKSPACE_CONFIG=:4096:8` before importing PyTorch,
+then enables deterministic algorithms, disables cuDNN benchmarking and requires
+the two frozen-feature passes to be byte-identical.
 `scripts/verify-remix-musicfm-synthetic-canary.py` verifies the path-free result
 and retained artifact bytes without reopening the model or any audio.
 
