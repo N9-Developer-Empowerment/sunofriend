@@ -180,6 +180,8 @@ def test_windows_setup_validates_before_writes_and_installs_only_offline() -> No
     first_write = text.index("New-Item -ItemType Directory -Path $FreshRoot")
     assert validation < first_write
     assert "--stdout-bundle" in text
+    assert "--repository-commit $RepositoryCommit" in text
+    assert "Generated setup inputs bind a different repository commit" in text
     assert "validated-setup-input-bundle.json" in text
     assert "[string]$InstallLock" not in text
     assert "[string]$AssetManifest" not in text
@@ -249,6 +251,24 @@ def test_builder_and_validator_round_trip_exact_setup_documents(tmp_path: Path) 
     )
     bundle = json.loads(completed.stdout)
     assert bundle == {"install_lock": lock, "asset_manifest": manifest}
+
+    explicit = subprocess.run(
+        [
+            sys.executable,
+            str(BUILDER),
+            str(report_path),
+            str(receipt_path),
+            "--repository-commit",
+            "8" * 40,
+            "--stdout-bundle",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    )
+    explicit_bundle = json.loads(explicit.stdout)
+    assert explicit_bundle["install_lock"]["repository_commit"] == "8" * 40
+    assert explicit_bundle["asset_manifest"]["repository_commit"] == "8" * 40
     assert lock["repository_commit"] == manifest["repository_commit"]
     assert lock_path.stat().st_mode & 0o777 == 0o600
     assert manifest_path.stat().st_mode & 0o777 == 0o600

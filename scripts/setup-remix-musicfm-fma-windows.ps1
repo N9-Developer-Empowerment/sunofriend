@@ -1,6 +1,7 @@
 param(
   [Parameter(Mandatory=$true)][string]$ResolverReport,
   [Parameter(Mandatory=$true)][string]$NativeResolutionReceipt,
+  [Parameter(Mandatory=$true)][string]$RepositoryCommit,
   [Parameter(Mandatory=$true)][string]$Python,
   [Parameter(Mandatory=$true)][string]$FreshRoot,
   [Parameter(Mandatory=$true)][switch]$ConfirmAuthorizedSetup
@@ -10,11 +11,12 @@ Set-StrictMode -Version Latest
 
 if ($env:OS -ne 'Windows_NT') { throw 'This handoff is native-Windows only.' }
 if (-not $ConfirmAuthorizedSetup) { throw 'Explicit MusicFM setup confirmation is required.' }
+if ($RepositoryCommit -notmatch '^[0-9a-f]{40}$') { throw 'RepositoryCommit must be a full lowercase Git commit.' }
 if (Test-Path -LiteralPath $FreshRoot) { throw 'FreshRoot must not already exist.' }
 if (-not (Test-Path -LiteralPath $Python -PathType Leaf)) { throw 'Explicit CPython path is not a file.' }
 $version = (& $Python -c "import sys; print('.'.join(map(str, sys.version_info[:3])))").Trim()
 if ($LASTEXITCODE -ne 0 -or -not $version.StartsWith('3.11.')) { throw 'Explicit interpreter must be CPython 3.11.' }
-$bundleJson = ((& $Python (Join-Path $PSScriptRoot 'build-remix-musicfm-windows-install-lock.py') $ResolverReport $NativeResolutionReceipt --stdout-bundle) -join [Environment]::NewLine)
+$bundleJson = ((& $Python (Join-Path $PSScriptRoot 'build-remix-musicfm-windows-install-lock.py') $ResolverReport $NativeResolutionReceipt --repository-commit $RepositoryCommit --stdout-bundle) -join [Environment]::NewLine)
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($bundleJson)) { throw 'MusicFM setup input construction and validation failed.' }
 $bundle = $bundleJson | ConvertFrom-Json
 $lock = $bundle.install_lock
@@ -22,6 +24,7 @@ $assets = $bundle.asset_manifest
 $report = Get-Content -Raw -LiteralPath $ResolverReport | ConvertFrom-Json
 if ($report.version -ne '1') { throw 'Unsupported pip report.' }
 if ($lock.schema -ne 'sunofriend.remix-musicfm-fma-native-windows-install-lock.v0') { throw 'Wrong generated install lock.' }
+if ($lock.repository_commit -ne $RepositoryCommit -or $assets.repository_commit -ne $RepositoryCommit) { throw 'Generated setup inputs bind a different repository commit.' }
 if ($lock.items.Count -ne 26 -or $report.install.Count -ne 26) { throw 'Expected exactly 26 pinned packages.' }
 if ($assets.schema -ne 'sunofriend.remix-musicfm-fma-asset-download-manifest.v0') { throw 'Wrong asset manifest.' }
 $checkpoint = @($assets.items | Where-Object { $_.kind -eq 'checkpoint' })
