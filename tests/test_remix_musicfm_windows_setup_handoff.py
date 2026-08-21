@@ -191,7 +191,18 @@ def test_windows_setup_validates_before_writes_and_installs_only_offline() -> No
     assert "private_audio_opened=$false" in text
     assert "from_pretrained" not in text
     assert "torch.load" not in text
+    assert "ToHexString" not in text
     assert VALIDATOR.is_file()
+
+
+def test_handoff_flushes_inputs_and_bounds_transient_windows_read_lock() -> None:
+    builder = BUILDER.read_text(encoding="utf-8")
+    validator = VALIDATOR.read_text(encoding="utf-8")
+    assert "os.fsync(handle.fileno())" in builder
+    assert 'if os.name != "nt"' in builder
+    assert "for attempt in range(5):" in validator
+    assert "time.sleep(0.25)" in validator
+    assert "while True" not in validator
 
 
 def test_builder_and_validator_round_trip_exact_setup_documents(tmp_path: Path) -> None:
