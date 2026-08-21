@@ -124,10 +124,12 @@ def test_plan_records_upstream_fetch_and_pickle_risks() -> None:
     )
     assert plan["required_runtime_controls"]["torch_load_weights_only_required"]
     assert not plan["gates"]["external_conformer_config_pinned"]
+    assert plan["gates"]["external_conformer_publication_revision_pinned"]
     assert not plan["gates"]["restricted_weights_only_load_passed"]
     assert plan["next_gate"] == {
         "kind": "explicit_checkpoint_and_runtime_evidence_approval",
         "maximum_checkpoint_bytes": 1_316_802_154,
+        "maximum_total_bytes": 1_316_806_674,
         "permits_installation": False,
         "permits_model_load": False,
         "permits_inference": False,
