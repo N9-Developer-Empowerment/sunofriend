@@ -273,10 +273,17 @@ def validate_musicfm_synthetic_canary_result(
     environment = document.get("environment")
     if (
         not isinstance(environment, Mapping)
-        or set(environment) != {"torch_version", "cuda_version", "device_name"}
+        or set(environment)
+        != {
+            "torch_version",
+            "cuda_version",
+            "device_name",
+            "cublas_workspace_config",
+        }
         or environment.get("torch_version") != "2.7.1+cu128"
         or environment.get("cuda_version") != "12.8"
         or environment.get("device_name") != "NVIDIA GeForce RTX 4080 Laptop GPU"
+        or environment.get("cublas_workspace_config") != ":4096:8"
         or any(
             not isinstance(environment.get(key), str)
             or not environment[key]
@@ -443,6 +450,7 @@ def _result_values(
             "torch_version": str(torch.__version__),
             "cuda_version": str(torch.version.cuda),
             "device_name": str(torch.cuda.get_device_name(0)),
+            "cublas_workspace_config": ":4096:8",
         },
         "authority": {
             "private_audio_access_authorized": False,
@@ -644,7 +652,12 @@ def _deny_network() -> Iterator[list[str]]:
     original_lookup = socket.getaddrinfo
     original_environment = {
         key: os.environ.get(key)
-        for key in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "PIP_NO_INDEX")
+        for key in (
+            "HF_HUB_OFFLINE",
+            "TRANSFORMERS_OFFLINE",
+            "PIP_NO_INDEX",
+            "CUBLAS_WORKSPACE_CONFIG",
+        )
     }
 
     def denied(*args: Any, **kwargs: Any) -> Any:
@@ -656,7 +669,12 @@ def _deny_network() -> Iterator[list[str]]:
     socket.create_connection = denied
     socket.getaddrinfo = denied
     os.environ.update(
-        {"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "PIP_NO_INDEX": "1"}
+        {
+            "HF_HUB_OFFLINE": "1",
+            "TRANSFORMERS_OFFLINE": "1",
+            "PIP_NO_INDEX": "1",
+            "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+        }
     )
     try:
         yield attempts

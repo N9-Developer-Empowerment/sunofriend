@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
+import os
 from pathlib import Path
 import socket
 import subprocess
@@ -109,6 +110,7 @@ def _result(output: Path, request: dict) -> dict:
             "torch_version": "2.7.1+cu128",
             "cuda_version": "12.8",
             "device_name": "NVIDIA GeForce RTX 4080 Laptop GPU",
+            "cublas_workspace_config": ":4096:8",
         },
         "authority": {
             "private_audio_access_authorized": False,
@@ -280,11 +282,14 @@ def test_checkpoint_key_migration_is_exactly_legacy_weight_norm_only() -> None:
 
 def test_network_guard_denies_and_records_lookup_without_network() -> None:
     original = socket.getaddrinfo
+    original_cublas = os.environ.get("CUBLAS_WORKSPACE_CONFIG")
     with canary_module._deny_network() as attempts:
+        assert os.environ["CUBLAS_WORKSPACE_CONFIG"] == ":4096:8"
         with pytest.raises(RuntimeError, match="network access is denied"):
             socket.getaddrinfo("example.invalid", 443)
     assert len(attempts) == 1
     assert socket.getaddrinfo is original
+    assert os.environ.get("CUBLAS_WORKSPACE_CONFIG") == original_cublas
 
 
 def test_batch_norm_counter_migration_is_exact_and_bookkeeping_only() -> None:
