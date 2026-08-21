@@ -375,6 +375,53 @@ def test_explicit_save_admits_fresh_v3_and_returns_path_free_unselected_session(
     assert _tree_snapshot(fixture.capture_output_dir) == saved_tree
 
 
+def test_three_consecutive_capture_saves_preserve_complete_lineage(
+    recording_http: _RecordingHTTP,
+) -> None:
+    fixture = recording_http
+    admitted_state_hashes = []
+    expected_lineage_hashes = {fixture.musical_state["document_sha256"]}
+    parent_sha256 = fixture.musical_state["document_sha256"]
+
+    for index in range(1, 4):
+        request = fixture.capture_request()
+        request["capture_id"] = f"attempt-{index:03d}"
+
+        status, _, payload = fixture.save_capture(request)
+
+        assert status == 201, payload
+        assert payload["admission"]["parent_musical_state_sha256"] == parent_sha256
+        admitted_state_hashes.append(payload["admission"]["musical_state_sha256"])
+        assert len(payload["state"]["sources"]) == 3 + index
+        assert (
+            payload["state"]["session"]["binding"]["musical_state_sha256"]
+            == admitted_state_hashes[-1]
+        )
+        assert not any(payload["state"]["session"]["effects"].values())
+        if index < 3:
+            expected_lineage_hashes.add(admitted_state_hashes[-1])
+        parent_sha256 = admitted_state_hashes[-1]
+
+    assert len(set(admitted_state_hashes)) == 3
+    assert (
+        len(fixture.server.musical_state["vocal_performance_state"]["phrase_captures"])
+        == 3
+    )
+    assert (
+        validate_musical_state(
+            fixture.server.musical_state_path,
+            root=fixture.server.musical_state_root,
+        )
+        == fixture.server.musical_state
+    )
+    lineage_files = {
+        path.name for path in (fixture.server.musical_state_root / "LINEAGE").iterdir()
+    }
+    assert lineage_files == {
+        f"musical-state-{sha256}.json" for sha256 in expected_lineage_hashes
+    }
+
+
 def test_capture_save_fails_closed_when_explicit_decision_already_exists(
     recording_http: _RecordingHTTP,
 ) -> None:
