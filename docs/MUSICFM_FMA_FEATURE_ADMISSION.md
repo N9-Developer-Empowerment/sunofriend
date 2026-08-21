@@ -105,8 +105,18 @@ dependency closure and are not an installable lock. The plan requires a fresh
 `musicfm-fma-windows-py311-cu128-v1` environment and explicitly forbids
 modifying or reusing the working Demucs environment.
 
-The next plan-only step is to resolve the complete transitive wheel roster,
-hashes, byte ceiling and licence metadata. It downloads and installs nothing.
+The first plan-only resolver pass selected 26 Windows wheel candidates totalling
+3,319,356,874 bytes and retained their public hashes without downloading the
+wheels. It also exposed an important cross-platform limitation: while pip chose
+Windows artifacts, it evaluated dependency environment markers against the Mac
+host. As a result, Windows-only `colorama` was omitted and host-selected
+`hf-xet` still requires a native Windows recheck. Sunofriend therefore records
+this pass only as partial evidence, never as a complete closure or install lock.
+
+The next plan-only step is a native Windows metadata-only resolution. It may
+retain the resolver report but downloads and installs no wheels. Only that
+native roster can set the final byte ceiling for a separately approved
+evidence-only wheel and licence inspection.
 The retained runtime plan is bound to commit
 `d1f559fe417916d22a7ee0aba26676fcc9b46abb` and has document SHA-256
 `fc728a03d7525425a67f42924eadaabd17aeb1ee28b34e894250e09d6c123b83`.
