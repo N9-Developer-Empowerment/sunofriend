@@ -152,10 +152,16 @@ byte-for-byte unchanged.
 `sunofriend.remix_anchor_session` and
 `scripts/private-remix-anchor-session.py` implement the missing first owner
 action before variants are made. The calm loopback page presents one exact
-source control and one synchronized separation estimate. The owner hears both,
-names the motif, bass movement, harmony, groove or structural relationship that
+source control as the primary musical truth. Synchronized vocal, drum, bass and
+grouped-accompaniment estimates are optional diagnostic views: they help locate
+melody, rhythm, harmony and structure but are never treated as original studio
+tracks or as definitions of those musical functions. The owner hears the full
+mix, chooses the diagnostic view where one primary anchor is clearest, names the
+melody or motif, bass movement, harmony, groove or structural relationship that
 must remain recognisable, marks its exact time window, and presses a separate
-confirmation button.
+confirmation button. The page explicitly presents melody-first, then rhythm,
+then compatible harmony as a useful pop starting point rather than an automatic
+rule.
 
 Playback and dwell create no evidence. Confirmation produces an owner-only,
 hash-bound preflight document, remix identity state, owner registry and receipt.
@@ -181,6 +187,9 @@ python scripts/private-remix-anchor-session.py \
   --separation-estimate TARGET_ESTIMATE.wav \
   --source-estimate-id TARGET_ESTIMATE_ID \
   --estimated-role "grouped other estimate" \
+  --diagnostic-vocals VOCALS_ESTIMATE.wav \
+  --diagnostic-drums DRUMS_ESTIMATE.wav \
+  --diagnostic-bass BASS_ESTIMATE.wav \
   --state-dir PRIVATE_ANCHOR_STATE \
   --identity-state-id IDENTITY_STATE_ID \
   --registry-id OWNER_REGISTRY_ID
