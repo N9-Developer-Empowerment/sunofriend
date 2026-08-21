@@ -70,6 +70,23 @@ split-disjoint; reversed copies of the same unordered pair are rejected. Its
 status remains `training_ineligible` and it grants no execution or checkpoint
 promotion authority even if provisional count thresholds are reached.
 
+### Synthetic remix-ranker canary
+
+`sunofriend.remix_ranker_canary` now implements the first remix-specific
+training request, checkpoint and result contracts over 192 deterministic
+synthetic pairs. It compares an untrained constant baseline, a transparent
+six-feature linear ranker, a fixed-hidden-feature MLP, the same MLP resumed
+from a canonical JSON checkpoint and a shuffled-label control. The independent
+`sunofriend.remix_ranker_verifier` recomputes the complete result rather than
+trusting reported metrics.
+
+This is technical pipeline evidence only. The fixed request refuses real
+snapshots, audio, MusicFM, network access and downloads; the result and
+verification cannot promote a checkpoint, rank a product candidate or render
+a remix. Run the local reference with
+`scripts/run-remix-ranker-canary.py`. This does not remove any real-data or
+frozen-feature admission gate below.
+
 ### Private A/B label collection
 
 `sunofriend.remix_pairwise_session` and
@@ -148,11 +165,15 @@ Sunofriend still does not yet have:
    plan are now implemented; see `MUSICFM_FMA_FEATURE_ADMISSION.md`);
 5. song- and composition-disjoint train, validation and test evidence that
    passes the provisional snapshot gate;
-6. remix-specific deterministic, metadata-only, frozen-linear and shuffled
-   baselines;
-7. a bounded training request/result/checkpoint contract; or
-8. an independent verifier that can reproduce split and metric claims without
-   granting product authority.
+6. remix-specific baselines over real held-out labels (the constant,
+   transparent-linear/MLP, shuffled and resume controls now run only on the
+   fixed synthetic canary);
+7. a separately reviewed real-data request that binds an eligible snapshot and
+   admitted feature manifest—the implemented request/result/checkpoint
+   contracts deliberately refuse those inputs; or
+8. a real-data verifier that rebuilds registry splits, loads an allowlisted
+   weights-only checkpoint and recomputes predictions. The implemented
+   verifier proves only the exact synthetic reference run.
 
 The present `identity_relationship` and `musical_usefulness` fields are valuable
 benchmark evidence, but they do not say that challenger A is preferred to
