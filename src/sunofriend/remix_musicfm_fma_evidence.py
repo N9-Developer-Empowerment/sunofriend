@@ -20,6 +20,7 @@ from .source_receipt import document_sha256
 
 
 MUSICFM_FMA_EVIDENCE_SCHEMA = "sunofriend.remix-musicfm-fma-static-evidence.v0"
+MUSICFM_FMA_READINESS_SCHEMA = "sunofriend.remix-musicfm-fma-readiness.v0"
 
 CHECKPOINT_FILE = "pretrained_fma.pt"
 CHECKPOINT_BYTES = 1_316_802_154
@@ -290,6 +291,97 @@ def verify_musicfm_fma_static_evidence_round_trip(
     }
 
 
+def assess_musicfm_fma_readiness(
+    plan: Mapping[str, Any], evidence: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Reduce verified static evidence into the next no-effects runtime gate."""
+
+    checked_plan = validate_musicfm_fma_admission_plan(plan)
+    checked_evidence = validate_musicfm_fma_static_evidence(evidence, checked_plan)
+    gates = {
+        "official_publication_identities_pinned": True,
+        "checkpoint_statistics_and_config_hashes_verified": True,
+        "checkpoint_static_inspection_complete": True,
+        "checkpoint_deserialized": False,
+        "source_snapshot_materialized_and_hashed": False,
+        "hash_locked_runtime_dependency_closure_available": False,
+        "isolated_runtime_import_gate_passed": False,
+        "restricted_weights_only_load_passed": False,
+        "network_denied_synthetic_feature_canary_passed": False,
+        "authorised_audio_feature_extraction_approved": False,
+    }
+    document: dict[str, Any] = {
+        "schema": MUSICFM_FMA_READINESS_SCHEMA,
+        "status": "static_evidence_complete_runtime_blocked",
+        "binding": {
+            "admission_plan_sha256": checked_plan["document_sha256"],
+            "static_evidence_sha256": checked_evidence["document_sha256"],
+            "provider_id": MUSICFM_FMA_PROVIDER_ID,
+        },
+        "verified_assets": checked_evidence["artifacts"],
+        "gates": gates,
+        "ready_for_model_load": False,
+        "ready_for_feature_extraction": False,
+        "ready_for_training": False,
+        "missing": [key for key, passed in gates.items() if not passed],
+        "next_gate": {
+            "kind": "runtime_source_and_dependency_evidence_plan",
+            "expected_direct_runtime_packages": [
+                "torch",
+                "torchaudio",
+                "transformers",
+                "einops",
+            ],
+            "upstream_requirements_lock_published": False,
+            "permits_network": False,
+            "permits_installation": False,
+            "permits_model_import": False,
+            "permits_model_load": False,
+            "permits_inference": False,
+            "permits_audio_access": False,
+        },
+        "authority": {
+            "dependency_download_authorized": False,
+            "dependency_install_authorized": False,
+            "model_import_authorized": False,
+            "model_load_authorized": False,
+            "synthetic_inference_authorized": False,
+            "private_audio_access_authorized": False,
+            "training_execution_authorized": False,
+            "checkpoint_promotion_authorized": False,
+            "product_ordering_changed": False,
+        },
+        "effects": {
+            "source_snapshot_materialized": False,
+            "dependency_downloaded": False,
+            "dependency_installed": False,
+            "model_imported": False,
+            "model_loaded": False,
+            "features_extracted": False,
+            "training_started": False,
+        },
+    }
+    document["document_sha256"] = document_sha256(document)
+    return document
+
+
+def validate_musicfm_fma_readiness(
+    readiness: Mapping[str, Any],
+    plan: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Reject any readiness claim not reproduced from the exact static evidence."""
+
+    document = dict(readiness)
+    if document.get("schema") != MUSICFM_FMA_READINESS_SCHEMA:
+        raise ValueError("unsupported MusicFM-FMA readiness schema")
+    _verify_hash(document)
+    expected = assess_musicfm_fma_readiness(plan, evidence)
+    if document != expected:
+        raise ValueError("MusicFM-FMA readiness evidence or authority changed")
+    return document
+
+
 def _inspect_json(
     path: Path, *, expected_file: str, expected_bytes: int
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -359,7 +451,10 @@ def _is_sha256(value: Any) -> bool:
 
 __all__ = [
     "MUSICFM_FMA_EVIDENCE_SCHEMA",
+    "MUSICFM_FMA_READINESS_SCHEMA",
+    "assess_musicfm_fma_readiness",
     "inspect_musicfm_fma_static_evidence",
+    "validate_musicfm_fma_readiness",
     "validate_musicfm_fma_static_evidence",
     "verify_musicfm_fma_static_evidence_round_trip",
 ]

@@ -1,8 +1,8 @@
 # Remix learning bridge
 
-Status: evidence contracts and an exact no-effects MusicFM-FMA admission plan
-are implemented; checkpoint/runtime admission and the real training runner
-remain gated. No trained remix model is admitted by this document.
+Status: evidence contracts, an exact MusicFM-FMA admission plan and static
+checkpoint evidence are implemented; runtime admission and the real training
+runner remain gated. No trained remix model is admitted by this document.
 
 ## Decision
 
