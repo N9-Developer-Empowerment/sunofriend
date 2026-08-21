@@ -78,6 +78,21 @@ result and output-audio hashes. This uses no model and decodes no audio. Its
 readiness document names the remaining real-model blockers without granting
 execution authority.
 
+`sunofriend.remix_musicfm_feature_plan` now binds the next learned-feature
+boundary without opening audio or loading MusicFM. For every controlled
+challenger it records the exact source control, separation estimate and
+challenger identities, their shared audio clock, the owner anchor, a clamped
+two-second context window and the composition-disjoint assignment. It fixes the
+24 kHz mono, layer-7, 25 Hz, 1,024-dimensional float32 contract while leaving
+feature-frame count explicitly unclaimed until the synthetic canary measures
+it. The current plan remains blocked by the native Windows dependency closure,
+isolated runtime, restricted load and synthetic feature-clock gates.
+
+Once an exact training snapshot and transparent-operation manifest exist, the
+no-write plan is printed with `scripts/plan-remix-musicfm-features.py`. It
+requires every upstream evidence document plus the resolver report, so a hash
+projection alone cannot silently substitute a provider, checkpoint or runtime.
+
 ## Remaining evidence and implementation
 
 The smallest honest training run is blocked by evidence, not GPU capacity.
