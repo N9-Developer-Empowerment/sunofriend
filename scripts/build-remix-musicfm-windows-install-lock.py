@@ -24,17 +24,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path)
     parser.add_argument("receipt", type=Path)
+    parser.add_argument("--repository-commit")
     output = parser.add_mutually_exclusive_group(required=True)
     output.add_argument("--out-dir", type=Path)
     output.add_argument("--stdout-bundle", action="store_true")
     args = parser.parse_args()
-    commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+    commit = args.repository_commit
+    if commit is None:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
     lock = create_windows_install_lock(
         args.report.read_bytes(),
         args.receipt.read_bytes(),
