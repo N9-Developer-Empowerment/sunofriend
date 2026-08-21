@@ -18,7 +18,6 @@ from typing import Any, Mapping
 from urllib.parse import parse_qs, unquote, urlparse
 import webbrowser
 
-from .musical_state import validate_musical_state
 from .remix_anchor_preflight import (
     REMIX_ANCHOR_KINDS,
     REMIX_ANCHOR_PRESERVATION_REQUIREMENTS,
@@ -26,6 +25,14 @@ from .remix_anchor_preflight import (
     create_remix_anchor_preflight_state,
 )
 from .remix_delta import inspect_remix_audio
+from .remix_source_anchor import (
+    confirm_remix_source_anchor_preflight,
+    create_remix_source_anchor_preflight,
+)
+from .remix_source_state import (
+    REMIX_SOURCE_STATE_SCHEMA,
+    validate_remix_project_state,
+)
 from .separation_review_transport import parse_file_range
 from .source_receipt import canonical_json_bytes
 
@@ -43,7 +50,7 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
         self,
         address: tuple[str, int],
         *,
-        musical_state: Mapping[str, Any],
+        project_state: Mapping[str, Any],
         source_control: str | Path,
         separation_estimate: str | Path,
         source_estimate_id: str,
@@ -51,16 +58,33 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
         state_dir: str | Path,
         identity_state_id: str,
         registry_id: str,
-        composition_id: str,
-        group_id: str,
+        composition_id: str | None,
+        group_id: str | None,
         title: str,
         token: str,
     ) -> None:
-        self.musical_state = validate_musical_state(musical_state)
+        self.project_state = validate_remix_project_state(project_state)
         self.title = str(title).strip() or "Define a remix anchor"
         self.token = token
         self.state_dir = _owner_directory(state_dir)
         self.confirmed_dir = self.state_dir / "CONFIRMED"
+        if self.project_state["schema"] == REMIX_SOURCE_STATE_SCHEMA:
+            for supplied, expected, label in (
+                (
+                    composition_id,
+                    self.project_state["composition_id"],
+                    "composition_id",
+                ),
+                (group_id, self.project_state["group_id"], "group_id"),
+            ):
+                if supplied is not None and str(supplied) != expected:
+                    raise ValueError(f"{label} does not match the remix source state")
+            composition_id = self.project_state["composition_id"]
+            group_id = self.project_state["group_id"]
+        elif composition_id is None or group_id is None:
+            raise ValueError(
+                "legacy Musical State sessions require composition and group IDs"
+            )
         self.identity_values = {
             "identity_state_id": str(identity_state_id),
             "registry_id": str(registry_id),
@@ -80,6 +104,11 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
             **estimate_audio,
             "private_path": str(self.estimate_path),
         }
+        if (
+            self.project_state["schema"] == REMIX_SOURCE_STATE_SCHEMA
+            and source_audio != self.project_state["source_control"]
+        ):
+            raise ValueError("source control does not match the remix source state")
         self.media_capabilities: dict[str, dict[str, Any]] = {}
         self.media_urls: dict[str, str] = {}
         for name, record in (
@@ -101,7 +130,10 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
                 else "awaiting_explicit_owner_anchor"
             ),
             "title": self.title,
-            "musical_state_sha256": self.musical_state["document_sha256"],
+            "project_state": {
+                "schema": self.project_state["schema"],
+                "document_sha256": self.project_state["document_sha256"],
+            },
             "clock": {
                 "sample_rate_hz": geometry["sample_rate_hz"],
                 "frames": geometry["frames"],
@@ -132,7 +164,7 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
 
     def confirm_anchor(self, request: Mapping[str, Any]) -> dict[str, Any]:
         if set(request) != {
-            "expected_musical_state_sha256",
+            "expected_project_state_sha256",
             "explicitly_heard",
             "owner_label",
             "anchor_kind",
@@ -142,10 +174,10 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
         }:
             raise ValueError("anchor confirmation request fields changed")
         if (
-            request["expected_musical_state_sha256"]
-            != self.musical_state["document_sha256"]
+            request["expected_project_state_sha256"]
+            != self.project_state["document_sha256"]
         ):
-            raise ValueError("anchor confirmation Musical State identity changed")
+            raise ValueError("anchor confirmation project state identity changed")
         heard = request["explicitly_heard"]
         if heard != {"source_control": True, "separation_estimate": True}:
             raise ValueError("explicitly hear original context and estimate")
@@ -165,21 +197,33 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
             key: self.source_record[key]
             for key in ("audio_sha256", "audio_bytes", "geometry")
         }
-        pending = create_remix_anchor_preflight_state(
-            self.musical_state,
-            source_control=control,
-            separation_estimate=estimate,
-            owner_label=request["owner_label"],
-            anchor_kind=request["anchor_kind"],
-            start_frame=request["start_frame"],
-            end_frame=request["end_frame"],
-            preservation_requirement=request["preservation_requirement"],
-            heard_source=True,
-            heard_estimate=True,
-        )
-        result = confirm_remix_anchor_preflight(
-            pending, self.musical_state, **self.identity_values
-        )
+        keyword = {
+            "separation_estimate": estimate,
+            "owner_label": request["owner_label"],
+            "anchor_kind": request["anchor_kind"],
+            "start_frame": request["start_frame"],
+            "end_frame": request["end_frame"],
+            "preservation_requirement": request["preservation_requirement"],
+            "heard_source": True,
+            "heard_estimate": True,
+        }
+        if self.project_state["schema"] == REMIX_SOURCE_STATE_SCHEMA:
+            pending = create_remix_source_anchor_preflight(
+                self.project_state, **keyword
+            )
+            result = confirm_remix_source_anchor_preflight(
+                pending,
+                self.project_state,
+                identity_state_id=self.identity_values["identity_state_id"],
+                registry_id=self.identity_values["registry_id"],
+            )
+        else:
+            pending = create_remix_anchor_preflight_state(
+                self.project_state, source_control=control, **keyword
+            )
+            result = confirm_remix_anchor_preflight(
+                pending, self.project_state, **self.identity_values
+            )
         self._publish_confirmation(pending, result)
         return {
             "schema": result["confirmation"]["schema"],
@@ -439,7 +483,7 @@ class _RemixAnchorHandler(BaseHTTPRequestHandler):
 
 
 def create_remix_anchor_server(
-    musical_state: Mapping[str, Any],
+    project_state: Mapping[str, Any],
     *,
     source_control: str | Path,
     separation_estimate: str | Path,
@@ -448,8 +492,8 @@ def create_remix_anchor_server(
     state_dir: str | Path,
     identity_state_id: str,
     registry_id: str,
-    composition_id: str,
-    group_id: str,
+    composition_id: str | None = None,
+    group_id: str | None = None,
     title: str = "Define a remix anchor",
     port: int = 0,
     token: str | None = None,
@@ -462,7 +506,7 @@ def create_remix_anchor_server(
         raise ValueError("remix anchor token must contain at least 32 characters")
     return RemixAnchorHTTPServer(
         ("127.0.0.1", port),
-        musical_state=musical_state,
+        project_state=project_state,
         source_control=source_control,
         separation_estimate=separation_estimate,
         source_estimate_id=source_estimate_id,
