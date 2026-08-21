@@ -87,3 +87,23 @@ MusicFM's upstream documentation reports weak key-detection performance, so
 Sunofriend retains deterministic harmony/chroma, onset and edit-envelope
 features in parallel. Replacing the extractor creates a new manifest and
 invalidates dependent training evidence.
+
+## Windows runtime plan
+
+`scripts/plan-remix-musicfm-fma-runtime.py` now creates a path-free plan bound
+to the exact admission plan, static evidence and readiness documents. It pins
+the seven required source/licence files by Git blob and the first four direct
+Windows wheels:
+
+- Torch 2.7.1+cu128, CPython 3.11 win-amd64;
+- Torchaudio 2.7.1+cu128, CPython 3.11 win-amd64;
+- Transformers 4.53.2; and
+- Einops 0.8.1.
+
+Those direct wheels total 3,288,617,517 bytes. They are **not** a complete
+dependency closure and are not an installable lock. The plan requires a fresh
+`musicfm-fma-windows-py311-cu128-v1` environment and explicitly forbids
+modifying or reusing the working Demucs environment.
+
+The next plan-only step is to resolve the complete transitive wheel roster,
+hashes, byte ceiling and licence metadata. It downloads and installs nothing.
