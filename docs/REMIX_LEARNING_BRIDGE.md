@@ -113,6 +113,11 @@ from the pinned local configuration, loads the exact checkpoint with
 model in evaluation mode and extracts layer-7 features twice from a generated
 two-second 24 kHz waveform. The expected result is exactly 50 by 1,024 finite
 float32 feature values per batch item with byte-identical repeats.
+The only admitted key migration is PyTorch's documented weight-normalisation
+serialization rename for the positional convolution: legacy `weight_g` and
+`weight_v` become `parametrizations.weight.original0` and `original1`. Any
+other missing or unexpected checkpoint key still stops the canary before
+feature extraction.
 `scripts/verify-remix-musicfm-synthetic-canary.py` verifies the path-free result
 and retained artifact bytes without reopening the model or any audio.
 
