@@ -137,7 +137,7 @@ def test_anchor_mutation_requires_same_origin_and_explicit_hearing(
             assert exc.code == 403
 
         payload = _payload(fixture["state"])
-        payload["explicitly_heard"]["separation_estimate"] = False
+        payload["explicitly_heard"]["selected_estimate"] = False
         try:
             with _post(server, payload):
                 raise AssertionError("unheard estimate unexpectedly confirmed")
@@ -157,15 +157,19 @@ def test_anchor_media_is_rechecked_and_page_separates_playback_from_confirmation
         assert "Define what must stay recognisable" in html
         assert "Listening alone saves nothing and chooses nothing" in html
         assert "Confirm this musical anchor" in html
-        assert 'data-play="source"' in html
-        assert 'data-play="estimate"' in html
+        assert "data-play-source" in html
+        assert "data-play-diagnostic" in script
+        assert "complete mix" in html.casefold()
+        assert "melody" in html.casefold()
+        assert "rhythm" in html.casefold()
+        assert "harmony" in html.casefold()
         assert "loadedmetadata" in script
         assert 'api("/api/confirm"' in script
 
         state = _get_json(server, "/api/session")
         fixture["estimate_path"].write_bytes(b"changed")
         try:
-            with urlopen(_url(server, state["media"]["estimate"]["media_url"])):
+            with urlopen(_url(server, state["media"]["diagnostics"][0]["media_url"])):
                 raise AssertionError("changed estimate unexpectedly served")
         except HTTPError as exc:
             assert exc.code == 409
@@ -201,6 +205,56 @@ def test_anchor_session_refuses_unsynchronised_audio(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="geometry differ"):
         _server(fixture, tmp_path / "state")
+
+
+def test_semantic_diagnostic_views_bind_the_selected_estimate_only(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    server = create_remix_anchor_server(
+        fixture["state"],
+        source_control=fixture["source_path"],
+        separation_estimate=fixture["estimate_path"],
+        source_estimate_id="grouped-other-estimate-001",
+        estimated_role="grouped other estimate",
+        diagnostic_estimates={
+            "vocals": fixture["estimate_path"],
+            "drums": fixture["estimate_path"],
+            "bass": fixture["estimate_path"],
+            "grouped_other": fixture["estimate_path"],
+        },
+        state_dir=tmp_path / "semantic-session",
+        identity_state_id="identity-state-001",
+        registry_id="registry-001",
+        composition_id="composition-001",
+        group_id="recording-group-001",
+        token="t" * 40,
+    )
+    with _running(server):
+        state = _get_json(server, "/api/session")
+        assert state["schema"] == REMIX_ANCHOR_SESSION_SCHEMA
+        assert [row["diagnostic_id"] for row in state["media"]["diagnostics"]] == [
+            "vocals",
+            "drums",
+            "bass",
+            "grouped_other",
+        ]
+        assert state["media"]["source"]["label"] == "Complete original mix"
+        assert state["media"]["diagnostics"][0]["musical_functions"] == [
+            "melody",
+            "rhythm",
+            "harmony",
+        ]
+        payload = _payload(fixture["state"])
+        payload["selected_estimate_id"] = "vocals"
+        with _post(server, payload) as response:
+            assert response.status == 201
+
+    pending = _read(
+        tmp_path / "semantic-session" / "CONFIRMED" / "anchor-preflight.json"
+    )
+    assert pending["separation_estimate"]["source_estimate_id"].startswith("vocals-")
+    assert pending["separation_estimate"]["estimated_role"] == "vocal estimate"
 
 
 def test_source_state_session_creates_v1_anchor_without_vocal_evidence(
@@ -301,10 +355,11 @@ def _payload(state: dict) -> dict:
         "expected_project_state_sha256": state["document_sha256"],
         "explicitly_heard": {
             "source_control": True,
-            "separation_estimate": True,
+            "selected_estimate": True,
         },
         "owner_label": "Keep the repeating accompaniment hook recognisable",
         "anchor_kind": "motif",
+        "selected_estimate_id": "estimate",
         "start_frame": 8_000,
         "end_frame": 16_000,
         "preservation_requirement": "must_remain_recognisable",

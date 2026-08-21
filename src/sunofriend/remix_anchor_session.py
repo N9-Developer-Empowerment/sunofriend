@@ -37,8 +37,34 @@ from .separation_review_transport import parse_file_range
 from .source_receipt import canonical_json_bytes
 
 
-REMIX_ANCHOR_SESSION_SCHEMA = "sunofriend.remix-anchor-session.v0"
+REMIX_ANCHOR_SESSION_SCHEMA = "sunofriend.remix-anchor-session.v1"
 _MAXIMUM_JSON_REQUEST_BYTES = 16 * 1024
+_DIAGNOSTIC_METADATA = {
+    "vocals": {
+        "label": "Vocal estimate",
+        "description": "Often carries the main sung melody and phrasing.",
+        "musical_functions": ["melody", "rhythm", "harmony"],
+        "estimated_role": "vocal estimate",
+    },
+    "drums": {
+        "label": "Drum estimate",
+        "description": "A diagnostic view of groove, pulse and rhythmic accents.",
+        "musical_functions": ["rhythm"],
+        "estimated_role": "drum estimate",
+    },
+    "bass": {
+        "label": "Bass estimate",
+        "description": "May connect bass melody, groove and harmonic movement.",
+        "musical_functions": ["melody", "rhythm", "harmony"],
+        "estimated_role": "bass estimate",
+    },
+    "grouped_other": {
+        "label": "Grouped accompaniment estimate",
+        "description": "Usually keys, guitars, synths or strings; it may contain chords or an instrumental hook.",
+        "musical_functions": ["melody", "rhythm", "harmony"],
+        "estimated_role": "grouped accompaniment estimate",
+    },
+}
 
 
 class RemixAnchorHTTPServer(ThreadingHTTPServer):
@@ -55,6 +81,7 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
         separation_estimate: str | Path,
         source_estimate_id: str,
         estimated_role: str,
+        diagnostic_estimates: Mapping[str, str | Path] | None,
         state_dir: str | Path,
         identity_state_id: str,
         registry_id: str,
@@ -98,12 +125,55 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
         if source_audio["geometry"] != estimate_audio["geometry"]:
             raise ValueError("source control and separation estimate geometry differ")
         self.source_record = {**source_audio, "private_path": str(self.source_path)}
-        self.estimate_record = {
-            "source_estimate_id": str(source_estimate_id),
-            "estimated_role": str(estimated_role),
-            **estimate_audio,
-            "private_path": str(self.estimate_path),
-        }
+        supplied_diagnostics = dict(diagnostic_estimates or {})
+        if supplied_diagnostics:
+            if set(supplied_diagnostics) - set(_DIAGNOSTIC_METADATA):
+                raise ValueError("remix diagnostic estimate kind is unsupported")
+            grouped_other = supplied_diagnostics.get("grouped_other")
+            if (
+                grouped_other is None
+                or _regular_file(grouped_other, "grouped accompaniment estimate")
+                != self.estimate_path
+            ):
+                raise ValueError(
+                    "grouped accompaniment diagnostic must match the primary separation estimate"
+                )
+        else:
+            supplied_diagnostics = {"estimate": self.estimate_path}
+
+        self.diagnostic_records: dict[str, dict[str, Any]] = {}
+        for diagnostic_id, supplied_path in supplied_diagnostics.items():
+            path = _regular_file(supplied_path, f"{diagnostic_id} diagnostic estimate")
+            audio = inspect_remix_audio(path)
+            if audio["geometry"] != source_audio["geometry"]:
+                raise ValueError(
+                    f"source control and {diagnostic_id} diagnostic geometry differ"
+                )
+            if diagnostic_id == "estimate":
+                metadata = {
+                    "label": "Separated-part estimate",
+                    "description": "A separator estimate used only as a diagnostic view.",
+                    "musical_functions": [],
+                    "estimated_role": str(estimated_role),
+                }
+                estimate_id = str(source_estimate_id)
+            else:
+                metadata = _DIAGNOSTIC_METADATA[diagnostic_id]
+                estimate_id = (
+                    str(source_estimate_id)
+                    if diagnostic_id == "grouped_other"
+                    else f"{diagnostic_id}-{audio['audio_sha256'][:16]}"
+                )
+            self.diagnostic_records[diagnostic_id] = {
+                "diagnostic_id": diagnostic_id,
+                "source_estimate_id": estimate_id,
+                "estimated_role": metadata["estimated_role"],
+                "label": metadata["label"],
+                "description": metadata["description"],
+                "musical_functions": list(metadata["musical_functions"]),
+                **audio,
+                "private_path": str(path),
+            }
         if (
             self.project_state["schema"] == REMIX_SOURCE_STATE_SCHEMA
             and source_audio != self.project_state["source_control"]
@@ -111,10 +181,11 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
             raise ValueError("source control does not match the remix source state")
         self.media_capabilities: dict[str, dict[str, Any]] = {}
         self.media_urls: dict[str, str] = {}
-        for name, record in (
+        media_records = [
             ("source", self.source_record),
-            ("estimate", self.estimate_record),
-        ):
+            *self.diagnostic_records.items(),
+        ]
+        for name, record in media_records:
             capability = secrets.token_urlsafe(24)
             self.media_capabilities[capability] = record
             self.media_urls[name] = f"/media/{capability}?token={self.token}"
@@ -141,13 +212,22 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
             },
             "media": {
                 "source": {
-                    "label": "Original context",
+                    "label": "Complete original mix",
+                    "description": "The primary truth for what makes this excerpt recognisable.",
                     "media_url": self.media_urls["source"],
                 },
-                "estimate": {
-                    "label": "Editable-part estimate",
-                    "media_url": self.media_urls["estimate"],
-                },
+                "diagnostics": [
+                    {
+                        "diagnostic_id": diagnostic_id,
+                        "label": record["label"],
+                        "description": record["description"],
+                        "musical_functions": record["musical_functions"],
+                        "source_estimate_id": record["source_estimate_id"],
+                        "estimated_role": record["estimated_role"],
+                        "media_url": self.media_urls[diagnostic_id],
+                    }
+                    for diagnostic_id, record in self.diagnostic_records.items()
+                ],
             },
             "anchor_kinds": list(REMIX_ANCHOR_KINDS),
             "preservation_requirement": REMIX_ANCHOR_PRESERVATION_REQUIREMENTS[0],
@@ -168,6 +248,7 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
             "explicitly_heard",
             "owner_label",
             "anchor_kind",
+            "selected_estimate_id",
             "start_frame",
             "end_frame",
             "preservation_requirement",
@@ -179,12 +260,16 @@ class RemixAnchorHTTPServer(ThreadingHTTPServer):
         ):
             raise ValueError("anchor confirmation project state identity changed")
         heard = request["explicitly_heard"]
-        if heard != {"source_control": True, "separation_estimate": True}:
-            raise ValueError("explicitly hear original context and estimate")
+        if heard != {"source_control": True, "selected_estimate": True}:
+            raise ValueError("explicitly hear the original mix and selected diagnostic")
         if self.confirmed_dir.exists():
             raise FileExistsError("this exact anchor session is already confirmed")
+        selected_estimate_id = str(request["selected_estimate_id"])
+        selected_estimate = self.diagnostic_records.get(selected_estimate_id)
+        if selected_estimate is None:
+            raise ValueError("selected diagnostic estimate is unknown")
         estimate = {
-            key: self.estimate_record[key]
+            key: selected_estimate[key]
             for key in (
                 "source_estimate_id",
                 "estimated_role",
@@ -514,6 +599,7 @@ def create_remix_anchor_server(
     separation_estimate: str | Path,
     source_estimate_id: str,
     estimated_role: str,
+    diagnostic_estimates: Mapping[str, str | Path] | None = None,
     state_dir: str | Path,
     identity_state_id: str,
     registry_id: str,
@@ -536,6 +622,7 @@ def create_remix_anchor_server(
         separation_estimate=separation_estimate,
         source_estimate_id=source_estimate_id,
         estimated_role=estimated_role,
+        diagnostic_estimates=diagnostic_estimates,
         state_dir=state_dir,
         identity_state_id=identity_state_id,
         registry_id=registry_id,
