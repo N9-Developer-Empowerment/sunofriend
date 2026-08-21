@@ -1,7 +1,8 @@
 # Remix learning bridge
 
-Status: evidence contracts implemented; feature admission and the real training
-runner remain gated. No trained remix model is admitted by this document.
+Status: evidence contracts and an exact no-effects MusicFM-FMA admission plan
+are implemented; checkpoint/runtime admission and the real training runner
+remain gated. No trained remix model is admitted by this document.
 
 ## Decision
 
@@ -86,7 +87,8 @@ Sunofriend still does not yet have:
 3. owner-confirmed registry entries and explicit pairwise labels across those
    compositions;
 4. an admitted frozen audio feature extractor and exact feature manifest (the
-   transparent operation-feature baseline is now implemented);
+   transparent operation-feature baseline and MusicFM-FMA no-effects admission
+   plan are now implemented; see `MUSICFM_FMA_FEATURE_ADMISSION.md`);
 5. song- and composition-disjoint train, validation and test evidence that
    passes the provisional snapshot gate;
 6. remix-specific deterministic, metadata-only, frozen-linear and shuffled
