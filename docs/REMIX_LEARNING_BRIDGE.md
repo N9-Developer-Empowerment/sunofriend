@@ -98,10 +98,11 @@ Restricted loading and the synthetic feature canary remain a separate gate.
 The repository-owned
 `scripts/build-remix-musicfm-windows-install-lock.py` generates the exact
 commit-bound install lock and asset manifest from the retained native Windows
-resolver evidence. The PowerShell handoff calls
-`scripts/validate-remix-musicfm-windows-setup-inputs.py` before creating its
-fresh destination or making a network request; callers must execute that
-handoff directly rather than reproduce its schema checks externally.
+resolver evidence. The PowerShell handoff calls that builder once and receives
+the validated documents as an in-memory bundle before creating its fresh
+destination or making a network request. It retains the bundle inside the new
+runtime for later verification. Callers must execute the handoff directly and
+must not reproduce its schema checks externally.
 
 After setup succeeds, `scripts/create-remix-musicfm-synthetic-canary-request.py`
 binds one canary request to the exact commit and setup receipt. The request
