@@ -117,6 +117,12 @@ The next plan-only step is a native Windows metadata-only resolution. It may
 retain the resolver report but downloads and installs no wheels. Only that
 native roster can set the final byte ceiling for a separately approved
 evidence-only wheel and licence inspection.
+
+The retained partial report is 386,696 bytes with SHA-256
+`c88bd8ca020b85c11aa13caca1025e5631e62b193ec172b4573123f42bc0ccbf`.
+Its fail-closed resolution document is bound to commit
+`553d4fd08aa8c8e53249435faab66578b5f1caea` and has SHA-256
+`ade983810a537a35688eaa10760f370b3a12ecd9e21cfcef012097333fc549e8`.
 The retained runtime plan is bound to commit
 `d1f559fe417916d22a7ee0aba26676fcc9b46abb` and has document SHA-256
 `fc728a03d7525425a67f42924eadaabd17aeb1ee28b34e894250e09d6c123b83`.
