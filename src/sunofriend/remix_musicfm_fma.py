@@ -20,6 +20,9 @@ _CHECKPOINT_SHA256 = "68392eee13d34c2941b3761934abb6b1e67b2e9df498695bda2ea5c108
 _CHECKPOINT_BYTES = 1_316_802_154
 _STATS_GIT_BLOB_SHA1 = "4b72fa21d6962f55ae9c95b3457e765eb19552e5"
 _STATS_BYTES = 2_281
+_CONFIG_PUBLICATION_REVISION = "6b36ef01c6443c67ae7ed0822876d091ab50e4aa"
+_CONFIG_GIT_BLOB_SHA1 = "f74dbbf6fe96728cceda4888cf841b39a579e66e"
+_CONFIG_BYTES = 2_239
 
 
 def create_musicfm_fma_admission_plan(
@@ -71,6 +74,7 @@ def _expected_plan(*, plan_id: str, repository_commit: str) -> dict[str, Any]:
         "official_checkpoint_publication_revision_pinned": True,
         "checkpoint_size_and_lfs_sha256_recorded": True,
         "code_and_model_metadata_licence_recorded": True,
+        "external_conformer_publication_revision_pinned": True,
         "checkpoint_download_explicitly_authorized": False,
         "checkpoint_bytes_locally_verified": False,
         "statistics_sha256_locally_verified": False,
@@ -133,7 +137,9 @@ def _expected_plan(*, plan_id: str, repository_commit: str) -> dict[str, Any]:
             "implicit_upstream_dependency": {
                 "model_id": "facebook/wav2vec2-conformer-rope-large-960h-ft",
                 "reason": "upstream constructor calls from_pretrained for configuration",
-                "revision": None,
+                "revision": _CONFIG_PUBLICATION_REVISION,
+                "bytes": _CONFIG_BYTES,
+                "publication_git_blob_sha1": _CONFIG_GIT_BLOB_SHA1,
                 "config_sha256": None,
                 "automatic_fetch_allowed": False,
             },
@@ -173,6 +179,7 @@ def _expected_plan(*, plan_id: str, repository_commit: str) -> dict[str, Any]:
         "next_gate": {
             "kind": "explicit_checkpoint_and_runtime_evidence_approval",
             "maximum_checkpoint_bytes": _CHECKPOINT_BYTES,
+            "maximum_total_bytes": _CHECKPOINT_BYTES + _STATS_BYTES + _CONFIG_BYTES,
             "permits_installation": False,
             "permits_model_load": False,
             "permits_inference": False,

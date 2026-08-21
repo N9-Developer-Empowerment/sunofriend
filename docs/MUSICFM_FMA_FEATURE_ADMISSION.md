@@ -20,6 +20,9 @@ The current no-effects plan pins:
   `68392eee13d34c2941b3761934abb6b1e67b2e9df498695bda2ea5c1087d4b96`;
 - `fma_stats.json`, 2,281 bytes, publication Git blob
   `4b72fa21d6962f55ae9c95b3457e765eb19552e5`; and
+- external Conformer configuration publication revision
+  `6b36ef01c6443c67ae7ed0822876d091ab50e4aa`, 2,239 bytes, Git blob
+  `f74dbbf6fe96728cceda4888cf841b39a579e66e`; and
 - the proposed 24 kHz mono, 25 Hz, layer-7, 1,024-dimensional feature clock.
 
 Generate the path-free plan without writing or downloading anything:
