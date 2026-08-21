@@ -176,9 +176,13 @@ def test_asset_manifest_is_exact_evidence_bound_and_no_load() -> None:
 
 def test_windows_setup_validates_before_writes_and_installs_only_offline() -> None:
     text = SETUP.read_text(encoding="utf-8")
-    validation = text.index("validate-remix-musicfm-windows-setup-inputs.py")
+    validation = text.index("build-remix-musicfm-windows-install-lock.py")
     first_write = text.index("New-Item -ItemType Directory -Path $FreshRoot")
     assert validation < first_write
+    assert "--stdout-bundle" in text
+    assert "validated-setup-input-bundle.json" in text
+    assert "[string]$InstallLock" not in text
+    assert "[string]$AssetManifest" not in text
     assert "[switch]$ConfirmAuthorizedSetup" in text
     assert "& $Python -m venv" in text
     assert "Asset target must be safe and relative" in text
@@ -225,10 +229,26 @@ def test_builder_and_validator_round_trip_exact_setup_documents(tmp_path: Path) 
         cwd=ROOT,
         check=True,
     )
+
     lock_path = output / "native-windows-install-lock.json"
     manifest_path = output / "asset-download-manifest.json"
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(BUILDER),
+            str(report_path),
+            str(receipt_path),
+            "--stdout-bundle",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    )
+    bundle = json.loads(completed.stdout)
+    assert bundle == {"install_lock": lock, "asset_manifest": manifest}
     assert lock["repository_commit"] == manifest["repository_commit"]
     assert lock_path.stat().st_mode & 0o777 == 0o600
     assert manifest_path.stat().st_mode & 0o777 == 0o600

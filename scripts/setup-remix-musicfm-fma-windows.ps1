@@ -1,8 +1,6 @@
 param(
   [Parameter(Mandatory=$true)][string]$ResolverReport,
   [Parameter(Mandatory=$true)][string]$NativeResolutionReceipt,
-  [Parameter(Mandatory=$true)][string]$InstallLock,
-  [Parameter(Mandatory=$true)][string]$AssetManifest,
   [Parameter(Mandatory=$true)][string]$Python,
   [Parameter(Mandatory=$true)][string]$FreshRoot,
   [Parameter(Mandatory=$true)][switch]$ConfirmAuthorizedSetup
@@ -16,11 +14,12 @@ if (Test-Path -LiteralPath $FreshRoot) { throw 'FreshRoot must not already exist
 if (-not (Test-Path -LiteralPath $Python -PathType Leaf)) { throw 'Explicit CPython path is not a file.' }
 $version = (& $Python -c "import sys; print('.'.join(map(str, sys.version_info[:3])))").Trim()
 if ($LASTEXITCODE -ne 0 -or -not $version.StartsWith('3.11.')) { throw 'Explicit interpreter must be CPython 3.11.' }
-& $Python (Join-Path $PSScriptRoot 'validate-remix-musicfm-windows-setup-inputs.py') $ResolverReport $NativeResolutionReceipt $InstallLock $AssetManifest
-if ($LASTEXITCODE -ne 0) { throw 'MusicFM setup input validation failed.' }
+$bundleJson = ((& $Python (Join-Path $PSScriptRoot 'build-remix-musicfm-windows-install-lock.py') $ResolverReport $NativeResolutionReceipt --stdout-bundle) -join [Environment]::NewLine)
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($bundleJson)) { throw 'MusicFM setup input construction and validation failed.' }
+$bundle = $bundleJson | ConvertFrom-Json
+$lock = $bundle.install_lock
+$assets = $bundle.asset_manifest
 $report = Get-Content -Raw -LiteralPath $ResolverReport | ConvertFrom-Json
-$lock = Get-Content -Raw -LiteralPath $InstallLock | ConvertFrom-Json
-$assets = Get-Content -Raw -LiteralPath $AssetManifest | ConvertFrom-Json
 if ($report.version -ne '1') { throw 'Unsupported pip report.' }
 if ($lock.schema -ne 'sunofriend.remix-musicfm-fma-native-windows-install-lock.v0') { throw 'Wrong generated install lock.' }
 if ($lock.items.Count -ne 26 -or $report.install.Count -ne 26) { throw 'Expected exactly 26 pinned packages.' }
@@ -31,6 +30,8 @@ if ($checkpoint.Count -ne 1 -or [int64]$checkpoint[0].bytes -ne 1316802154) { th
 New-Item -ItemType Directory -Path $FreshRoot | Out-Null
 $wheelDir = New-Item -ItemType Directory -Path (Join-Path $FreshRoot 'wheel-cache')
 $assetDir = New-Item -ItemType Directory -Path (Join-Path $FreshRoot 'assets')
+$technicalDir = New-Item -ItemType Directory -Path (Join-Path $FreshRoot 'technical')
+$bundleJson | Set-Content -Encoding UTF8 (Join-Path $technicalDir 'validated-setup-input-bundle.json')
 $licences = @()
 $observedWheelBytes = [int64]0
 for ($i=0; $i -lt 26; $i++) {
