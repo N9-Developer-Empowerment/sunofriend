@@ -123,6 +123,14 @@ The retained partial report is 386,696 bytes with SHA-256
 Its fail-closed resolution document is bound to commit
 `553d4fd08aa8c8e53249435faab66578b5f1caea` and has SHA-256
 `ade983810a537a35688eaa10760f370b3a12ecd9e21cfcef012097333fc549e8`.
+
+The exact native handoff is
+`scripts/resolve-remix-musicfm-fma-runtime-windows.ps1`. It must be invoked as
+the supplied script on Windows with an existing CPython 3.11 executable and a
+fresh output directory. It uses pip's dry-run report path, disables its cache,
+retains no wheels and installs nothing. Its receipt remains `unvalidated`
+until the report is returned and checked on the Mac; it grants no follow-on
+download, installation, model or training authority.
 The retained runtime plan is bound to commit
 `d1f559fe417916d22a7ee0aba26676fcc9b46abb` and has document SHA-256
 `fc728a03d7525425a67f42924eadaabd17aeb1ee28b34e894250e09d6c123b83`.
