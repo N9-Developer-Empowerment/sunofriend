@@ -89,6 +89,65 @@ a remix. Run the local reference with
 `scripts/run-remix-ranker-canary.py`. This does not remove any real-data or
 frozen-feature admission gate below.
 
+### Commit-bound frozen-feature training bridge
+
+`sunofriend.remix_ranker_training` now adds the real-shaped contract that the
+first canary intentionally omitted:
+
+- `sunofriend.remix-frozen-feature-manifest.v0` binds every snapshot variant
+  to one canonical JSON feature artifact by filename, byte count, SHA-256,
+  shape, dtype and finite-value check. It also binds the frozen extractor,
+  checkpoint, source revision, licence, layer, clock, pooling and feature
+  dimension. Symlinks, missing rows, duplicate variants and path escapes are
+  rejected.
+- `sunofriend.remix-ranker-training-request.v1` binds the exact snapshot,
+  feature manifest, repository commit and dependency-contract hash. It records
+  composition/group/Musical-State/variant-family-disjoint split counts,
+  constant and deterministic baselines, clean/resumed/shuffled arms and hard
+  example, feature, step, byte, time, network, download and audio ceilings.
+- `sunofriend.remix-ranker-training-result.v1` records baseline, validation,
+  test and per-composition metrics, strict checkpoints, predictions, exact
+  resume, left/right swap error, shuffled-label control and the offline
+  resource receipt.
+- `sunofriend.remix_ranker_training_verifier` rehashes every document and
+  feature artifact, revalidates the split and checkpoint shapes, and
+  recomputes predictions and metrics from the retained weights without
+  optimisation.
+
+The runnable fixture is deliberately a new synthetic snapshot schema. Its
+labels say `synthetic_fixture_only`; it cannot be confused with an explicit
+owner label. The real snapshot path is also exercised, but remains
+`blocked_insufficient_real_evidence` and the runner refuses it. Even after the
+count gate is met, a real request remains
+`blocked_pending_explicit_real_training_authority` until a new exact private
+training authorization exists.
+
+Run the complete CPU-only contract fixture from a clean commit with:
+
+```bash
+COMMIT="$(git rev-parse HEAD)"
+python3 scripts/create-remix-ranker-synthetic-training-fixture.py \
+  --out-dir /absolute/fresh/remix-ranker-fixture \
+  --repository-commit "$COMMIT" \
+  --dependency-contract pyproject.toml
+python3 scripts/run-remix-ranker-training.py \
+  /absolute/fresh/remix-ranker-fixture/request.json \
+  /absolute/fresh/remix-ranker-fixture/snapshot.json \
+  /absolute/fresh/remix-ranker-fixture/feature-manifest.json \
+  --feature-root /absolute/fresh/remix-ranker-fixture/features \
+  --out /absolute/fresh/remix-ranker-fixture/result.json
+python3 scripts/verify-remix-ranker-training.py \
+  /absolute/fresh/remix-ranker-fixture/request.json \
+  /absolute/fresh/remix-ranker-fixture/snapshot.json \
+  /absolute/fresh/remix-ranker-fixture/feature-manifest.json \
+  /absolute/fresh/remix-ranker-fixture/result.json \
+  --feature-root /absolute/fresh/remix-ranker-fixture/features \
+  --out /absolute/fresh/remix-ranker-fixture/verification.json
+```
+
+This does not import MusicFM, read audio, download anything, use a real label,
+promote a checkpoint or change product audition ordering.
+
 The separately authorised native-Windows setup handoff is
 `scripts/setup-remix-musicfm-fma-windows.ps1`. It requires the retained pip
 report, runtime-resolution receipt and a hash/size/URL asset manifest. It
@@ -277,19 +336,41 @@ Sunofriend still does not yet have:
    admitted or processed;
 5. song- and composition-disjoint train, validation and test evidence that
    passes the provisional snapshot gate;
-6. remix-specific baselines over real held-out labels (the constant,
-   transparent-linear/MLP, shuffled and resume controls now run only on the
-   fixed synthetic canary);
-7. a separately reviewed real-data request that binds an eligible snapshot and
-   admitted feature manifest—the implemented request/result/checkpoint
-   contracts deliberately refuse those inputs; or
-8. a real-data verifier that rebuilds registry splits, loads an allowlisted
-   weights-only checkpoint and recomputes predictions. The implemented
-   verifier proves only the exact synthetic reference run.
+6. remix-specific baseline results over real held-out labels (the constant,
+   deterministic heuristics, operation probe, frozen-feature probe, shuffled
+   and resume controls currently run only on synthetic fixtures);
+7. a separately reviewed real-data execution request: the v1 request validates
+   and binds an explicit snapshot plus admitted feature manifest, but stays
+   non-executable while the evidence gate is short and still requires fresh
+   explicit authority after that gate passes; or
+8. retained real-data checkpoints and predictions for the independent verifier
+   to inspect. The verifier path exists, but current verified evidence remains
+   synthetic and unpromoted.
 
 The present `identity_relationship` and `musical_usefulness` fields are valuable
 benchmark evidence, but they do not say that challenger A is preferred to
 challenger B. They must remain unchanged.
+
+### Review-only controlled comparison
+
+`sunofriend.remix_comparison_session` provides a separate owner-only localhost
+surface for the first source-state/anchor v1 controlled comparison. It accepts
+the exact source state, anchor preflight, identity state, owner registry and
+anchor confirmation without projecting them into the legacy Musical State v0
+renderer. The original context and two exact candidate files are checked by
+audio SHA-256, byte count, geometry and a stable owner-only hidden A/B mapping.
+
+The musician hears the original, A and B through one shared playhead, then
+explicitly records whether each was heard, the pairwise result, identity
+retention, goal usefulness and one to four bounded reasons. A draft can be
+resumed. Saved review revisions and reopen events are append-only. Neither
+playback nor a saved review creates a pairwise training label, selects a product
+result, authorises a render or starts training. Admitting review evidence to the
+learning contracts remains a later, separate and explicit action.
+
+The local launch surface is `scripts/private-remix-comparison-session.py`. The
+current tests use generated tones only; the module does not render or discover
+private audio.
 
 ## New evidence contracts
 
@@ -465,10 +546,10 @@ shuffled margin is positive under a predeclared threshold.
 
 ### Request
 
-`sunofriend.remix-ranker-training-request.v0` binds:
+`sunofriend.remix-ranker-training-request.v1` binds:
 
 - dataset snapshot and feature-manifest hashes;
-- repository revision and dependency-lock hash;
+- repository revision and exact dependency/runtime-contract hash;
 - architecture, seed, optimizer, loss, steps/epochs and resource ceilings;
 - exact composition-disjoint split;
 - clean and shuffled arms;
@@ -481,7 +562,7 @@ render, preference, selection, correction or product authority.
 
 ### Result
 
-`sunofriend.remix-ranker-training-result.v0` binds:
+`sunofriend.remix-ranker-training-result.v1` binds:
 
 - request, snapshot and feature-manifest hashes;
 - clean/shuffled checkpoint and prediction hashes;

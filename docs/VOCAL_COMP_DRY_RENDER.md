@@ -161,3 +161,25 @@ must never be imported as a pairwise ranker label.
 - The page records no review response yet.
 - No pitch correction, timing correction, word-level splice, shared
   production processing, automatic selection or training label is created.
+
+## Carrying a reviewed excerpt into the next phrase
+
+`scripts/render-vocal-comp-continuation.py` is a narrower iterative bridge for
+the case where an immutable multi-phrase excerpt is already explicitly marked
+`usable_as_next_iteration_base`, while the newest Musical State contains one
+new explicit browser-capture decision. It does not migrate the earlier phrase
+decisions into the new state. Instead, its plan binds all of the following:
+
+- the exact usable-base audio, review and render receipt;
+- the newest recursively valid Musical State;
+- the exact active phrase-decision document and selected capture hash;
+- the reviewed phrase boundary and PCM frame geometry; and
+- a no-fade boundary join that remains `not_reviewed`.
+
+The plan is no-effect and cannot render. A separate owner authorization must
+confirm one dry uncorrected preview, followed by a separate execution
+confirmation bound to the exact plan SHA-256. The resulting local page exposes
+the carried base, selected phrase and combined excerpt. Playback cannot accept
+the join or update the usable base. The renderer performs exact PCM24 sample
+concatenation only: no tuning, timing change, resampling, crossfade, gain
+change, normalization, limiting, model inference or training.

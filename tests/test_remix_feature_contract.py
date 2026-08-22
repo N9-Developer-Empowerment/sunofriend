@@ -82,8 +82,7 @@ def test_readiness_names_exact_real_model_blockers_without_authority() -> None:
     assert readiness["gates"]["transparent_operation_baseline_available"] is True
     assert readiness["gates"]["frozen_audio_feature_manifest_admitted"] is False
     assert (
-        readiness["gates"]["remix_training_request_result_verifier_implemented"]
-        is False
+        readiness["gates"]["remix_training_request_result_verifier_implemented"] is True
     )
     assert readiness["authority"]["training_execution_authorized"] is False
     assert validate_remix_training_readiness(readiness, snapshot, manifest) == readiness
