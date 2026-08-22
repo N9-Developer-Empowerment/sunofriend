@@ -1,5 +1,11 @@
 # Lyric-aware, melody-aware vocal comping
 
+> **Direction update - 19 August 2026:** The product decision remains valid,
+> but MIDI is no longer the canonical or required vocal-comp representation.
+> The [Semantic Musical State programme](SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md)
+> supersedes the MIDI-first input and implementation details below. This
+> document remains the original design record.
+
 Prepared: 1 August 2026
 
 Repository baseline: `82e2548` (`main`)

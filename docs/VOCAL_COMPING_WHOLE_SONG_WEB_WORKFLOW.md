@@ -1,5 +1,10 @@
 # Whole-song vocal comping web workflow
 
+> **Direction update - 19 August 2026:** The human workflow and interface
+> decisions remain useful, but target MIDI is no longer required preparation.
+> The canonical data and delivery sequence is defined in the
+> [Semantic Musical State programme](SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md).
+
 Prepared: 16 August 2026
 
 Status: product and engineering design. The existing private pilot records and
@@ -8,6 +13,7 @@ render a complete vocal comp.
 
 Companion documents:
 
+- [Canonical Semantic Musical State and audio-native programme](SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md)
 - [Implementation and evaluation plan](VOCAL_COMPING_IMPLEMENTATION_PLAN.md)
 - [Current ranked-evidence pilot](VOCAL_COMPING_PILOT.md)
 - [Product and technical design](VOCAL_COMPING_DESIGN.md)

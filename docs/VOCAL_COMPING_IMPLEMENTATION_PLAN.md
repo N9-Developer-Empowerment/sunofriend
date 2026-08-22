@@ -1,5 +1,11 @@
 # Vocal comping implementation and evaluation plan
 
+> **Direction update - 19 August 2026:** This MIDI-first programme is retained
+> as the historical record for the implemented v1 pilot. The canonical forward
+> programme is now [Semantic Musical State, vocal comping and training
+> plan](SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md). New work must not
+> extend reviewed target MIDI as the compulsory internal representation.
+
 Prepared: 1 August 2026
 
 Status: VC1 admission and a bounded VC2 ranked-evidence pilot implemented;
@@ -7,6 +13,7 @@ human selection, assembly and correction have not started.
 
 Companion documents:
 
+- [Canonical Semantic Musical State and audio-native programme](SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md)
 - [Product and technical design](VOCAL_COMPING_DESIGN.md)
 - [Research and dependency assessment](VOCAL_COMPING_RESEARCH.md)
 

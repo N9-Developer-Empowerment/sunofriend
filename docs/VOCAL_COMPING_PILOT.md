@@ -1,5 +1,10 @@
 # Vocal comping ranked-evidence pilot
 
+> **Historical v1 pilot:** This implemented pilot retains its reviewed
+> monophonic-MIDI contract for reproducibility. It must not be treated as the
+> forward architecture. See the
+> [Semantic Musical State programme](SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md).
+
 The current private pilot compares synchronized vocal-only takes one musical
 phrase at a time. It produces evidence, audition clips and pickup suggestions.
 It does **not** choose takes, assemble joins, tune notes or render a replacement

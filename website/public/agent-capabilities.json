@@ -244,7 +244,10 @@
         "consonant and guttural closures may be intentionally unpitched",
         "an automated ranking is not a take selection or musical preference"
       ],
-      "research_status_url": "https://sunofriend.com/research/vocal-comping/"
+      "research_status_url": "https://sunofriend.com/research/vocal-comping/",
+      "programme": "semantic_musical_state_audio_native",
+      "forward_plan": "audio-native phrase decisions and whole-song assembly; target MIDI is no longer required or canonical input",
+      "v1_midi_first_pilot": "implemented and retained as the historical record"
     },
     "finished_mix_separation": {
       "status": "public_experimental_local_alpha",
@@ -270,7 +273,10 @@
           "visibility": "public",
           "release_tier": "public_default",
           "status": "public_default",
-          "roles": ["vocals", "instrumental"],
+          "roles": [
+            "vocals",
+            "instrumental"
+          ],
           "public_execution_available": true,
           "automatic_source_selection": false,
           "automatic_midi": false
@@ -281,7 +287,12 @@
           "status": "public_opt_in",
           "scope_id": "core-four-stems-v1",
           "profile_id": "scnet-large-musdb-release-v1",
-          "roles": ["vocals", "drums", "bass", "grouped_other"],
+          "roles": [
+            "vocals",
+            "drums",
+            "bass",
+            "grouped_other"
+          ],
           "public_execution_available": true,
           "automatic_source_selection": false,
           "automatic_midi": false
@@ -291,7 +302,14 @@
           "release_tier": "private_studio_research",
           "status": "private_unregistered_research",
           "registered": false,
-          "roles": ["vocals", "drums", "bass", "synth", "guitar", "residual_other"],
+          "roles": [
+            "vocals",
+            "drums",
+            "bass",
+            "synth",
+            "guitar",
+            "residual_other"
+          ],
           "public_execution_available": false,
           "public_six_role_support_established": false
         },
@@ -382,17 +400,34 @@
           "status": "objective_pass",
           "duration_seconds": 60.0,
           "same_configuration_runs": 3,
-          "worker_elapsed_seconds": [69.96541137504391, 70.19936337508261, 71.18379291682504],
-          "peak_resident_set_bytes": [6581846016, 6719586304, 6588547072],
+          "worker_elapsed_seconds": [
+            69.96541137504391,
+            70.19936337508261,
+            71.18379291682504
+          ],
+          "peak_resident_set_bytes": [
+            6581846016,
+            6719586304,
+            6588547072
+          ],
           "all_persisted_audio_hashes_identical": true,
-          "roles_persisted": ["vocals", "drums", "bass", "other"],
+          "roles_persisted": [
+            "vocals",
+            "drums",
+            "bass",
+            "other"
+          ],
           "maximum_reconstruction_error_lsb": 0,
           "network_denied": true
         },
         "full_song_canaries": {
           "status": "objective_pass",
           "song_disjoint_count": 3,
-          "coverage": ["vocal_forward", "dense_electronic", "acoustic_mixed"],
+          "coverage": [
+            "vocal_forward",
+            "dense_electronic",
+            "acoustic_mixed"
+          ],
           "catastrophic_listens_complete": true,
           "catastrophic_defects_reported": 0,
           "private_audio_or_filenames_published": false
@@ -453,7 +488,10 @@
         "parent_scope_id": "core-four-stems-v1",
         "parent_profile_id": "scnet-large-musdb-release-v1",
         "parent_role": "other",
-        "supported_targets": ["guitar", "keys"],
+        "supported_targets": [
+          "guitar",
+          "keys"
+        ],
         "one_target_per_run": true,
         "residual_role": "other",
         "maximum_reconstruction_error_lsb": 2,
@@ -469,9 +507,18 @@
           "network_denied": true,
           "synthetic_canary_passed": true,
           "full_song_duration_seconds": 234,
-          "full_song_targets_passed": ["guitar", "keys"],
-          "elapsed_seconds": [9.94, 9.22],
-          "peak_unified_memory_bytes": [3492069640, 3492069624],
+          "full_song_targets_passed": [
+            "guitar",
+            "keys"
+          ],
+          "elapsed_seconds": [
+            9.94,
+            9.22
+          ],
+          "peak_unified_memory_bytes": [
+            3492069640,
+            3492069624
+          ],
           "maximum_reconstruction_error_lsb": 0,
           "known_musical_limitation": "The completed fixed five-song, ten-report review demonstrated neither useful guitar extraction nor successful piano extraction. The technically valid profile remains reproducible in Studio but is not promoted, selected or fed to MIDI.",
           "first_verified_machine": "Apple M3 Max with 36 GB unified memory",
@@ -493,7 +540,10 @@
           "status": "reference_objective_pass_human_listening_musically_unsuccessful",
           "registered": false,
           "executable": false,
-          "targets": ["guitar", "keyboard_synth"],
+          "targets": [
+            "guitar",
+            "keyboard_synth"
+          ],
           "keyboard_synth_training_classes": [
             "electric_piano",
             "organ_electric_organ",
@@ -623,13 +673,17 @@
             "attempts_consumed": 1,
             "elapsed_seconds": 2.853968958137557,
             "peak_resident_set_bytes": 2052014080,
-            "output_shape": [1, 2, 88200],
+            "output_shape": [
+              1,
+              2,
+              88200
+            ],
             "output_dtype": "float32",
             "output_sample_rate_hz": 44100,
             "all_output_samples_finite": true,
-            "target_peak": 0.00004118360084248707,
+            "target_peak": 4.118360084248707e-05,
             "residual_peak": 0.15990281105041504,
-            "maximum_reconstruction_error": 7.450580596923828e-9,
+            "maximum_reconstruction_error": 7.450580596923828e-09,
             "network_attempts": 0,
             "audio_open_attempts": 0,
             "private_audio_processed": false,
@@ -645,7 +699,11 @@
             "command": ".venv/bin/python scripts/plan-separation-other-refinement-query-reference.py",
             "document_sha256": "abfebe4f3eddfa3d891c8972edcbfd2dc62b968dc71e6c20dfb4311068059c76",
             "rights_category": "owned",
-            "query_targets": ["guitar", "keyboard", "synth"],
+            "query_targets": [
+              "guitar",
+              "keyboard",
+              "synth"
+            ],
             "query_track_is_song_disjoint": true,
             "test_mixtures": 3,
             "inference_attempt_limit": 9,
@@ -688,7 +746,11 @@
           "status": "private_six_role_integration_qualified_not_public",
           "registered": false,
           "executable": false,
-          "priority": ["synth", "guitar", "wind"],
+          "priority": [
+            "synth",
+            "guitar",
+            "wind"
+          ],
           "piano_policy": "optional acoustic-piano control only; never a proxy for modern keyboard or synth separation",
           "first_target": "synth",
           "checkpoint_release": "https://github.com/ZFTurbo/Music-Source-Separation-Training/releases/tag/v1.0.21",
@@ -717,7 +779,10 @@
           "automatic_download_allowed": false,
           "unrestricted_checkpoint_loader_allowed": false,
           "required_checkpoint_loader": "torch.load(weights_only=True, map_location='cpu')",
-          "persisted_roles": ["synth", "residual_other"],
+          "persisted_roles": [
+            "synth",
+            "residual_other"
+          ],
           "native_53_stem_sum_is_reconstruction_claim": false,
           "instrument_presence_review_precedes_usefulness": true,
           "absent_target_is_model_failure": false,
@@ -749,8 +814,12 @@
             "report_file_sha256": "567068a414c5ebc0cdb7cd47564934c5ec8f6b13c70425dd736c02af43892ac7",
             "network_denied": true,
             "python_network_attempts": 0,
-            "socket_constructions": ["requests:socket.__new__"],
-            "local_bind_attempts": ["requests:socket.bind:('::1', 0)"],
+            "socket_constructions": [
+              "requests:socket.__new__"
+            ],
+            "local_bind_attempts": [
+              "requests:socket.bind:('::1', 0)"
+            ],
             "checkpoint_open_attempts": 0,
             "audio_open_attempts": 0,
             "torch_load_calls": 0,
@@ -808,7 +877,12 @@
               "report_sha256": "07d8af0ccd913914f509a75015476c9a0efe85bb89639514032c138420ec3f10",
               "elapsed_seconds": 18.186591000063345,
               "peak_mlx_memory_bytes": 15424362972,
-              "output_shape": [1, 53, 2, 881664],
+              "output_shape": [
+                1,
+                53,
+                2,
+                881664
+              ],
               "all_samples_finite": true,
               "maximum_reconstruction_error": 9.313225746154785e-10,
               "network_attempts": 0,
@@ -836,7 +910,14 @@
             "report_sha256": "af0533233c4469c3914fbe2cf4eae1195de1ee545847c122a8a9f023f350d513",
             "review_document_sha256": "407e4bf0ab686ceee2bcaa77473eca0a76b307b13b217e070cf5ae8a8cdb31ce",
             "outcome_document_sha256": "85b63909743da20a0b68e9d2fc130d0120f99e88036653586f7507766cf5d6f9",
-            "persisted_roles": ["vocals", "drums", "bass", "synth", "guitar", "residual_other"],
+            "persisted_roles": [
+              "vocals",
+              "drums",
+              "bass",
+              "synth",
+              "guitar",
+              "residual_other"
+            ],
             "review_case_count": 8,
             "pcm24_artifact_count": 64,
             "model_loads": 3,
@@ -964,7 +1045,14 @@
         "status": "private_review_package_recovered_model_free_resource_gate_incomplete",
         "registered": false,
         "public_execution_available": false,
-        "roles": ["vocals", "drums", "bass", "synth", "guitar", "residual_other"],
+        "roles": [
+          "vocals",
+          "drums",
+          "bass",
+          "synth",
+          "guitar",
+          "residual_other"
+        ],
         "original_plan_sha256": "869ac229d5c95c9c3d5eb2c9eb38da368056f6fe3c644de9830cc593313efb7d",
         "original_plan_authority_consumed": true,
         "automatic_retry_authorized": false,
@@ -1091,6 +1179,30 @@
       "public_status_page": "https://sunofriend.com/research/separation/",
       "feedback_url": "https://github.com/N9-Developer-Empowerment/sunofriend/issues/new?template=daw-ai-compatibility.yml",
       "feedback_accepts_private_audio": false
+    },
+    "remixing": {
+      "status": "private_research_plan_not_implemented",
+      "public_product_route_available": false,
+      "website_recording_available": false,
+      "website_audio_upload_available": false,
+      "model_installed": false,
+      "model_trained": false,
+      "programme": "semantic_musical_state_audio_native",
+      "working_private_scope": "canonical programme plan only; no remix command, model or generation exists yet",
+      "first_planned_lane": "deterministic assembly/retrieval with frozen pretrained models (D+I+H); learned conditioning (T+I+H) only after bounded remix evidence beats the controls",
+      "current_effects": {
+        "automatic_remix_generation": false,
+        "learned_conditioning": false,
+        "unconstrained_full_song_generation": false
+      },
+      "human_authority": "owner-named identity anchors and one permitted change; human listening decides whether the result retains the song",
+      "identity_anchor_examples": [
+        "accompaniment motifs",
+        "bass and harmony motion",
+        "groove and section energy",
+        "lyric, phrase and structure evidence"
+      ],
+      "cloud_gate": "local work only today; larger training requires separate authorisation and never uploads private audio"
     }
   },
   "boundaries": {
