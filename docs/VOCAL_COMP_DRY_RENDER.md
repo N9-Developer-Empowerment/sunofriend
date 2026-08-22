@@ -183,3 +183,10 @@ the carried base, selected phrase and combined excerpt. Playback cannot accept
 the join or update the usable base. The renderer performs exact PCM24 sample
 concatenation only: no tuning, timing change, resampling, crossfade, gain
 change, normalization, limiting, model inference or training.
+
+After listening, `scripts/record-vocal-comp-continuation-review.py` binds an
+explicit phrase-usability and join-quality decision to the exact plan, result
+and continuation-audio hashes. Only the combination `phrase=usable` and
+`join=natural` marks that exact dry excerpt usable as the next iteration base.
+The review is written outside the immutable render package and grants no
+release, correction, training-label or checkpoint-promotion authority.

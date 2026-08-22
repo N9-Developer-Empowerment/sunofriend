@@ -33,6 +33,7 @@ VOCAL_CONTINUATION_EDIT_MAP_SCHEMA = "sunofriend.vocal-dry-continuation-edit-map
 VOCAL_CONTINUATION_VERIFICATION_SCHEMA = (
     "sunofriend.vocal-dry-continuation-verification.v0"
 )
+VOCAL_CONTINUATION_REVIEW_SCHEMA = "sunofriend.vocal-dry-continuation-owner-review.v0"
 
 _BASE_BINDING_SCHEMA = "sunofriend.private-vocal-continuation-base-binding.v0"
 _BASE_REVIEW_SCHEMA = "sunofriend.private-vocal-excerpt-review-result.v0"
@@ -514,6 +515,140 @@ def verify_vocal_continuation_result(
     return verification
 
 
+def create_vocal_continuation_review(
+    output_dir: str | Path,
+    plan: Mapping[str, Any],
+    *,
+    phrase_outcome: str,
+    join_outcome: str,
+    heard_full_preview: bool,
+    notes: str | None = None,
+) -> dict[str, Any]:
+    """Record one explicit owner review of the exact rendered continuation."""
+
+    checked_plan = _validate_plan_shape(plan)
+    result = _continuation_result_from_root(output_dir)
+    verify_vocal_continuation_result(output_dir, checked_plan, result)
+    document = _continuation_review_document(
+        checked_plan,
+        result,
+        phrase_outcome=phrase_outcome,
+        join_outcome=join_outcome,
+        heard_full_preview=heard_full_preview,
+        notes=notes,
+    )
+    return validate_vocal_continuation_review(
+        document, output_dir=output_dir, plan=checked_plan
+    )
+
+
+def validate_vocal_continuation_review(
+    review: Mapping[str, Any],
+    *,
+    output_dir: str | Path,
+    plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Reverify the render and reject altered or excessive review authority."""
+
+    checked_plan = _validate_plan_shape(plan)
+    result = _continuation_result_from_root(output_dir)
+    verify_vocal_continuation_result(output_dir, checked_plan, result)
+    document = dict(review)
+    _verify_document(document, VOCAL_CONTINUATION_REVIEW_SCHEMA, "continuation review")
+    decision = document.get("decision")
+    heard = document.get("heard")
+    if not isinstance(decision, Mapping) or not isinstance(heard, Mapping):
+        raise ValueError("continuation review decision or heard evidence is missing")
+    expected = _continuation_review_document(
+        checked_plan,
+        result,
+        phrase_outcome=decision.get("phrase_3"),
+        join_outcome=decision.get("join_at_reviewed_boundary"),
+        heard_full_preview=heard.get("full_three_phrase_preview"),
+        notes=document.get("notes"),
+    )
+    if document != expected:
+        raise ValueError("continuation review is stale, altered or excessive")
+    return document
+
+
+def _continuation_review_document(
+    plan: Mapping[str, Any],
+    result: Mapping[str, Any],
+    *,
+    phrase_outcome: Any,
+    join_outcome: Any,
+    heard_full_preview: Any,
+    notes: Any,
+) -> dict[str, Any]:
+    if phrase_outcome not in {"usable", "not_usable", "cannot_tell"}:
+        raise ValueError("continuation phrase outcome is unsupported")
+    if join_outcome not in {"natural", "audible", "cannot_tell"}:
+        raise ValueError("continuation join outcome is unsupported")
+    if heard_full_preview is not True:
+        raise ValueError("continuation review requires the full preview to be heard")
+    if not isinstance(notes, (str, type(None))):
+        raise ValueError("continuation review notes must be text or null")
+    if isinstance(notes, str) and len(notes) > 2_000:
+        raise ValueError("continuation review notes are too long")
+    usable_base = phrase_outcome == "usable" and join_outcome == "natural"
+    document: dict[str, Any] = {
+        "schema": VOCAL_CONTINUATION_REVIEW_SCHEMA,
+        "status": "complete_explicit_owner_continuation_review",
+        "method_natures": ["H"],
+        "binding": {
+            "plan_schema": VOCAL_CONTINUATION_PLAN_SCHEMA,
+            "plan_sha256": plan["document_sha256"],
+            "result_schema": VOCAL_CONTINUATION_RESULT_SCHEMA,
+            "result_sha256": result["document_sha256"],
+            "continuation_audio_sha256": result["artifacts"]["continuation_audio"][
+                "sha256"
+            ],
+            "musical_state_sha256": plan["binding"]["musical_state_sha256"],
+            "phrase_decision_sha256": plan["binding"]["phrase_decision_sha256"],
+        },
+        "scope": {
+            "phrase_ids": list(plan["scope"]["phrase_ids"]),
+            "appended_phrase_id": plan["scope"]["appended_phrase_id"],
+            "song_start_seconds": plan["scope"]["song_start_seconds"],
+            "song_end_seconds": plan["scope"]["song_end_seconds"],
+            "join_song_time_seconds": plan["join"]["song_time_seconds"],
+        },
+        "heard": {"full_three_phrase_preview": True},
+        "decision": {
+            "phrase_3": phrase_outcome,
+            "join_at_reviewed_boundary": join_outcome,
+            "whole_excerpt": (
+                "usable_as_next_iteration_base" if usable_base else "needs_iteration"
+            ),
+        },
+        "notes": notes,
+        "authority": {
+            "usable_as_next_iteration_base": usable_base,
+            "join_accepted_for_this_exact_dry_excerpt": join_outcome == "natural",
+            "phrase_selection_changed": False,
+            "release_authorized": False,
+            "correction_authorized": False,
+            "training_label_created": False,
+            "checkpoint_promotion_authorized": False,
+        },
+        "effects": _no_effects(),
+        "network_used": False,
+    }
+    document["document_sha256"] = document_sha256(document)
+    _reject_paths(document)
+    return document
+
+
+def _continuation_result_from_root(output_dir: str | Path) -> dict[str, Any]:
+    root = Path(output_dir).expanduser().resolve(strict=True)
+    return _read_hashed_json(
+        root / "TECHNICAL/dry-continuation-result.json",
+        VOCAL_CONTINUATION_RESULT_SCHEMA,
+        "continuation result",
+    )
+
+
 def _load_base(
     base_binding_path: str | Path,
 ) -> tuple[Path, dict[str, Any], Path, dict[str, Any], dict[str, Any]]:
@@ -821,12 +956,15 @@ __all__ = [
     "VOCAL_CONTINUATION_AUTHORIZATION_SCHEMA",
     "VOCAL_CONTINUATION_EDIT_MAP_SCHEMA",
     "VOCAL_CONTINUATION_PLAN_SCHEMA",
+    "VOCAL_CONTINUATION_REVIEW_SCHEMA",
     "VOCAL_CONTINUATION_RESULT_SCHEMA",
     "VOCAL_CONTINUATION_VERIFICATION_SCHEMA",
     "create_vocal_continuation_plan",
+    "create_vocal_continuation_review",
     "create_vocal_continuation_render_authorization",
     "render_vocal_continuation",
     "validate_vocal_continuation_plan",
+    "validate_vocal_continuation_review",
     "validate_vocal_continuation_render_authorization",
     "verify_vocal_continuation_result",
 ]

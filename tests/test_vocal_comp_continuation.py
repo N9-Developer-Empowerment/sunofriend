@@ -20,9 +20,11 @@ from sunofriend.vocal_capture import create_vocal_capture
 from sunofriend.vocal_comp_continuation import (
     VOCAL_CONTINUATION_PLAN_SCHEMA,
     create_vocal_continuation_plan,
+    create_vocal_continuation_review,
     create_vocal_continuation_render_authorization,
     render_vocal_continuation,
     validate_vocal_continuation_plan,
+    validate_vocal_continuation_review,
 )
 from sunofriend.vocal_phrase_decision import create_phrase_decision
 
@@ -176,6 +178,67 @@ def test_stale_decision_tampering_and_base_authority_expansion_fail_closed(
     with pytest.raises(ValueError, match="excessive authority"):
         create_vocal_continuation_plan(
             expanded, fixture["state_path"], fixture["decision"]
+        )
+
+
+def test_explicit_phrase_and_natural_join_review_make_exact_preview_next_base(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    plan = create_vocal_continuation_plan(
+        fixture["base_binding"], fixture["state_path"], fixture["decision"]
+    )
+    authorization = create_vocal_continuation_render_authorization(
+        plan, confirm_dry_uncorrected_preview=True
+    )
+    output = tmp_path / "reviewed-three-phrase-output"
+    render_vocal_continuation(
+        fixture["base_binding"],
+        fixture["state_path"],
+        fixture["decision"],
+        plan,
+        authorization,
+        out_dir=output,
+        expected_plan_sha256=plan["document_sha256"],
+        confirm_dry_uncorrected_render=True,
+    )
+
+    review = create_vocal_continuation_review(
+        output,
+        plan,
+        phrase_outcome="usable",
+        join_outcome="natural",
+        heard_full_preview=True,
+    )
+
+    assert review["decision"] == {
+        "phrase_3": "usable",
+        "join_at_reviewed_boundary": "natural",
+        "whole_excerpt": "usable_as_next_iteration_base",
+    }
+    assert review["authority"]["usable_as_next_iteration_base"] is True
+    assert review["authority"]["join_accepted_for_this_exact_dry_excerpt"] is True
+    assert review["authority"]["release_authorized"] is False
+    assert review["authority"]["training_label_created"] is False
+    assert not any(review["effects"].values())
+    assert (
+        validate_vocal_continuation_review(review, output_dir=output, plan=plan)
+        == review
+    )
+
+    excessive = deepcopy(review)
+    excessive["authority"]["release_authorized"] = True
+    _rehash(excessive)
+    with pytest.raises(ValueError, match="altered|excessive"):
+        validate_vocal_continuation_review(excessive, output_dir=output, plan=plan)
+
+    with pytest.raises(ValueError, match="full preview"):
+        create_vocal_continuation_review(
+            output,
+            plan,
+            phrase_outcome="usable",
+            join_outcome="natural",
+            heard_full_preview=False,
         )
 
 
