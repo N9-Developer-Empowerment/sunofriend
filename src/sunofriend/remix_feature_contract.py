@@ -177,7 +177,7 @@ def assess_remix_training_readiness(
         "explicit_composition_disjoint_evidence_gate": evidence_passed,
         "transparent_operation_baseline_available": True,
         "frozen_audio_feature_manifest_admitted": False,
-        "remix_training_request_result_verifier_implemented": False,
+        "remix_training_request_result_verifier_implemented": True,
         "owner_blind_promotion_review_available": False,
     }
     document: dict[str, Any] = {
@@ -191,8 +191,8 @@ def assess_remix_training_readiness(
         "ready_for_real_weight_optimisation": False,
         "missing": [key for key, passed in gates.items() if not passed],
         "next_implementation": (
-            "admit one reproducible frozen audio feature provider and implement "
-            "the remix-specific bounded request, runner, result and verifier"
+            "extract and admit one reproducible real-audio frozen feature manifest "
+            "under a fresh rights-bound request"
         ),
         "next_owner_evidence": (
             "create controlled variants and explicit three-way pairwise labels "
@@ -276,7 +276,7 @@ def assess_values(
         is True,
         "transparent_operation_baseline_available": True,
         "frozen_audio_feature_manifest_admitted": False,
-        "remix_training_request_result_verifier_implemented": False,
+        "remix_training_request_result_verifier_implemented": True,
         "owner_blind_promotion_review_available": False,
     }
     return {
@@ -289,8 +289,8 @@ def assess_values(
         "ready_for_real_weight_optimisation": False,
         "missing": [key for key, passed in gates.items() if not passed],
         "next_implementation": (
-            "admit one reproducible frozen audio feature provider and implement "
-            "the remix-specific bounded request, runner, result and verifier"
+            "extract and admit one reproducible real-audio frozen feature manifest "
+            "under a fresh rights-bound request"
         ),
         "next_owner_evidence": (
             "create controlled variants and explicit three-way pairwise labels "
