@@ -27,6 +27,11 @@ from sunofriend.vocal_comp_continuation import (
     validate_vocal_continuation_review,
 )
 from sunofriend.vocal_phrase_decision import create_phrase_decision
+from sunofriend.vocal_iteration_base import (
+    VOCAL_ITERATION_BASE_SCHEMA,
+    create_vocal_iteration_base,
+    verify_vocal_iteration_base,
+)
 
 
 SAMPLE_RATE = 8_000
@@ -240,6 +245,70 @@ def test_explicit_phrase_and_natural_join_review_make_exact_preview_next_base(
             join_outcome="natural",
             heard_full_preview=False,
         )
+
+
+def test_reviewed_continuation_promotes_to_exact_immutable_next_iteration_base(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    plan = create_vocal_continuation_plan(
+        fixture["base_binding"], fixture["state_path"], fixture["decision"]
+    )
+    authorization = create_vocal_continuation_render_authorization(
+        plan, confirm_dry_uncorrected_preview=True
+    )
+    render_root = tmp_path / "reviewed-render"
+    render_vocal_continuation(
+        fixture["base_binding"],
+        fixture["state_path"],
+        fixture["decision"],
+        plan,
+        authorization,
+        out_dir=render_root,
+        expected_plan_sha256=plan["document_sha256"],
+        confirm_dry_uncorrected_render=True,
+    )
+    review = create_vocal_continuation_review(
+        render_root,
+        plan,
+        phrase_outcome="usable",
+        join_outcome="natural",
+        heard_full_preview=True,
+    )
+    destination = tmp_path / "next-iteration-base"
+
+    with pytest.raises(ValueError, match="explicit next-iteration"):
+        create_vocal_iteration_base(
+            render_root,
+            plan,
+            review,
+            out_dir=destination,
+            expected_review_sha256=review["document_sha256"],
+        )
+    base = create_vocal_iteration_base(
+        render_root,
+        plan,
+        review,
+        out_dir=destination,
+        expected_review_sha256=review["document_sha256"],
+        confirm_next_iteration_base=True,
+    )
+
+    assert base["schema"] == VOCAL_ITERATION_BASE_SCHEMA
+    assert base["scope"]["phrase_ids"] == ["phrase-1", "phrase-2", "phrase-3"]
+    assert base["authority"]["usable_as_next_iteration_base"] is True
+    assert base["authority"]["decisions_migrated"] is False
+    assert base["effects"]["audio_copied_exactly"] is True
+    assert base["effects"]["audio_rendered"] is False
+    assert file_sha256(destination / base["artifacts"]["audio"]["path"]) == (
+        file_sha256(render_root / "AUDIO/dry-three-phrase-continuation.wav")
+    )
+    assert verify_vocal_iteration_base(destination) == base
+
+    changed = destination / "AUDIO/reviewed-vocal-base.wav"
+    changed.write_bytes(b"changed")
+    with pytest.raises(ValueError, match="identity changed"):
+        verify_vocal_iteration_base(destination)
 
 
 def _fixture(root: Path) -> dict[str, Any]:

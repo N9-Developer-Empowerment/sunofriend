@@ -629,3 +629,26 @@ under a separate, explicit private-data approval and bounded request.
 
 This bridge makes training real from the beginning while keeping each musical
 deliverable useful without depending on the model research succeeding.
+
+## First audio-native real comparison
+
+`sunofriend.remix_source_delta` bridges the dedicated remix source/anchor v1
+evidence into a deterministic two-challenger listening experiment. The first
+bounded operation edits only one exact drums estimate, treated explicitly as a
+rhythm estimate rather than ground truth. The separately confirmed melodic
+anchor estimate is not the direct edit target. Separator bleed may still make
+the decomposition imperfect, so the owner must judge identity retention from
+the complete mix.
+
+Each challenger uses the transparent formula
+`source + (gain - 1) * drums_estimate`. The source control remains a byte-exact
+copy. Both variants share one frame clock and differ only in the declared gain
+envelope. The renderer refuses clipping instead of hiding it with independent
+normalization or limiting.
+
+Planning has no audio effect. One exact private A/B render needs separate owner
+authorization and a separate execution confirmation. Rendering produces no
+review, preference, label, training authority, product selection or model
+change. The existing review-only comparison page can then present original,
+anonymous A and anonymous B on one playhead. A later explicit training label
+remains a separate admission action.

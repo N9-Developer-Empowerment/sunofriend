@@ -190,3 +190,21 @@ and continuation-audio hashes. Only the combination `phrase=usable` and
 `join=natural` marks that exact dry excerpt usable as the next iteration base.
 The review is written outside the immutable render package and grants no
 release, correction, training-label or checkpoint-promotion authority.
+
+## Freezing the accepted continuation for the next phrase
+
+`sunofriend.vocal_iteration_base` turns the exact combination of a technically
+verified continuation render and an explicit `usable_as_next_iteration_base`
+owner review into a fresh owner-only evidence package. It copies the accepted
+PCM24 audio byte-for-byte and retains the exact plan, result and owner review.
+The package validator reopens and hashes every retained file.
+
+This is an iteration boundary, not a comp decision migration. Earlier phrase
+choices remain in their original ledgers; the new package authorizes only use
+of the exact accepted waveform as the carried base for the next phrase. It
+does not authorize another render, correction, release, training label,
+training execution or checkpoint promotion.
+
+The next phrase still needs canonical lyrics and separately reviewed start and
+end boundaries. Auxiliary Whisper timestamps may seed a listening page, but
+cannot approve the window or silently rewrite the lyrics.
