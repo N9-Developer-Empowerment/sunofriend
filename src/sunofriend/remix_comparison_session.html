@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sunofriend controlled remix review</title>
+  <link rel="stylesheet" href="/remix_comparison_session.css">
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">Sunofriend · Controlled remix review</p>
+      <h1 id="title">Loading comparison…</h1>
+      <p id="progress" class="progress">Preparing this local review.</p>
+    </div>
+    <span class="local"><i></i> Saved only on this computer</span>
+  </header>
+
+  <main>
+    <section class="card purpose">
+      <div>
+        <p class="eyebrow">What you are listening for</p>
+        <h2 id="goal">Loading the musical goal…</h2>
+        <p id="anchor" class="support">Loading the owner-approved musical anchor…</p>
+      </div>
+      <div class="boundary">
+        <strong>Listening and saving choose nothing</strong>
+        <span>This page does not pick a final remix, start training, or change any audio.</span>
+      </div>
+    </section>
+
+    <section class="card transport-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">One shared playhead</p>
+          <h2>Hear the same moment in every version</h2>
+          <p class="support">Switch between the original, A and B without losing your place.</p>
+        </div>
+        <button id="stop" type="button" class="quiet">Stop</button>
+      </div>
+      <div class="source-buttons">
+        <button type="button" data-play="original"><span>Original context</span><small>Hear the song before judging</small></button>
+        <button type="button" data-play="a"><span>Version A</span><small>Anonymous</small></button>
+        <button type="button" data-play="b"><span>Version B</span><small>Anonymous</small></button>
+      </div>
+      <audio id="player" preload="metadata"></audio>
+      <div class="timeline">
+        <button id="play-pause" type="button" aria-label="Play or pause">Play</button>
+        <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Playback position">
+        <span id="clock">0:00 / 0:00</span>
+      </div>
+      <p id="playing" class="support">Choose original context first.</p>
+      <div class="heard-gates">
+        <label><input id="heard-original" type="checkbox"> I heard the original context</label>
+        <label><input id="heard-a" type="checkbox"> I heard Version A</label>
+        <label><input id="heard-b" type="checkbox"> I heard Version B</label>
+      </div>
+    </section>
+
+    <section id="decision" class="card decision">
+      <p class="eyebrow">Your review</p>
+      <h2>Which version helps the song?</h2>
+
+      <fieldset>
+        <legend>Overall result</legend>
+        <div class="choice-grid outcomes">
+          <label><input type="radio" name="outcome" value="a"> A works better</label>
+          <label><input type="radio" name="outcome" value="b"> B works better</label>
+          <label><input type="radio" name="outcome" value="equivalent"> No meaningful difference</label>
+          <label><input type="radio" name="outcome" value="neither"> Neither helps</label>
+          <label><input type="radio" name="outcome" value="cannot_tell"> I cannot tell yet</label>
+        </div>
+      </fieldset>
+
+      <div class="version-grid">
+        <article>
+          <h3>Version A</h3>
+          <label>Does it keep the song recognisable?
+            <select id="identity-a">
+              <option value="">Choose…</option>
+              <option value="preserved">Yes</option>
+              <option value="partly_preserved">Partly</option>
+              <option value="lost">No</option>
+              <option value="cannot_tell">I cannot tell</option>
+            </select>
+          </label>
+          <label>Does it help the stated goal?
+            <select id="usefulness-a">
+              <option value="">Choose…</option>
+              <option value="useful">Yes</option>
+              <option value="not_useful">No</option>
+              <option value="equivalent_to_original">About the same as the original</option>
+              <option value="cannot_tell">I cannot tell</option>
+            </select>
+          </label>
+        </article>
+        <article>
+          <h3>Version B</h3>
+          <label>Does it keep the song recognisable?
+            <select id="identity-b">
+              <option value="">Choose…</option>
+              <option value="preserved">Yes</option>
+              <option value="partly_preserved">Partly</option>
+              <option value="lost">No</option>
+              <option value="cannot_tell">I cannot tell</option>
+            </select>
+          </label>
+          <label>Does it help the stated goal?
+            <select id="usefulness-b">
+              <option value="">Choose…</option>
+              <option value="useful">Yes</option>
+              <option value="not_useful">No</option>
+              <option value="equivalent_to_original">About the same as the original</option>
+              <option value="cannot_tell">I cannot tell</option>
+            </select>
+          </label>
+        </article>
+      </div>
+
+      <fieldset>
+        <legend>What mattered? Choose one to four</legend>
+        <div class="choice-grid reasons">
+          <label><input type="checkbox" value="musical_change"> More useful musical change</label>
+          <label><input type="checkbox" value="identity_retention"> Song identity</label>
+          <label><input type="checkbox" value="energy_shape"> Energy shape</label>
+          <label><input type="checkbox" value="groove_fit"> Groove</label>
+          <label><input type="checkbox" value="arrangement_fit"> Arrangement</label>
+          <label><input type="checkbox" value="balance"> Musical balance</label>
+          <label><input type="checkbox" value="artifact"> Unwanted sound or artifact</label>
+          <label><input type="checkbox" value="change_inaudible"> Change was too small to hear</label>
+          <label><input type="checkbox" value="both_unusable"> Neither version was usable</label>
+          <label><input type="checkbox" value="unable_to_compare"> I could not compare them</label>
+          <label><input type="checkbox" value="other"> Something else</label>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button id="save-draft" type="button" class="quiet">Save draft</button>
+        <button id="save-review" type="button" class="primary">Save this review locally</button>
+      </div>
+      <p class="support">A draft lets you return later. A saved review records only what you explicitly chose here.</p>
+    </section>
+
+    <section id="saved-panel" class="card saved-panel" hidden>
+      <p class="eyebrow">Review saved locally</p>
+      <h2>Your decision is recorded, not acted upon</h2>
+      <p class="support">You can keep listening. Reopening adds a new revision; the earlier review is never overwritten.</p>
+      <label>Why reopen it?
+        <select id="reopen-reason">
+          <option value="">Choose…</option>
+          <option value="listen_again">I want to listen again</option>
+          <option value="change_answer">I want to change an answer</option>
+          <option value="audio_issue">I noticed an audio problem</option>
+          <option value="compare_new_context">I want to compare more context</option>
+          <option value="other">Something else</option>
+        </select>
+      </label>
+      <button id="reopen" type="button">Reopen this review</button>
+      <div id="history" class="history"></div>
+    </section>
+    <p id="notice" role="status"></p>
+  </main>
+  <script src="/remix_comparison_session.js"></script>
+</body>
+</html>

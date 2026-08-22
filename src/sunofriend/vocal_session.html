@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sunofriend Vocal Session</title>
+  <link rel="stylesheet" href="/vocal_session.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Sunofriend · Vocal comping lab</p>
+      <h1 id="song-title">Vocal session</h1>
+    </div>
+    <div class="privacy-pill"><span></span> Private on this computer</div>
+  </header>
+
+  <main class="workspace" aria-live="polite">
+    <aside class="song-map panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Song map</p>
+          <h2>What needs you</h2>
+        </div>
+        <span id="progress-count" class="count">—</span>
+      </div>
+      <div class="progress-track"><span id="progress-fill"></span></div>
+      <div class="phrase-tools">
+        <div class="phrase-filter" role="group" aria-label="Filter song phrases">
+          <button type="button" data-phrase-filter="open" aria-pressed="true">Needs me</button>
+          <button type="button" data-phrase-filter="all" aria-pressed="false">All</button>
+          <button type="button" data-phrase-filter="decided" aria-pressed="false">Done</button>
+        </div>
+        <button id="next-open-phrase" class="quiet-button" type="button">Next phrase needing me</button>
+      </div>
+      <nav id="phrase-list" aria-label="Song phrases"></nav>
+      <div class="map-note">
+        Progress changes only when you make a clear phrase decision. Listening
+        never chooses for you.
+      </div>
+    </aside>
+
+    <section class="phrase-stage panel">
+      <div class="stage-meta">
+        <span id="phrase-time">—</span>
+        <span id="phrase-state" class="state-chip">Open</span>
+      </div>
+      <p id="phrase-lyrics" class="lyrics">Loading your phrase…</p>
+
+      <div class="context-card">
+        <div class="listen-heading">
+          <div>
+            <p class="eyebrow">Original and context</p>
+            <h2>Hear where this phrase belongs</h2>
+          </div>
+          <button id="play-original" type="button">Play original</button>
+        </div>
+        <div class="scope-switch" role="group" aria-label="Playback context">
+          <button type="button" data-context-scope="phrase" aria-pressed="true">Phrase</button>
+          <button type="button" data-context-scope="section" aria-pressed="false">Surrounding section</button>
+          <button type="button" data-context-scope="song" aria-pressed="false">Song</button>
+        </div>
+        <p id="context-help" class="support-copy">
+          Start with the original, then compare any human attempt across the same context window.
+          Playback is only an audition and never saves a choice.
+        </p>
+      </div>
+
+      <div class="listen-card">
+        <div class="listen-heading">
+          <div>
+            <p class="eyebrow">Human takes</p>
+            <h2>Listen without ranking</h2>
+          </div>
+          <button id="stop-audio" class="quiet-button" type="button">Stop</button>
+        </div>
+        <p class="support-copy">
+          Play and Use are separate. The labels are neutral; no score or
+          automatic “best take” is shown.
+        </p>
+        <div id="source-tray" class="source-tray"></div>
+        <audio id="player" preload="metadata"></audio>
+      </div>
+
+      <div class="record-card">
+        <div class="record-icon" aria-hidden="true"></div>
+        <div>
+          <p class="eyebrow">Guided pickup recording</p>
+          <h2 id="record-title">Preparing the safe cue</h2>
+          <p id="record-reason" class="support-copy"></p>
+        </div>
+        <div class="record-actions">
+          <button id="enable-mic" type="button" disabled>Enable microphone</button>
+          <button id="record-attempt" class="primary-button" type="button" disabled>Record</button>
+          <button id="stop-recording" class="quiet-button" type="button" disabled>Stop &amp; discard</button>
+        </div>
+      </div>
+      <div id="recorder-panel" class="recorder-panel hidden">
+        <div class="meter-row">
+          <span id="record-count">READY</span>
+          <div class="meter-track"><span id="mic-meter"></span></div>
+        </div>
+        <p id="mic-status" class="microcopy">Microphone is not enabled.</p>
+        <p id="record-status" class="support-copy">Use headphones before recording.</p>
+        <div id="recorded-attempt" class="recorded-attempt hidden">
+          <audio id="attempt-player" controls preload="metadata"></audio>
+          <p id="attempt-level" class="microcopy"></p>
+          <p class="microcopy">The player uses a compatibility preview; Save retains the exact PCM24 capture.</p>
+          <div class="record-save-actions">
+            <button id="save-recording" class="primary-button" type="button">Save this recording locally</button>
+            <button id="discard-attempt" class="quiet-button" type="button">Discard</button>
+          </div>
+          <p class="microcopy">Saving admits a new unreviewed source. After earlier decisions, it explicitly reopens this phrase and revalidates only unchanged choices. It does not choose, tune or comp audio.</p>
+        </div>
+      </div>
+    </section>
+
+    <aside class="decision-panel panel">
+      <p class="eyebrow">Your decision</p>
+      <h2>What should happen here?</h2>
+      <p class="support-copy">
+        Choose only after listening. This records the source plan; it does not
+        assemble, tune or alter any audio.
+      </p>
+
+      <div id="current-choice" class="current-choice hidden"></div>
+
+      <label for="session-note">Note for yourself</label>
+      <textarea id="session-note" rows="4" maxlength="2000"
+        placeholder="For example: stronger last word, but keep the warmth."></textarea>
+      <p id="draft-status" class="microcopy">Saved locally as a draft only.</p>
+
+      <div id="decision-actions" class="decision-actions">
+        <button id="use-human" class="primary-button" type="button" disabled>
+          Use the selected human take
+        </button>
+        <button id="record-new-attempt" type="button">Record a new attempt</button>
+        <button id="no-candidate" class="quiet-button" type="button">
+          No acceptable human take
+        </button>
+        <button id="ai-fallback" class="ai-button hidden" type="button">
+          Keep authorised AI here for now
+        </button>
+      </div>
+
+      <div id="decision-revision-actions" class="decision-actions hidden">
+        <button id="reopen-phrase" type="button">Reopen and reconsider this phrase</button>
+        <button id="record-replacement" type="button">Record a replacement attempt</button>
+      </div>
+
+      <div class="boundary-note">
+        <strong>Not happening yet</strong>
+        <span>No comp render, join, pitch correction, timing correction or model training.</span>
+      </div>
+      <p id="notice" role="status" class="notice"></p>
+    </aside>
+  </main>
+
+  <script src="/vocal_session.js"></script>
+</body>
+</html>

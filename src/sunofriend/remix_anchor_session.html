@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Define a remix anchor</title>
+  <link rel="stylesheet" href="/remix_anchor_session.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">CONTROLLED REMIX · STEP 1</p>
+      <h1 id="title">Define what must stay recognisable</h1>
+      <p class="lede">Start with the complete mix. Then use separated estimates only to locate the melody, rhythm, harmony or structure that gives this excerpt its identity.</p>
+    </header>
+
+    <section class="card">
+      <p class="eyebrow">1 · THE MUSICAL TRUTH</p>
+      <h2>Hear the complete original mix</h2>
+      <p>The mix—not any separated stem—is the primary evidence of what listeners recognise.</p>
+      <div class="source-player">
+        <button type="button" data-play-source>Play complete mix</button>
+        <label><input id="heard-source" type="checkbox"> I heard the complete mix</label>
+      </div>
+      <audio id="player" controls preload="metadata"></audio>
+      <button type="button" id="stop" class="secondary">Stop</button>
+      <p class="quiet">Listening alone saves nothing and chooses nothing.</p>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">2 · OPTIONAL DIAGNOSTIC VIEWS</p>
+      <h2>Locate the musical function across the stems</h2>
+      <p>These are separator estimates, not original studio tracks. They can omit content or contain leakage. Use them to investigate the mix—not to define melody, rhythm or harmony by filename.</p>
+      <div id="diagnostics" class="diagnostic-grid"></div>
+    </section>
+
+    <section class="card musical-model">
+      <p class="eyebrow">A USEFUL POP STARTING POINT</p>
+      <h2>Preserve identity, then create around it</h2>
+      <div class="function-grid">
+        <article><b>1 · Melody</b><span>Often the strongest identity: sung contour, instrumental hook or bass motif.</span></article>
+        <article><b>2 · Rhythm</b><span>Groove and accents may change unless they are themselves the recognisable hook.</span></article>
+        <article><b>3 · Harmony</b><span>Chords may change, but they must remain musically compatible with retained melody.</span></article>
+      </div>
+      <p class="quiet">This is guidance, not an automatic rule. A distinctive groove, chord movement, bass line or section shape can be the primary anchor.</p>
+    </section>
+
+    <section class="card" id="anchor-card">
+      <p class="eyebrow">3 · YOUR PRIMARY MUSICAL ANCHOR</p>
+      <h2>What is the one relationship this first remix test must preserve?</h2>
+      <p>Choose the diagnostic view where you can hear it most clearly. The complete mix remains the final authority.</p>
+      <label class="field">Musical function
+        <select id="anchor-kind"></select>
+      </label>
+      <label class="field">Describe it in your own words
+        <input id="owner-label" maxlength="240" placeholder="For example: keep the main vocal melody recognisable; rhythm may change and new chords must fit">
+      </label>
+      <div class="window">
+        <label class="field">Starts at (seconds)
+          <input id="start-seconds" type="number" min="0" step="0.001" placeholder="0.000">
+        </label>
+        <label class="field">Ends at (seconds)
+          <input id="end-seconds" type="number" min="0" step="0.001" placeholder="8.000">
+        </label>
+      </div>
+      <p id="duration" class="quiet"></p>
+      <div class="promise">This records one must-preserve identity anchor for a controlled comparison. It does not freeze every musical dimension, render audio, choose a remix or train a model.</div>
+      <button type="button" id="confirm" class="primary">Confirm this musical anchor</button>
+      <p id="status" role="status"></p>
+    </section>
+
+    <section class="card boundary">
+      <p class="eyebrow">NOT HAPPENING YET</p>
+      <p>No remix render, A/B preference, model training, checkpoint promotion or product selection.</p>
+    </section>
+  </main>
+  <script src="/remix_anchor_session.js"></script>
+</body>
+</html>
