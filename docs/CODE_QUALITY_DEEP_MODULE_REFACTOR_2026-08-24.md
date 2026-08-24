@@ -10,8 +10,9 @@ and owns filesystem inspection, retained payload loading, output construction,
 review rendering and exclusive publication.
 
 No schema, status, public facade name, hash algorithm, receipt rule, review
-state or authority boundary changed. No audio, model or checkpoint was used by
-the refactor or its quality measurements.
+state or authority boundary changed. No private or source audio, model or
+checkpoint was used by the refactor or its quality measurements; tests used
+only their synthetic fixtures.
 
 ## Deep-module boundary
 
@@ -26,7 +27,8 @@ offers eight declared names, of which the four supported operations are:
 The contract hides request/report schema identity, retained-tree and payload
 rules, worker evidence, resource-incomplete accounting, artifact identity,
 effects and preservation binding. It does not import NumPy, resource, stat,
-temporary-file, timing, review-rendering, publication or execution modules.
+temporary-file, timing, review-rendering, publication, execution-worker or
+execution-facade modules.
 
 The facade's public functions remain defined in the facade, rather than being
 exposed as direct re-exports. The architecture diff therefore reports zero
