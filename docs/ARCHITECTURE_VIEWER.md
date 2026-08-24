@@ -178,6 +178,8 @@ Supported schemas are:
 
 Function-level quality records bind to repository-relative path, module,
 qualified name, exact line range, module source SHA-256 and source-tree SHA-256.
+The analyser records nested functions separately for this binding without
+misrepresenting them as public API.
 The viewer labels evidence `current`, `unbound`, `source_stale`,
 `snapshot_stale`, `symbol_stale_or_missing` or `orphaned`; it never presents
 stale evidence as current. Mutation reports also preserve source-before and
@@ -194,6 +196,13 @@ complexity without coverage is not labelled CRAP. Installing or running
 coverage.py, Radon or mutmut remains a separate quality-workflow step requiring
 the dependency and execution approval described in
 [`CODE_QUALITY_AND_DEEP_MODULES_PLAN.md`](CODE_QUALITY_AND_DEEP_MODULES_PLAN.md).
+
+The dependency-free report adapter is available at
+`scripts/report-code-risk.py`. It validates coverage.py format-3 function
+regions, requires branch data, obtains exact function complexity through
+Radon's supported programmatic visitor, rejects absolute input paths, and
+writes deterministic owner-only `sunofriend-code-risk.v1` JSON. A missing
+Radon installation is reported as an approval-gated blocker.
 
 Maintained semantic records can describe responsibility, supported entry
 points, inputs, outputs, stability, knowledge hidden, caller obligations,
@@ -229,8 +238,11 @@ permissions, stale source, symlink escapes and collision-safe code pages:
 
 ```bash
 .venv/bin/python -m pytest -q tests/test_architecture_viewer*.py
+.venv/bin/python -m pytest -q tests/test_code_risk_report.py
 .venv/bin/python -m ruff check \
-  devtools/architecture_viewer tests/test_architecture_viewer*.py
+  devtools/architecture_viewer devtools/code_risk.py \
+  scripts/report-code-risk.py tests/test_architecture_viewer*.py \
+  tests/test_code_risk_report.py
 ```
 
 When Node is available, the suite also executes the embedded browser script

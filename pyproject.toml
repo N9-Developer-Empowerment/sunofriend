@@ -124,6 +124,17 @@ markers = [
     "trusted_local: live security probe that requires a locally owned macOS toolchain and Python runtime",
 ]
 
+[tool.coverage.run]
+branch = true
+data_file = "work/quality/.coverage"
+relative_files = true
+source = ["src/sunofriend"]
+
+[tool.coverage.json]
+output = "work/quality/coverage.json"
+pretty_print = true
+show_contexts = false
+
 [tool.ruff]
 target-version = "py39"
 

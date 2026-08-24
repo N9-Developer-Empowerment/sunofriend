@@ -131,6 +131,7 @@ def _definitions(module: Mapping[str, Any]) -> dict[tuple[str, int, int], Mappin
     for definition in [
         *module.get("public_interface", []),
         *module.get("implementation", []),
+        *module.get("function_definitions", []),
     ]:
         if isinstance(definition, Mapping):
             add(definition)

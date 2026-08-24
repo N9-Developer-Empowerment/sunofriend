@@ -502,11 +502,28 @@ mutation jobs may run on Linux when their tests are platform-neutral.
 
 ### Phase 1 — measurement only
 
-- With explicit dependency approval, add the pinned `quality` extra,
-  coverage/Radon configuration and `report-code-risk.py`.
+- Dependency-free preparation is implemented: branch/relative-path coverage
+  configuration, nested-function source identities, the deterministic
+  `report-code-risk.py` adapter, report/overlay validation and focused tests.
+- With explicit dependency approval, add the pinned `quality` extra and install
+  coverage.py plus Radon in a separate Python 3.11 environment.
 - Generate the first complete report twice and require byte-identical output
   for the same source and coverage data.
 - Keep the report advisory for at least one normal development increment.
+
+The preparation does not claim a baseline: the current project `.venv` has no
+coverage.py or Radon installation, and no report has been generated from the
+full test suite. After the dependency gate is approved, the intended adapter
+invocation is:
+
+```bash
+python3.11 scripts/report-code-risk.py \
+  --coverage-json work/quality/coverage.json \
+  --out work/quality/code-risk.json
+```
+
+The output path must be fresh. Run the same input into a second fresh path and
+compare bytes before accepting the first advisory baseline.
 
 ### Phase 2 — mutation pilot and ratchet
 

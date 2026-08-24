@@ -273,6 +273,45 @@ def _definitions(
     return interface, implementation
 
 
+class _FunctionDefinitionCollector(ast.NodeVisitor):
+    """Collect every lexical function without treating nesting as an API."""
+
+    def __init__(self) -> None:
+        self.scopes: list[tuple[str, str]] = []
+        self.functions: list[dict[str, Any]] = []
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self.scopes.append((node.name, "class"))
+        self.generic_visit(node)
+        self.scopes.pop()
+
+    def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        qualified_name = ".".join([*(name for name, _ in self.scopes), node.name])
+        parent_kind = self.scopes[-1][1] if self.scopes else "module"
+        definition = _definition(node, qualified_name=qualified_name)
+        definition["scope"] = parent_kind
+        definition["public"] = parent_kind == "module" and not node.name.startswith("_")
+        self.functions.append(definition)
+        self.scopes.append((node.name, "function"))
+        self.generic_visit(node)
+        self.scopes.pop()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._visit_function(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._visit_function(node)
+
+
+def _function_definitions(tree: ast.Module) -> list[dict[str, Any]]:
+    collector = _FunctionDefinitionCollector()
+    collector.visit(tree)
+    return sorted(
+        collector.functions,
+        key=lambda item: (int(item["line"]), str(item["qualified_name"])),
+    )
+
+
 def _longest_known_module(name: str, known_modules: set[str]) -> str | None:
     value = name
     while value:
@@ -1164,6 +1203,7 @@ def analyse_source_tree(
                 "interface_source": "parse_error",
                 "public_interface": [],
                 "implementation": [],
+                "function_definitions": [],
                 "imports": [],
                 "external_imports": [],
                 "external_import_details": [],
@@ -1206,6 +1246,7 @@ def analyse_source_tree(
             "declared_all": list(declared_all) if declared_all is not None else None,
             "public_interface": interface,
             "implementation": implementation,
+            "function_definitions": _function_definitions(tree),
             "imports": internal_imports,
             "external_imports": external_imports,
             "external_import_details": external_import_details,
