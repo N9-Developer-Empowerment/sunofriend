@@ -69,6 +69,23 @@
       "errors": ["ambiguous or unauthorized candidates remain unselected"],
       "schemas": [],
       "authority_boundary": "Automated scores and defaults never create a human-reviewed decision."
+    },
+    {
+      "target": {"module": "sunofriend.separation_fine_stem_full_song_recovery_contract"},
+      "claim_kind": "intent",
+      "roles": ["contract", "guard"],
+      "surface": "internal",
+      "stability": "internal",
+      "responsibility": "Validate retained full-song recovery requests and reports without owning execution, publication, rendering or model machinery.",
+      "supported_entry_points": ["recovery_request_sha256", "recovery_report_sha256", "validate_recovery_request", "validate_recovery_report"],
+      "inputs": ["full-song recovery plan, request and report mappings"],
+      "outputs": ["defensive validated copies and deterministic document hashes"],
+      "knowledge_owned": ["recovery schemas", "retained evidence identity", "resource-incomplete report rules", "request-to-report binding"],
+      "caller_obligations": ["continue to use the recovery facade for execution and publication"],
+      "side_effects": [],
+      "errors": ["invalid identity, evidence, accounting, effects or preservation bindings fail closed"],
+      "schemas": ["sunofriend.fine-stem-full-song-six-role-recovery-request.v1", "sunofriend.fine-stem-full-song-six-role-recovery-report.v1"],
+      "authority_boundary": "A valid recovery document remains resource-incomplete review evidence; validation does not authorize a model run, source selection, musical approval, render or publication."
     }
   ],
   "system": {

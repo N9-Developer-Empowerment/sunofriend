@@ -116,17 +116,19 @@ classification does not waive them.
 
 ## Hotspot assessment
 
-`separation_fine_stem_full_song_recovery.py` remains the clearest first Phase 3
-deep-module candidate. `validate_recovery_request` scores CRAP 423.454810 at
-complexity 115 and 71.429% coverage. `validate_recovery_report` scores
-358.705990 at complexity 124 and 75.194% coverage. Both results remain high in
+`separation_fine_stem_full_song_recovery.py` was the clearest first Phase 3
+deep-module candidate. `validate_recovery_request` scored CRAP 423.454810 at
+complexity 115 and 71.429% coverage. `validate_recovery_report` scored
+358.705990 at complexity 124 and 75.194% coverage. Both results were high in
 the clean macOS baseline, so the evidence is not a sandbox-created zero-
 coverage artifact.
 
-The first refactor should hide only the pure request/report validation contract
-behind the existing public facade. It must preserve all accepted schemas,
-hashes, approval fields, receipts and recovery states. Characterization and
-architecture checks come before moving production code.
+That first refactor is now complete. The pure validation contract is hidden
+behind the unchanged public facade, and the final CRAP and architecture
+ratchets pass. See
+[`CODE_QUALITY_DEEP_MODULE_REFACTOR_2026-08-24.md`](CODE_QUALITY_DEEP_MODULE_REFACTOR_2026-08-24.md)
+for the source-current measurements. This document retains the original values
+as the accepted pre-refactor baseline.
 
 Other credible nonzero-coverage investigation targets remain:
 

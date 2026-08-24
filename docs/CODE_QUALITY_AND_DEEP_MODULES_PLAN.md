@@ -593,12 +593,16 @@ ratchet rather than silently treating all historical functions as new.
 
 ### Phase 3 — first deep-module refactor
 
-- Extract only the pure request/report contract from full-song recovery behind
-  the existing facade.
-- Preserve old schema readability and add characterization, mutation and
-  import-boundary tests.
-- Stop if an existing approval, receipt identity, public profile or review
-  state would acquire broader authority.
+- **Complete on 2026-08-24.** The pure request/report contract was extracted
+  from full-song recovery behind the unchanged public facade.
+- Existing schemas, hashes, receipts, resource-incomplete state and authority
+  boundaries remain intact. Characterization and import-boundary tests pass;
+  the established mutation pilot remains scoped to its original three modules.
+- The changed-code CRAP ratchet rejected the first complexity-18 helper. After
+  splitting it into three cohesive checks, the final ratchet passes with no new
+  over-threshold function and no public-interface or architecture regression.
+- The complete measurements and before/after evidence are in
+  [`CODE_QUALITY_DEEP_MODULE_REFACTOR_2026-08-24.md`](CODE_QUALITY_DEEP_MODULE_REFACTOR_2026-08-24.md).
 
 ### Phase 4 — repeat and broaden
 
