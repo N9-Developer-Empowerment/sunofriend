@@ -1,0 +1,92 @@
+{
+  "schema": "sunofriend-architecture-semantics.v1",
+  "lane": "maintained-intent",
+  "modules": [
+    {
+      "target": {"module": "sunofriend.cli"},
+      "claim_kind": "intent",
+      "roles": ["interface", "facade"],
+      "surface": "public",
+      "stability": "public",
+      "responsibility": "Parse commands and delegate to bounded application operations without owning music-processing algorithms.",
+      "supported_entry_points": ["main"],
+      "inputs": ["command-line arguments and explicit local paths"],
+      "outputs": ["exit status and delegated operation presentation"],
+      "knowledge_owned": ["public command names", "command-line compatibility", "exit-code presentation"],
+      "caller_obligations": ["supply explicit paths and command options"],
+      "side_effects": ["delegated operations may write only through their own explicit contracts"],
+      "errors": ["invalid commands and rejected application operations are presented without broadening authority"],
+      "schemas": [],
+      "authority_boundary": "Command invocation does not imply musical approval, model approval or rights authority."
+    },
+    {
+      "target": {"module": "sunofriend.separation_review_transport"},
+      "claim_kind": "intent",
+      "roles": ["transport", "persistence"],
+      "surface": "internal",
+      "stability": "internal",
+      "responsibility": "Hide bounded localhost transport, byte ranges and owner-only atomic review persistence from review-specific policy.",
+      "supported_entry_points": ["the module's declared public interface"],
+      "inputs": ["review-specific handlers and bounded local requests"],
+      "outputs": ["byte-range responses and explicitly persisted review state"],
+      "knowledge_owned": ["bounded request bodies", "byte-range responses", "owner-only atomic JSON persistence"],
+      "caller_obligations": ["provide review-specific validation separately"],
+      "side_effects": ["bounded localhost serving", "explicit owner-only review-state writes"],
+      "errors": ["malformed ranges, oversized bodies and unsafe persistence requests fail closed"],
+      "schemas": [],
+      "authority_boundary": "Transport and playback never create a musical decision or selection."
+    },
+    {
+      "target": {"module": "sunofriend._private_atomic_directory"},
+      "claim_kind": "intent",
+      "roles": ["guard", "persistence"],
+      "surface": "internal",
+      "stability": "internal",
+      "responsibility": "Hide safe-name, no-follow traversal and exclusive publication mechanics for private directories.",
+      "supported_entry_points": ["the module's declared public interface"],
+      "inputs": ["fresh private-directory publication requests"],
+      "outputs": ["owner-only atomically published directories"],
+      "knowledge_owned": ["safe basenames", "no-follow traversal", "exclusive directory publication"],
+      "caller_obligations": ["use a fresh destination and preserve the operation-specific evidence contract"],
+      "side_effects": ["owner-only filesystem creation and atomic publication"],
+      "errors": ["unsafe names, links, collisions and incomplete publication fail closed"],
+      "schemas": [],
+      "authority_boundary": "Successful persistence does not approve the musical or model content being persisted."
+    },
+    {
+      "target": {"module": "sunofriend.automatic_selection"},
+      "claim_kind": "intent",
+      "roles": ["policy", "guard"],
+      "surface": "internal",
+      "stability": "internal",
+      "responsibility": "Keep automatic published primaries distinct from human Workbench decisions.",
+      "supported_entry_points": ["the module's declared public interface"],
+      "inputs": ["candidate and decision evidence"],
+      "outputs": ["automatic-primary eligibility without human approval"],
+      "knowledge_owned": ["automatic-primary eligibility", "recorded versus generated distinctions"],
+      "caller_obligations": ["do not reinterpret an automatic choice as reviewed approval"],
+      "side_effects": [],
+      "errors": ["ambiguous or unauthorized candidates remain unselected"],
+      "schemas": [],
+      "authority_boundary": "Automated scores and defaults never create a human-reviewed decision."
+    }
+  ],
+  "system": {
+    "nodes": [
+      {"id": "musician", "type": "person", "label": "Musician / reviewer", "description": "Owns rights confirmations and musical decisions."},
+      {"id": "interfaces", "type": "process", "label": "CLI, TUI and Simple", "description": "Local entry points and orchestration."},
+      {"id": "workbench", "type": "process", "label": "Workbench", "description": "Local listening and explicit review decisions."},
+      {"id": "application", "type": "component", "label": "Application facades", "description": "Bounded source, separation, MIDI, vocal and rendering operations."},
+      {"id": "workers", "type": "process", "label": "Optional model workers", "description": "Separately authorized, guarded local execution lanes."},
+      {"id": "local-store", "type": "store", "label": "Local source and evidence stores", "description": "Private audio, MIDI, receipts, reviews and generated artifacts."}
+    ],
+    "relationships": [
+      {"source": "musician", "target": "interfaces", "label": "invokes explicit local operation"},
+      {"source": "musician", "target": "workbench", "label": "listens and records explicit decisions"},
+      {"source": "interfaces", "target": "application", "label": "delegates through application interfaces"},
+      {"source": "application", "target": "workers", "label": "may launch only under a separately satisfied execution contract"},
+      {"source": "application", "target": "local-store", "label": "reads authorized inputs and publishes bounded outputs"},
+      {"source": "workbench", "target": "local-store", "label": "reads evidence and persists explicit review state"}
+    ]
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "schema": "sunofriend-architecture-groups.v2",
+  "default_group": "shared-product",
+  "groups": [
+    {
+      "id": "product-experience",
+      "label": "Product experience",
+      "description": "User-facing entry points and local review experiences.",
+      "modules": [], "prefixes": [],
+      "children": [
+        {
+          "id": "interfaces", "label": "User and command interfaces",
+          "description": "Thin CLI, TUI and Simple-mode entry points. These should orchestrate application services rather than own audio, MIDI or persistence algorithms.",
+          "modules": ["__init__", "__main__", "cli", "separation_alpha", "tui"],
+          "prefixes": ["simple_", "tui_"]
+        },
+        {
+          "id": "workbench", "label": "Workbench and review state",
+          "description": "Local review projection, explicit decisions, transports, artifacts and GarageBand handoff. Playback and scores must remain separate from musical authority.",
+          "modules": [], "prefixes": ["workbench_"]
+        }
+      ]
+    },
+    {
+      "id": "music-processing", "label": "Music processing",
+      "description": "Source preparation, separation, transcription, vocal work, instruments and rendering.",
+      "modules": [], "prefixes": [],
+      "children": [
+        {
+          "id": "separation", "label": "Stem separation",
+          "description": "Public profiles and private evidence lanes. Open the focused subareas before individual modules.",
+          "modules": ["core_four_approval"], "prefixes": ["_separation_", "separation_"],
+          "children": [
+            {
+              "id": "separation-review", "label": "Review and listening",
+              "description": "Review pages, transports, approval records and human-listening projections. Playback remains non-authoritative.",
+              "patterns": ["*review*", "*approval*", "*listening*"]
+            },
+            {
+              "id": "separation-planning", "label": "Contracts and planning",
+              "description": "Plans, requests, profiles, contracts and readiness decisions that constrain later execution.",
+              "patterns": ["*plan*", "*request*", "*readiness*", "*reassessment*", "*qualification*", "*profile*", "*contract*"]
+            },
+            {
+              "id": "separation-execution", "label": "Execution and supervision",
+              "description": "Workers, runners, canaries, recovery, native execution and bounded inference machinery.",
+              "patterns": ["*execution*", "*executor*", "*worker*", "*runner*", "*_run", "*canary*", "*inference*", "*native*", "*fake*", "*recovery*"]
+            },
+            {
+              "id": "separation-evidence", "label": "Evidence and evaluation",
+              "description": "Outcome, report, metric, coverage, audit and parity evidence without activation authority.",
+              "patterns": ["*evidence*", "*outcome*", "*report*", "*result*", "*evaluation*", "*metrics*", "*coverage*", "*parity*", "*audit*"]
+            },
+            {
+              "id": "separation-resources", "label": "Resources and adapters",
+              "description": "Checkpoint, resource, runtime, adapter, artifact, process, sandbox, staging, lease and guard mechanics.",
+              "patterns": ["*checkpoint*", "*resource*", "*runtime*", "*adapter*", "*artifact*", "*process*", "*sandbox*", "*staging*", "*lease*", "*records*", "*guard*"]
+            }
+          ]
+        },
+        {
+          "id": "source-access", "label": "Source access and metadata",
+          "description": "Local source validation, imports, immutable receipts, project manifests, roles, audio formats and musical metadata.",
+          "modules": ["audio_formats", "musical_metadata", "project_audio_inputs", "source_folder_import", "source_import", "source_project", "source_receipt", "source_roles"],
+          "prefixes": ["audio_", "project_audio_", "source_"]
+        },
+        {
+          "id": "vocal-comping", "label": "Vocals and comping",
+          "description": "Vocal extraction, lyric- and phrase-bound analysis, draft review, comp evidence and bounded corrections. Human listening remains authoritative.",
+          "modules": ["hybrid_report", "melody_correction", "note_alignment", "vocal"],
+          "prefixes": ["melody_", "phrase_", "vocal_"]
+        },
+        {
+          "id": "midi-transcription", "label": "MIDI and transcription",
+          "description": "Transcription, editable note data, timing transforms, alignment, role splitting, reusable clips and deterministic MIDI comparison.",
+          "modules": ["clip", "library", "listen_all", "loop"],
+          "prefixes": ["beat_", "beatgrid", "drum_", "midi_", "note_", "transcrib"]
+        },
+        {
+          "id": "instruments-rendering", "label": "Instruments and rendering",
+          "description": "Starter sounds, instrument matching and preferences, SoundFont construction, playback, previews, timbre and MIDI-derived audio rendering.",
+          "modules": ["soundfont"],
+          "prefixes": ["garageband_", "instrument_", "listening_", "mix_", "playback_", "preview_", "render_", "soundfont_", "timbre_"]
+        }
+      ]
+    },
+    {
+      "id": "research", "label": "Research",
+      "description": "Optional comparison and research lanes that remain isolated from automatic product authority.",
+      "modules": [], "prefixes": [],
+      "children": [
+        {
+          "id": "ai-research", "label": "AI comparison and research",
+          "description": "Isolated optional AI candidates, caches, workers, benchmarks and comparison evidence. Model execution is not implied by viewing this graph.",
+          "modules": [], "prefixes": ["ai_", "muscriptor_"]
+        }
+      ]
+    },
+    {
+      "id": "platform", "label": "Shared platform",
+      "description": "Cross-cutting product contracts, diagnostics, policies and modules not yet assigned to a more cohesive boundary.",
+      "modules": [], "prefixes": [],
+      "children": [
+        {
+          "id": "shared-product", "label": "Shared and product contracts",
+          "description": "Cross-cutting data models, diagnostics, policies, product contracts and modules not yet assigned to a more cohesive architectural area.",
+          "modules": [], "prefixes": []
+        }
+      ]
+    }
+  ],
+  "contracts": [
+    {
+      "id": "lower-layers-do-not-import-cli-or-tui", "type": "forbidden", "severity": "error",
+      "description": "Non-interface areas must not depend on the CLI or TUI entry modules.",
+      "source": {"groups": ["workbench", "music-processing", "research", "platform"]},
+      "target": {"modules": ["cli", "tui"]}
+    },
+    {
+      "id": "review-transport-has-no-musical-authority-coupling", "type": "forbidden", "severity": "error",
+      "description": "The shared review transport must not depend on selection, MIDI, model or separation execution policy.",
+      "source": {"modules": ["separation_review_transport"]},
+      "target": {"prefixes": ["automatic_selection", "midi_", "ai_", "_separation_"]}
+    },
+    {
+      "id": "source-access-remains-acyclic", "type": "acyclic", "severity": "error",
+      "description": "Source access and metadata modules should remain free of reciprocal static imports.",
+      "selector": {"groups": ["source-access"]}
+    }
+  ]
+}

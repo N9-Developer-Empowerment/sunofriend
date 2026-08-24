@@ -37,6 +37,12 @@ export effect. The Guided Local Studio supplies that flag by default when it
 starts Workbench; `tui --no-developer-inspector` keeps it absent. See the
 [technical tour](TECHNICAL_TOUR.md).
 
+For a drillable static view of the current Python modules, dependencies,
+interfaces, implementations and exact source lines, generate the local
+[architecture explorer](ARCHITECTURE_VIEWER.md). Its graph is descriptive and
+read-only; it does not replace the product and authority boundaries in this
+document.
+
 ## Current execution flow
 
 ```text
