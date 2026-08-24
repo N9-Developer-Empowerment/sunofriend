@@ -21,7 +21,7 @@ import resource
 import stat
 import tempfile
 import time
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, NamedTuple, Sequence
 
 import numpy as np
 
@@ -88,6 +88,19 @@ RETAINED_TREE_FILES = _CONTRACT_RETAINED_TREE_FILES
 NETWORK_SANDBOX_ENV = "SUNOFRIEND_FULL_SONG_RECOVERY_NETWORK_SANDBOX"
 EXPECTED_FAILURE_FRAGMENT = "fine-stem canary crossed its effects boundary"
 MAXIMUM_RETAINED_JSON_BYTES = 16 * 1024**2
+
+
+class _RetainedRecoveryEvidence(NamedTuple):
+    tree: dict[str, Any]
+    documents: dict[str, dict[str, Any]]
+    json_receipts: dict[str, dict[str, Any]]
+    payload_inventory: list[dict[str, Any]]
+
+
+class _PriorFailedPackageEvidence(NamedTuple):
+    package: dict[str, Any]
+    file_count: int
+    audio_payload_count: int
 
 
 def recovery_request_sha256(value: Mapping[str, Any]) -> str:
@@ -689,16 +702,11 @@ def _implementation_identities() -> list[dict[str, Any]]:
     return identities
 
 
-def _build_recovery_request_with_documents(
-    plan_value: Mapping[str, Any],
+def _resolve_recovery_request_paths(
     failed_root_value: str | Path,
     *,
     proposed_output: str | Path,
-    prior_failed_root_value: str | Path | None = None,
-) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-    """Build an exact no-write request, hashing three guitar payloads."""
-
-    plan = validate_fine_stem_full_song_plan(plan_value)
+) -> tuple[Path, Path]:
     failed_root = Path(failed_root_value).expanduser().resolve(strict=True)
     if not failed_root.is_dir() or failed_root.is_symlink():
         raise ValueError("full-song recovery needs a regular failed directory")
@@ -710,6 +718,10 @@ def _build_recovery_request_with_documents(
         raise ValueError("full-song recovery output must be a fresh exact sibling")
     if output.exists() or output.with_name(output.name + "-RECOVERY-FAILED").exists():
         raise FileExistsError("full-song recovery output target must be fresh")
+    return failed_root, output
+
+
+def _expected_retained_files(plan: Mapping[str, Any]) -> set[str]:
     expected_files = set(JSON_EVIDENCE.values())
     for track in _case_ids(plan):
         expected_files.add(f"TEMP/canonical/{track}/reference.wav")
@@ -721,13 +733,15 @@ def _build_recovery_request_with_documents(
         expected_files.add(f"TEMP/guitar/{track}/guitar.npy")
     if len(expected_files) != RETAINED_TREE_FILES:
         raise RuntimeError("full-song recovery expected tree inventory differs")
-    retained_tree = _tree_snapshot(failed_root, expected_files=expected_files)
-    retained_directories = _tree_directory_map(retained_tree)
-    retained_files = _tree_file_map(retained_tree)
-    documents, retained_json = _read_bound_json_documents(failed_root, retained_tree)
-    failure, scnet, synth, guitar_request = _validate_failure_and_requests(
-        plan, documents
-    )
+    return expected_files
+
+
+def _retained_guitar_hashes(
+    plan: Mapping[str, Any],
+    failed_root: Path,
+    retained_files: Mapping[str, Mapping[str, Any]],
+    retained_directories: Mapping[str, Mapping[str, Any]],
+) -> dict[str, str]:
     guitar_sha256 = {}
     for track in _case_ids(plan):
         relative = f"TEMP/guitar/{track}/guitar.npy"
@@ -738,6 +752,23 @@ def _build_recovery_request_with_documents(
         )
         guitar_sha256[track] = loaded_guitar.sha256
         del loaded_guitar
+    return guitar_sha256
+
+
+def _capture_retained_recovery_evidence(
+    plan: Mapping[str, Any], failed_root: Path
+) -> _RetainedRecoveryEvidence:
+    expected_files = _expected_retained_files(plan)
+    retained_tree = _tree_snapshot(failed_root, expected_files=expected_files)
+    retained_directories = _tree_directory_map(retained_tree)
+    retained_files = _tree_file_map(retained_tree)
+    documents, retained_json = _read_bound_json_documents(failed_root, retained_tree)
+    _failure, scnet, synth, guitar_request = _validate_failure_and_requests(
+        plan, documents
+    )
+    guitar_sha256 = _retained_guitar_hashes(
+        plan, failed_root, retained_files, retained_directories
+    )
     inventory = _payload_inventory(
         plan,
         retained_files,
@@ -752,6 +783,17 @@ def _build_recovery_request_with_documents(
         raise RuntimeError("full-song recovery payload tree binding differs")
     if _tree_snapshot(failed_root, expected_files=expected_files) != retained_tree:
         raise RuntimeError("full-song recovery retained tree changed during preflight")
+    return _RetainedRecoveryEvidence(
+        tree=retained_tree,
+        documents=documents,
+        json_receipts=retained_json,
+        payload_inventory=inventory,
+    )
+
+
+def _capture_prior_failed_package(
+    prior_failed_root_value: str | Path | None,
+) -> _PriorFailedPackageEvidence:
     if prior_failed_root_value is None:
         raise ValueError("full-song recovery requires the prior failed package")
     prior_root = Path(prior_failed_root_value).expanduser().resolve(strict=True)
@@ -775,11 +817,13 @@ def _build_recovery_request_with_documents(
         raise ValueError("full-song recovery prior failure report is missing")
     if _tree_snapshot(prior_root) != prior_tree_snapshot:
         raise RuntimeError("full-song recovery prior tree changed during preflight")
-    prior_audio_payloads_hashed = sum(
-        PurePosixPath(item["relative_path"]).suffix.lower() in _AUDIO_PAYLOAD_SUFFIXES
+    audio_payload_count = sum(
+        PurePosixPath(item["relative_path"]).suffix.lower()
+        in _AUDIO_PAYLOAD_SUFFIXES
         for item in prior_tree["files"]
     )
-    prior_failure = {
+    file_count = len(prior_tree["files"])
+    package = {
         "root": str(prior_root),
         "failure_report": {
             "relative_path": "FAILED-REPORT.json",
@@ -788,10 +832,25 @@ def _build_recovery_request_with_documents(
         },
         "tree": prior_tree,
         "tree_binding_sha256": _value_sha256(prior_tree),
-        "files_content_hashed": len(prior_tree["files"]),
-        "audio_payloads_content_hashed": prior_audio_payloads_hashed,
+        "files_content_hashed": file_count,
+        "audio_payloads_content_hashed": audio_payload_count,
         "must_remain_unchanged": True,
     }
+    return _PriorFailedPackageEvidence(
+        package=package,
+        file_count=file_count,
+        audio_payload_count=audio_payload_count,
+    )
+
+
+def _recovery_request_document(
+    plan: Mapping[str, Any],
+    *,
+    failed_root: Path,
+    output: Path,
+    retained: _RetainedRecoveryEvidence,
+    prior: _PriorFailedPackageEvidence,
+) -> dict[str, Any]:
     request: dict[str, Any] = {
         "schema": RECOVERY_REQUEST_SCHEMA,
         "document_sha256": "",
@@ -800,11 +859,11 @@ def _build_recovery_request_with_documents(
         "failed_root": str(failed_root),
         "proposed_output": str(output),
         "output_parent_binding": _output_parent_binding(output.parent),
-        "prior_failed_package": prior_failure,
+        "prior_failed_package": prior.package,
         "implementation": _implementation_identities(),
-        "retained_json": retained_json,
-        "retained_payloads": inventory,
-        "retained_tree": retained_tree,
+        "retained_json": retained.json_receipts,
+        "retained_payloads": retained.payload_inventory,
+        "retained_tree": retained.tree,
         "recovery_contract": {
             "network_denied": True,
             "parent_sandbox_reexecs": 1,
@@ -824,10 +883,10 @@ def _build_recovery_request_with_documents(
                 3 * RECOVERY_RETAINED_VERIFICATION_PASSES
             ),
             "prior_failed_audio_payload_hash_opens": (
-                prior_audio_payloads_hashed * RECOVERY_RETAINED_VERIFICATION_PASSES
+                prior.audio_payload_count * RECOVERY_RETAINED_VERIFICATION_PASSES
             ),
             "prior_failed_file_hash_opens": (
-                len(prior_tree["files"]) * RECOVERY_RETAINED_VERIFICATION_PASSES
+                prior.file_count * RECOVERY_RETAINED_VERIFICATION_PASSES
             ),
             "retained_evidence_verification_passes": (
                 RECOVERY_RETAINED_VERIFICATION_PASSES
@@ -848,11 +907,11 @@ def _build_recovery_request_with_documents(
             ),
         },
         "effects": {
-            "audio_payloads_opened": 3 + prior_audio_payloads_hashed,
+            "audio_payloads_opened": 3 + prior.audio_payload_count,
             "retained_json_files_content_read": len(JSON_EVIDENCE),
             "guitar_arrays_content_hashed": 3,
-            "prior_failed_files_content_hashed": len(prior_tree["files"]),
-            "prior_failed_audio_payloads_content_hashed": (prior_audio_payloads_hashed),
+            "prior_failed_files_content_hashed": prior.file_count,
+            "prior_failed_audio_payloads_content_hashed": prior.audio_payload_count,
             "audio_writes": 0,
             "checkpoint_loads": 0,
             "model_constructions": 0,
@@ -874,13 +933,38 @@ def _build_recovery_request_with_documents(
             "fixed projection and 24 PCM24 writes, preserve the failed package, "
             "preserve the separately bound prior failed package, and retain the "
             f"incomplete guitar resource/guard evidence. Rehash the "
-            f"{prior_audio_payloads_hashed} prior-package private audio payload(s) "
+            f"{prior.audio_payload_count} prior-package private audio payload(s) "
             f"during each of {RECOVERY_RETAINED_VERIFICATION_PASSES} fixed "
             "verification passes."
         ),
     }
     request["document_sha256"] = recovery_request_sha256(request)
-    return validate_recovery_request(request, plan), documents
+    return request
+
+
+def _build_recovery_request_with_documents(
+    plan_value: Mapping[str, Any],
+    failed_root_value: str | Path,
+    *,
+    proposed_output: str | Path,
+    prior_failed_root_value: str | Path | None = None,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Build an exact no-write request, hashing three guitar payloads."""
+
+    plan = validate_fine_stem_full_song_plan(plan_value)
+    failed_root, output = _resolve_recovery_request_paths(
+        failed_root_value, proposed_output=proposed_output
+    )
+    retained = _capture_retained_recovery_evidence(plan, failed_root)
+    prior = _capture_prior_failed_package(prior_failed_root_value)
+    request = _recovery_request_document(
+        plan,
+        failed_root=failed_root,
+        output=output,
+        retained=retained,
+        prior=prior,
+    )
+    return validate_recovery_request(request, plan), retained.documents
 
 
 def build_recovery_request(

@@ -611,8 +611,13 @@ ratchet rather than silently treating all historical functions as new.
   CRAP fell from 44.252000 to a 3.000000 coordinator, five boundary cases were
   added, and both architecture and changed-code ratchets pass. See
   [`CODE_QUALITY_RECOVERY_PREFLIGHT_REFACTOR_2026-08-24.md`](CODE_QUALITY_RECOVERY_PREFLIGHT_REFACTOR_2026-08-24.md).
-- Continue recovery seams one at a time; retained-package evidence capture is
-  the next bounded candidate.
+- **Increment 2 complete on 2026-08-24.** Retained-current and prior-package
+  evidence capture now sit behind narrow private interfaces. The request
+  builder fell from CRAP 30.320988 to a 1.000000 coordinator, four fail-closed
+  characterization cases were added, and both ratchets still pass. See
+  [`CODE_QUALITY_RECOVERY_EVIDENCE_REFACTOR_2026-08-24.md`](CODE_QUALITY_RECOVERY_EVIDENCE_REFACTOR_2026-08-24.md).
+- Continue recovery seams one at a time; `_tree_snapshot` is the remaining
+  bounded recovery warning.
 - Introduce the lossless MIDI codec and migrate one caller per change.
 - Consolidate remaining review transport mechanics.
 - Add Import Linter with the planned package structure.

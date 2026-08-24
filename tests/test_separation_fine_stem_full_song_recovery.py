@@ -492,6 +492,83 @@ def test_preflight_binds_exact_tree_and_hashes_guitar_without_writes(
     assert _tree_bytes(failed) == before
 
 
+def test_preflight_captures_current_evidence_before_requiring_prior_package(
+    tmp_path: Path,
+) -> None:
+    plan, failed, _prior = _failed_fixture(tmp_path)
+    _private_file(failed / "TEMP/unexpected.bin", b"unexpected")
+
+    with pytest.raises(ValueError, match="retained file inventory"):
+        build_recovery_request(
+            plan,
+            failed,
+            proposed_output=tmp_path / "recovered",
+        )
+
+
+def test_preflight_requires_prior_failure_report(
+    tmp_path: Path,
+) -> None:
+    plan, failed, prior = _failed_fixture(tmp_path)
+    (prior / "FAILED-REPORT.json").unlink()
+
+    with pytest.raises(ValueError, match="prior failure report is missing"):
+        build_recovery_request(
+            plan,
+            failed,
+            proposed_output=tmp_path / "recovered",
+            prior_failed_root_value=prior,
+        )
+
+
+@pytest.mark.parametrize(
+    ("package", "relative_path", "message"),
+    [
+        (
+            "current",
+            "TEMP/guitar/both/guitar.npy",
+            "retained tree changed during preflight",
+        ),
+        (
+            "prior",
+            "TEMP/canonical/reference.wav",
+            "prior tree changed during preflight",
+        ),
+    ],
+)
+def test_preflight_rejects_evidence_changed_while_it_is_being_captured(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    package: str,
+    relative_path: str,
+    message: str,
+) -> None:
+    plan, failed, prior = _failed_fixture(tmp_path)
+    target_root = failed if package == "current" else prior
+    original_snapshot = recovery_module._tree_snapshot
+    target_snapshots = 0
+
+    def racing_snapshot(root: Path, **kwargs: object) -> dict[str, object]:
+        nonlocal target_snapshots
+        if root == target_root:
+            target_snapshots += 1
+            if target_snapshots == 2:
+                target = target_root / relative_path
+                target.write_bytes(target.read_bytes() + b"raced")
+                target.chmod(0o600)
+        return original_snapshot(root, **kwargs)
+
+    monkeypatch.setattr(recovery_module, "_tree_snapshot", racing_snapshot)
+
+    with pytest.raises(RuntimeError, match=message):
+        build_recovery_request(
+            plan,
+            failed,
+            proposed_output=tmp_path / "recovered",
+            prior_failed_root_value=prior,
+        )
+
+
 @pytest.mark.parametrize(
     ("relative_path", "field_path", "replacement", "message"),
     [
