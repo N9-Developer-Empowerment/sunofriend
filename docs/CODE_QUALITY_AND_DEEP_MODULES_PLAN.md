@@ -616,8 +616,13 @@ ratchet rather than silently treating all historical functions as new.
   builder fell from CRAP 30.320988 to a 1.000000 coordinator, four fail-closed
   characterization cases were added, and both ratchets still pass. See
   [`CODE_QUALITY_RECOVERY_EVIDENCE_REFACTOR_2026-08-24.md`](CODE_QUALITY_RECOVERY_EVIDENCE_REFACTOR_2026-08-24.md).
-- Continue recovery seams one at a time; `_tree_snapshot` is the remaining
-  bounded recovery warning.
+- **Increment 3 complete on 2026-08-24.** Retained-tree enumeration, identity
+  projection and invariant checks now sit behind the unchanged tree-snapshot
+  facade. `_tree_snapshot` fell from CRAP 33.323566 to 3.000000, nine synthetic
+  boundary cases were added, and both ratchets still pass. See
+  [`CODE_QUALITY_RECOVERY_TREE_SNAPSHOT_REFACTOR_2026-08-24.md`](CODE_QUALITY_RECOVERY_TREE_SNAPSHOT_REFACTOR_2026-08-24.md).
+- The accepted recovery-facade warning queue is now exhausted. Select the next
+  bounded seam independently rather than combining the following tracks.
 - Introduce the lossless MIDI codec and migrate one caller per change.
 - Consolidate remaining review transport mechanics.
 - Add Import Linter with the planned package structure.

@@ -492,6 +492,112 @@ def test_preflight_binds_exact_tree_and_hashes_guitar_without_writes(
     assert _tree_bytes(failed) == before
 
 
+def test_tree_snapshot_preserves_identity_schema_and_legacy_mode_count(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "tree"
+    root.mkdir(mode=0o700)
+    root.chmod(0o700)
+    legacy = root / "legacy"
+    legacy.mkdir(mode=0o755)
+    legacy.chmod(0o755)
+    payload = _private_file(legacy / "payload.bin", b"payload")
+    legacy.chmod(0o755)
+
+    snapshot = recovery_module._tree_snapshot(
+        root, expected_files={"legacy/payload.bin"}
+    )
+
+    assert list(snapshot) == [
+        "directories",
+        "files",
+        "legacy_inner_directory_modes_0755",
+    ]
+    assert [item["relative_path"] for item in snapshot["directories"]] == [
+        ".",
+        "legacy",
+    ]
+    assert set(snapshot["directories"][0]) == {
+        "relative_path",
+        "device",
+        "inode",
+        "uid",
+        "mtime_ns",
+        "ctime_ns",
+        "mode",
+    }
+    assert snapshot["files"] == [
+        {
+            "relative_path": "legacy/payload.bin",
+            "bytes": len(b"payload"),
+            "device": payload.stat().st_dev,
+            "inode": payload.stat().st_ino,
+            "mtime_ns": payload.stat().st_mtime_ns,
+            "ctime_ns": payload.stat().st_ctime_ns,
+            "mode": 0o600,
+            "uid": payload.stat().st_uid,
+            "links": 1,
+        }
+    ]
+    assert snapshot["legacy_inner_directory_modes_0755"] == 1
+
+
+@pytest.mark.parametrize(
+    ("boundary", "message"),
+    [
+        ("inventory_before_file_mode", "retained file inventory differs"),
+        ("root_mode", "retained root mode differs"),
+        ("inner_directory_mode", "retained inner directory mode differs"),
+        ("private_directory_mode", "retained directory mode differs"),
+        ("file_mode", "retained file mode differs"),
+        ("hard_link", "retained file ownership differs"),
+        ("symlink", "must not contain symlinks"),
+        ("special_file", "contains a special file"),
+    ],
+)
+def test_tree_snapshot_preserves_fail_closed_invariant_order(
+    tmp_path: Path,
+    boundary: str,
+    message: str,
+) -> None:
+    root = tmp_path / "tree"
+    root.mkdir(mode=0o700)
+    root.chmod(0o700)
+    inner = root / "inner"
+    inner.mkdir(mode=0o700)
+    inner.chmod(0o700)
+    payload = _private_file(inner / "payload.bin", b"payload")
+    expected_files = {"inner/payload.bin"}
+    require_private_directory_modes = False
+
+    if boundary == "inventory_before_file_mode":
+        unexpected = _private_file(root / "unexpected.bin", b"unexpected")
+        unexpected.chmod(0o644)
+    elif boundary == "root_mode":
+        root.chmod(0o755)
+    elif boundary == "inner_directory_mode":
+        inner.chmod(0o750)
+    elif boundary == "private_directory_mode":
+        inner.chmod(0o755)
+        require_private_directory_modes = True
+    elif boundary == "file_mode":
+        payload.chmod(0o644)
+    elif boundary == "hard_link":
+        os.link(payload, root / "alias.bin")
+        expected_files.add("alias.bin")
+    elif boundary == "symlink":
+        (root / "alias.bin").symlink_to(payload)
+    elif boundary == "special_file":
+        os.mkfifo(root / "pipe", mode=0o600)
+
+    with pytest.raises(ValueError, match=message):
+        recovery_module._tree_snapshot(
+            root,
+            expected_files=expected_files,
+            require_private_directory_modes=require_private_directory_modes,
+        )
+
+
 def test_preflight_captures_current_evidence_before_requiring_prior_package(
     tmp_path: Path,
 ) -> None:

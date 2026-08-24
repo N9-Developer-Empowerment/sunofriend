@@ -103,6 +103,11 @@ class _PriorFailedPackageEvidence(NamedTuple):
     audio_payload_count: int
 
 
+class _TreeSnapshotEntries(NamedTuple):
+    directories: list[dict[str, Any]]
+    files: list[dict[str, Any]]
+
+
 def recovery_request_sha256(value: Mapping[str, Any]) -> str:
     return _contract_recovery_request_sha256(value)
 
@@ -140,28 +145,41 @@ def _relative_regular(root: Path, relative_path: str) -> Path:
     return resolved
 
 
-def _tree_snapshot(
-    root: Path,
-    *,
-    expected_files: set[str] | None = None,
-    require_private_directory_modes: bool = False,
+def _directory_snapshot_identity(
+    relative_path: str, details: os.stat_result
 ) -> dict[str, Any]:
-    """Bind a private tree without following links or decoding audio."""
+    return {
+        "relative_path": relative_path,
+        "device": details.st_dev,
+        "inode": details.st_ino,
+        "uid": details.st_uid,
+        "mtime_ns": details.st_mtime_ns,
+        "ctime_ns": details.st_ctime_ns,
+        "mode": stat.S_IMODE(details.st_mode),
+    }
 
+
+def _file_snapshot_identity(
+    relative_path: str, details: os.stat_result
+) -> dict[str, Any]:
+    return {
+        "relative_path": relative_path,
+        "bytes": details.st_size,
+        "device": details.st_dev,
+        "inode": details.st_ino,
+        "mtime_ns": details.st_mtime_ns,
+        "ctime_ns": details.st_ctime_ns,
+        "mode": stat.S_IMODE(details.st_mode),
+        "uid": details.st_uid,
+        "links": details.st_nlink,
+    }
+
+
+def _enumerate_tree_snapshot(root: Path) -> _TreeSnapshotEntries:
     root_details = root.lstat()
     if stat.S_ISLNK(root_details.st_mode) or not stat.S_ISDIR(root_details.st_mode):
         raise ValueError("full-song recovery tree root differs")
-    directories = [
-        {
-            "relative_path": ".",
-            "device": root_details.st_dev,
-            "inode": root_details.st_ino,
-            "uid": root_details.st_uid,
-            "mtime_ns": root_details.st_mtime_ns,
-            "ctime_ns": root_details.st_ctime_ns,
-            "mode": stat.S_IMODE(root_details.st_mode),
-        }
-    ]
+    directories = [_directory_snapshot_identity(".", root_details)]
     files = []
     for candidate in sorted(root.rglob("*")):
         details = candidate.lstat()
@@ -169,35 +187,27 @@ def _tree_snapshot(
         if stat.S_ISLNK(details.st_mode):
             raise ValueError("full-song recovery tree must not contain symlinks")
         if stat.S_ISDIR(details.st_mode):
-            directories.append(
-                {
-                    "relative_path": relative,
-                    "device": details.st_dev,
-                    "inode": details.st_ino,
-                    "uid": details.st_uid,
-                    "mtime_ns": details.st_mtime_ns,
-                    "ctime_ns": details.st_ctime_ns,
-                    "mode": stat.S_IMODE(details.st_mode),
-                }
-            )
+            directories.append(_directory_snapshot_identity(relative, details))
         elif stat.S_ISREG(details.st_mode):
-            identity = {
-                "relative_path": relative,
-                "bytes": details.st_size,
-                "device": details.st_dev,
-                "inode": details.st_ino,
-                "mtime_ns": details.st_mtime_ns,
-                "ctime_ns": details.st_ctime_ns,
-                "mode": stat.S_IMODE(details.st_mode),
-                "uid": details.st_uid,
-                "links": details.st_nlink,
-            }
-            files.append(identity)
+            files.append(_file_snapshot_identity(relative, details))
         else:
             raise ValueError("full-song recovery tree contains a special file")
+    return _TreeSnapshotEntries(directories=directories, files=files)
+
+
+def _validate_tree_file_inventory(
+    files: Sequence[Mapping[str, Any]], expected_files: set[str] | None
+) -> None:
     observed = {item["relative_path"] for item in files}
     if expected_files is not None and observed != expected_files:
         raise ValueError("full-song recovery retained file inventory differs")
+
+
+def _validate_tree_directory_invariants(
+    directories: Sequence[Mapping[str, Any]],
+    *,
+    require_private_directory_modes: bool,
+) -> None:
     if directories[0]["mode"] != 0o700:
         raise ValueError("full-song recovery retained root mode differs")
     if any(item["mode"] not in {0o700, 0o755} for item in directories[1:]):
@@ -206,16 +216,36 @@ def _tree_snapshot(
         item["mode"] != 0o700 for item in directories
     ):
         raise ValueError("full-song recovery retained directory mode differs")
+
+
+def _validate_tree_file_invariants(files: Sequence[Mapping[str, Any]]) -> None:
     if any(item["mode"] != 0o600 for item in files):
         raise ValueError("full-song recovery retained file mode differs")
     if any(item["uid"] != os.geteuid() or item["links"] != 1 for item in files):
         raise ValueError("full-song recovery retained file ownership differs")
+
+
+def _tree_snapshot(
+    root: Path,
+    *,
+    expected_files: set[str] | None = None,
+    require_private_directory_modes: bool = False,
+) -> dict[str, Any]:
+    """Bind a private tree without following links or decoding audio."""
+
+    entries = _enumerate_tree_snapshot(root)
+    _validate_tree_file_inventory(entries.files, expected_files)
+    _validate_tree_directory_invariants(
+        entries.directories,
+        require_private_directory_modes=require_private_directory_modes,
+    )
+    _validate_tree_file_invariants(entries.files)
     return {
-        "directories": directories,
-        "files": files,
+        "directories": entries.directories,
+        "files": entries.files,
         "legacy_inner_directory_modes_0755": sum(
             item["relative_path"] != "." and item["mode"] == 0o755
-            for item in directories
+            for item in entries.directories
         ),
     }
 
