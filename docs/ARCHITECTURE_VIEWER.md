@@ -200,9 +200,65 @@ the dependency and execution approval described in
 The dependency-free report adapter is available at
 `scripts/report-code-risk.py`. It validates coverage.py format-3 function
 regions, requires branch data, obtains exact function complexity through
-Radon's supported programmatic visitor, rejects absolute input paths, and
-writes deterministic owner-only `sunofriend-code-risk.v1` JSON. A missing
-Radon installation is reported as an approval-gated blocker.
+Radon's supported programmatic visitor, remeasures nested-class methods from
+their exact definitions when Radon's whole-file visitor omits them, rejects
+absolute input paths, and writes deterministic owner-only
+`sunofriend-code-risk.v1` JSON. Declarations and intentional no-op seams with
+zero executable opportunities are explicit `not_applicable` records; missing
+coverage for executable code remains incomplete. A missing Radon installation
+is reported as an approval-gated blocker.
+
+The same command can create the coverage binding. Record the architecture
+source-tree SHA-256 before running coverage, then provide that exact value:
+
+```bash
+work/quality/venv/bin/python scripts/report-code-risk.py \
+  --coverage-json work/quality/coverage.json \
+  --out work/quality/code-risk.json \
+  --coverage-binding-out work/quality/coverage-binding.json \
+  --source-tree-sha256-before THE_64_CHARACTER_PRE_RUN_HASH
+```
+
+The command refuses the binding if the source tree changed, the coverage JSON
+contains an out-of-package path, either output is inside production source, or
+an output already exists.
+
+The measurement-only `quality` extra pins coverage.py 7.15.3 and Radon 6.0.1.
+Run it under Python 3.11 in ignored `work/quality/venv`; do not add it to the
+application environment or published runtime dependencies.
+The accepted baseline and earlier restricted-harness diagnostic are recorded in
+[`CODE_QUALITY_BASELINE_2026-08-24.md`](CODE_QUALITY_BASELINE_2026-08-24.md).
+
+The separate `mutation` extra pins mutmut 3.7.0 for the bounded three-module
+pilot. Convert its generated metadata into the viewer's neutral, source-bound
+format with:
+
+```bash
+work/quality/venv/bin/python scripts/report-mutation.py \
+  --mutants-root work/quality/mutation-pilot/mutants-cache \
+  --classifications docs/mutation-pilot-classifications.json \
+  --out work/quality/mutation-pilot/mutation.json \
+  --source-tree-sha256-before THE_64_CHARACTER_PRE_RUN_HASH
+```
+
+The adapter fails if source changed, a mutant cannot be matched to an exact
+current function, an exit code is unknown or an output would be overwritten.
+Survivors retain explicit classifications in the viewer; classifications are
+evidence, not waivers or authority.
+
+CRAP reports also carry a hash of each exact function source region. This
+allows the changed-code ratchet to distinguish a materially changed function
+from an unchanged neighbour in the same module:
+
+```bash
+work/quality/venv/bin/python scripts/check-code-risk-ratchet.py \
+  --baseline work/quality/BASELINE/code-risk.json \
+  --current work/quality/CURRENT/code-risk.json
+```
+
+The command rejects incomplete, unbound or formula-incompatible reports. New
+functions above CRAP 30 fail; changed existing functions fail only when CRAP
+increases or branch-aware coverage falls.
 
 Maintained semantic records can describe responsibility, supported entry
 points, inputs, outputs, stability, knowledge hidden, caller obligations,

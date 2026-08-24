@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,6 +13,8 @@ from devtools.architecture_viewer.overlays import build_overlay_bundle
 from devtools.code_risk import (
     ComplexityFunction,
     build_code_risk_document,
+    build_coverage_binding_document,
+    collect_complexities,
     generate_code_risk_report,
     serialize_report,
     write_fresh_report,
@@ -146,6 +149,7 @@ def test_report_is_nested_source_bound_branch_aware_and_deterministic(tmp_path: 
         "function_count": 3,
         "measured_count": 3,
         "unmeasured_count": 0,
+        "not_applicable_count": 0,
         "warning_count": 1,
         "crap_load": "26.000000",
     }
@@ -184,6 +188,7 @@ def test_nested_function_report_attaches_to_architecture_overlay(tmp_path: Path)
                 line=nested["line"],
                 end_line=nested["end_line"],
                 complexity=2,
+                source_sha256="a" * 64,
             )
         ],
         radon_version="6.fixture",
@@ -208,6 +213,7 @@ def test_report_rejects_line_only_coverage_and_unsafe_paths(tmp_path: Path) -> N
         line=definition["line"],
         end_line=definition["end_line"],
         complexity=2,
+        source_sha256="a" * 64,
     )
     coverage = _coverage(architecture)
     coverage["meta"]["branch_coverage"] = False
@@ -231,6 +237,35 @@ def test_report_rejects_line_only_coverage_and_unsafe_paths(tmp_path: Path) -> N
         )
 
 
+def test_coverage_binding_requires_an_unchanged_exact_source_tree(tmp_path: Path) -> None:
+    _, architecture = _fixture(tmp_path)
+    coverage = _coverage(architecture)
+    raw = (json.dumps(coverage, sort_keys=True) + "\n").encode()
+
+    binding = build_coverage_binding_document(
+        architecture,
+        coverage,
+        raw,
+        source_tree_sha256_before=architecture["source_tree_sha256"],
+    )
+
+    module = architecture["modules"]["riskpkg.risk"]
+    assert binding == {
+        "schema": "sunofriend-coverage-binding.v1",
+        "coverage_json_sha256": hashlib.sha256(raw).hexdigest(),
+        "source_tree_sha256_before": architecture["source_tree_sha256"],
+        "source_tree_sha256_after": architecture["source_tree_sha256"],
+        "files": {module["path"]: module["source_sha256"]},
+    }
+    with pytest.raises(ValueError, match="source tree changed"):
+        build_coverage_binding_document(
+            architecture,
+            coverage,
+            raw,
+            source_tree_sha256_before="f" * 64,
+        )
+
+
 def test_report_marks_missing_function_region_incomplete(tmp_path: Path) -> None:
     _, architecture = _fixture(tmp_path)
     module = architecture["modules"]["riskpkg.risk"]
@@ -248,6 +283,7 @@ def test_report_marks_missing_function_region_incomplete(tmp_path: Path) -> None
                 line=definition["line"],
                 end_line=definition["end_line"],
                 complexity=2,
+                source_sha256="a" * 64,
             )
         ],
         radon_version="6.fixture",
@@ -256,3 +292,139 @@ def test_report_marks_missing_function_region_incomplete(tmp_path: Path) -> None
     assert report["status"] == "incomplete"
     assert report["summary"]["unmeasured_count"] == 1
     assert report["functions"][0]["unmeasured_reason"].startswith("matching coverage")
+
+
+def test_zero_opportunity_declaration_is_explicitly_not_applicable(
+    tmp_path: Path,
+) -> None:
+    _, architecture = _fixture(tmp_path)
+    module = architecture["modules"]["riskpkg.risk"]
+    definition = next(
+        item
+        for item in module["function_definitions"]
+        if item["qualified_name"] == "API.run"
+    )
+    coverage = _coverage(architecture)
+    coverage["files"][module["path"]]["functions"]["API.run"]["summary"] = _summary(
+        covered_lines=0,
+        statements=0,
+        covered_branches=0,
+        branches=0,
+    )
+    report = build_code_risk_document(
+        architecture,
+        coverage,
+        [
+            ComplexityFunction(
+                path=module["path"],
+                qualified_name="API.run",
+                line=definition["line"],
+                end_line=definition["end_line"],
+                complexity=1,
+                source_sha256="a" * 64,
+            )
+        ],
+        radon_version="6.fixture",
+    )
+
+    assert report["status"] == "advisory_complete"
+    assert report["summary"] == {
+        "function_count": 1,
+        "measured_count": 0,
+        "unmeasured_count": 0,
+        "not_applicable_count": 1,
+        "warning_count": 0,
+        "crap_load": "0.000000",
+    }
+    assert report["functions"][0]["status"] == "not_applicable"
+    report_path = tmp_path / "risk.json"
+    report_path.write_bytes(serialize_report(report))
+    overlay = build_overlay_bundle(architecture, risk_report=report_path)
+    assert overlay["documents"][0]["records"][0]["status"] == "not_applicable"
+
+
+def test_complexity_falls_back_to_each_definition_for_nested_class_methods(
+    tmp_path: Path,
+) -> None:
+    package = tmp_path / "src" / "riskpkg"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "nested.py").write_text(
+        """def build():
+    class Handler:
+        def serve(self, ready: bool):
+            if ready:
+                return 1
+            return 0
+    return Handler
+""",
+        encoding="utf-8",
+    )
+    architecture = analyse_source_tree(package, repository_root=tmp_path)
+
+    outer = SimpleNamespace(
+        is_method=False,
+        lineno=1,
+        endline=8,
+        complexity=1,
+        closures=[],
+    )
+
+    def whole_file_visitor(source: str):
+        return [outer] if "def build" in source else []
+
+    def definition_visitor(source: str):
+        assert source.startswith("def serve")
+        return [
+            SimpleNamespace(
+                is_method=False,
+                lineno=1,
+                endline=5,
+                complexity=2,
+                closures=[],
+            )
+        ]
+
+    complexities = collect_complexities(
+        architecture,
+        repository_root=tmp_path,
+        visitor=whole_file_visitor,
+        definition_visitor=definition_visitor,
+    )
+
+    assert [
+        (item.qualified_name, item.line, item.complexity) for item in complexities
+    ] == [("build", 1, 1), ("build.Handler.serve", 3, 2)]
+
+
+def test_complexity_still_fails_closed_when_definition_fallback_omits_a_function(
+    tmp_path: Path,
+) -> None:
+    package = tmp_path / "src" / "riskpkg"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "nested.py").write_text(
+        """def build():
+    class Handler:
+        def serve(self):
+            return 1
+    return Handler
+""",
+        encoding="utf-8",
+    )
+    architecture = analyse_source_tree(package, repository_root=tmp_path)
+    outer = SimpleNamespace(
+        is_method=False,
+        lineno=1,
+        endline=5,
+        complexity=1,
+        closures=[],
+    )
+
+    with pytest.raises(ValueError, match="Radon omitted 1 functions"):
+        collect_complexities(
+            architecture,
+            repository_root=tmp_path,
+            visitor=lambda source: [outer] if "def build" in source else [],
+            definition_visitor=lambda source: [],
+        )

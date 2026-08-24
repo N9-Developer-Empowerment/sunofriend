@@ -361,7 +361,13 @@ def _normalize_risk(
             raise ValueError("code-risk coverage opportunities are invalid")
         if possible == 0:
             score: Decimal | None = None
-            status = "unmeasured"
+            status = (
+                "not_applicable"
+                if record.get("status") == "not_applicable"
+                and record.get("unmeasured_reason")
+                == "coverage region has no measurable opportunities"
+                else "unmeasured"
+            )
             percentage: Decimal | None = None
         else:
             with localcontext() as context:

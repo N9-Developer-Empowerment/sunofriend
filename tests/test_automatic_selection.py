@@ -59,17 +59,113 @@ class AutomaticSelectionTests(unittest.TestCase):
                 result_root=result,
             )
 
-            self.assertEqual(len(plan.selected), 1)
-            self.assertEqual(plan.selected[0]["midi_path"], primary.resolve())
-            self.assertEqual(
-                plan.receipt["policy"],
-                AUTOMATIC_SELECTION_POLICY,
+            source_record = _record(source)
+            midi_record = _record(primary)
+            summary_raw = summary.read_bytes()
+            summary_sha256 = hashlib.sha256(summary_raw).hexdigest()
+            candidate_id = "candidate-" + midi_record["sha256"][:16]
+            expected_selected = {
+                "stem_id": "stem-one",
+                "stem_label": "Bass",
+                "candidate_id": candidate_id,
+                "candidate_label": "bass_listened",
+                "process": "sunofriend-specialist",
+                "role": "bass",
+                "selection_basis": "automatic_primary",
+                "review_status": "not_reviewed",
+                "quality_status": "review_recommended",
+                "source_path": source.resolve(),
+                "source": source_record,
+                "midi_path": primary.resolve(),
+                "midi": midi_record,
+                "summary_sha256": summary_sha256,
+                "selection_index": 1,
+                "decision": "automatic-baseline",
+                "garageband_pack_archive_member": (
+                    "MIDI/01-bass-automatic-primary.mid"
+                ),
+            }
+            self.assertEqual(plan.selected, (expected_selected,))
+            self.assertEqual(plan.omitted, ())
+
+            expected_receipt_without_hash = {
+                "schema": "sunofriend.automatic-selection.v1",
+                "policy": AUTOMATIC_SELECTION_POLICY,
+                "project_id": "project-one",
+                "project": {
+                    "bpm": 113.0,
+                    "key": "B minor",
+                    "tuning_hz": 440.0,
+                },
+                "selected": [
+                    {
+                        "selection_index": 1,
+                        "stem_id": "stem-one",
+                        "candidate_id": candidate_id,
+                        "role": "bass",
+                        "process": "sunofriend-specialist",
+                        "selection_basis": "automatic_primary",
+                        "review_status": "not_reviewed",
+                        "quality_status": "review_recommended",
+                        "source_sha256": source_record["sha256"],
+                        "source_bytes": source_record["bytes"],
+                        "midi_sha256": midi_record["sha256"],
+                        "midi_bytes": midi_record["bytes"],
+                        "summary_sha256": summary_sha256,
+                        "archive_member": "MIDI/01-bass-automatic-primary.mid",
+                    }
+                ],
+                "omitted": [],
+                "conversion_summaries": [
+                    {
+                        "sha256": summary_sha256,
+                        "bytes": len(summary_raw),
+                        "kind": "instrumental",
+                    }
+                ],
+                "review_status": "not_reviewed",
+                "quality_status": "review_recommended",
+                "effects": {
+                    "automatic_selection": True,
+                    "automatic_ranking": False,
+                    "human_decision_events": 0,
+                    "workbench_state_changed": False,
+                    "feedback_recorded": False,
+                    "source_audio_mutated": False,
+                    "source_midi_mutated": False,
+                },
+            }
+            receipt_without_hash = dict(plan.receipt)
+            manifest_sha256 = receipt_without_hash.pop(
+                "selection_manifest_sha256"
             )
-            self.assertEqual(plan.receipt["review_status"], "not_reviewed")
-            self.assertTrue(plan.receipt["effects"]["automatic_selection"])
-            self.assertEqual(plan.receipt["effects"]["human_decision_events"], 0)
+            self.assertEqual(
+                receipt_without_hash,
+                expected_receipt_without_hash,
+            )
+            expected_manifest = hashlib.sha256(
+                json.dumps(
+                    expected_receipt_without_hash,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode("utf-8")
+            ).hexdigest()
+            self.assertEqual(manifest_sha256, expected_manifest)
             self.assertNotIn(str(project), json.dumps(plan.receipt))
             self.assertFalse((root / "workbench.sqlite3").exists())
+
+    def test_missing_result_folder_error_is_exact(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            missing = Path(temporary) / "missing"
+
+            with self.assertRaises(AutomaticSelectionError) as caught:
+                plan_automatic_selection({}, (), result_root=missing)
+
+            self.assertEqual(
+                str(caught.exception),
+                "the verified conversion result folder does not exist",
+            )
 
     def test_vocal_summary_source_pairing_is_exact_for_duplicate_roles(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

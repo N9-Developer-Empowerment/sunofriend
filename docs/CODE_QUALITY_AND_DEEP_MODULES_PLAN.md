@@ -505,32 +505,91 @@ mutation jobs may run on Linux when their tests are platform-neutral.
 - Dependency-free preparation is implemented: branch/relative-path coverage
   configuration, nested-function source identities, the deterministic
   `report-code-risk.py` adapter, report/overlay validation and focused tests.
-- With explicit dependency approval, add the pinned `quality` extra and install
-  coverage.py plus Radon in a separate Python 3.11 environment.
+- The approved `quality` extra pins coverage.py 7.15.3 and Radon 6.0.1. Install
+  it only in a separate Python 3.11 environment under ignored `work/quality/`;
+  it is not an application or published-package runtime dependency.
 - Generate the first complete report twice and require byte-identical output
   for the same source and coverage data.
 - Keep the report advisory for at least one normal development increment.
 
-The preparation does not claim a baseline: the current project `.venv` has no
-coverage.py or Radon installation, and no report has been generated from the
-full test suite. After the dependency gate is approved, the intended adapter
-invocation is:
+The preparation alone does not claim a baseline. The intended isolated setup,
+coverage and adapter sequence is:
 
 ```bash
-python3.11 scripts/report-code-risk.py \
+PYENV_VERSION=3.11.7 python3.11 -m venv work/quality/venv
+work/quality/venv/bin/python -m pip install -e '.[all,dev,quality]'
+work/quality/venv/bin/python -m coverage run \
+  -m pytest -q -m 'not trusted_local'
+work/quality/venv/bin/python -m coverage json
+work/quality/venv/bin/python scripts/report-code-risk.py \
   --coverage-json work/quality/coverage.json \
-  --out work/quality/code-risk.json
+  --out work/quality/code-risk.json \
+  --coverage-binding-out work/quality/coverage-binding.json \
+  --source-tree-sha256-before THE_64_CHARACTER_PRE_RUN_HASH
 ```
 
 The output path must be fresh. Run the same input into a second fresh path and
 compare bytes before accepting the first advisory baseline.
 
+The 2026-08-24 unrestricted macOS run completed with 3,827 tests passing and no
+failures or setup errors. It produced byte-deterministic, source-bound coverage
+and CRAP artifacts. The earlier restricted-harness failures are retained as
+environmental diagnostic evidence, not as the accepted baseline. Exact
+results and hotspot triage are in
+[`CODE_QUALITY_BASELINE_2026-08-24.md`](CODE_QUALITY_BASELINE_2026-08-24.md).
+
 ### Phase 2 — mutation pilot and ratchet
 
-- Add the exact three-module mutmut configuration.
-- Classify every survivor in the first bounded run.
-- Enable the changed-code CRAP ratchet and architecture test.
+- The `mutation` extra pins mutmut 3.7.0 separately from the measurement-only
+  `quality` extra. The exact three-module configuration and selected tests are
+  implemented in `pyproject.toml`.
+- The fresh post-hardening run exercised all 1,391 mutants: 1,074 killed, 315
+  survived and two timed out. All survivors are classified in the deterministic
+  report: 291 conservative test gaps and 24 documented import-time trampoline
+  limitations. There is no global mutation-score gate.
+- The path-free `report-mutation.py` adapter binds every result to an exact
+  current function and source hash. Two builds from the same metadata were
+  byte-identical.
+- The changed-code CRAP ratchet is implemented with function-source hashes:
+  new functions must remain at or below 30, while materially changed existing
+  functions may neither increase CRAP nor reduce branch-aware coverage.
+  Unchanged functions are ignored even when another function in their module
+  changes. The architecture-contract check is enabled in the portable Python
+  3.11 CI job.
 - Do not introduce a global mutation-score gate yet.
+
+The isolated mutation workflow is:
+
+```bash
+work/quality/venv/bin/python -m pip install -e '.[all,dev,quality,mutation]'
+work/quality/venv/bin/python -m mutmut run 'sunofriend.source_roles*'
+work/quality/venv/bin/python -m mutmut run 'sunofriend.automatic_selection*'
+work/quality/venv/bin/python -m mutmut run \
+  'sunofriend.separation_review_transport*'
+work/quality/venv/bin/python scripts/report-mutation.py \
+  --mutants-root work/quality/mutation-pilot/mutants-cache \
+  --classifications docs/mutation-pilot-classifications.json \
+  --out work/quality/mutation-pilot/mutation.json \
+  --source-tree-sha256-before THE_64_CHARACTER_PRE_RUN_HASH
+```
+
+mutmut 3 uses a repository-root `mutants` working path. For this local pilot,
+that path is a temporary symlink to the ignored
+`work/quality/mutation-pilot/mutants-cache` directory and is removed after the
+run. Never replace or delete an existing non-pilot `mutants` path.
+
+Compare a current complete report with an accepted baseline using:
+
+```bash
+work/quality/venv/bin/python scripts/check-code-risk-ratchet.py \
+  --baseline work/quality/BASELINE/code-risk.json \
+  --current work/quality/CURRENT/code-risk.json
+```
+
+The complete reports remain local artifacts rather than a large tracked
+snapshot. A pull-request workflow may obtain the accepted base report from its
+quality artifact store; absence, incompleteness or formula drift must block the
+ratchet rather than silently treating all historical functions as new.
 
 ### Phase 3 — first deep-module refactor
 

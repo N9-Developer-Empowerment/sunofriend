@@ -6,11 +6,14 @@ import argparse
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal, localcontext
+import hashlib
 import importlib.metadata
 import json
 import os
 from pathlib import Path, PurePosixPath
+import re
 import tempfile
+import textwrap
 from typing import Any
 
 from devtools.architecture_viewer.analyzer import analyse_source_tree
@@ -19,6 +22,7 @@ from devtools.architecture_viewer.analyzer import analyse_source_tree
 REPORT_SCHEMA = "sunofriend-code-risk.v1"
 MAX_INPUT_BYTES = 64 * 1024 * 1024
 DEFAULT_THRESHOLD = Decimal("30")
+SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 
 
 @dataclass(frozen=True)
@@ -28,6 +32,7 @@ class ComplexityFunction:
     line: int
     end_line: int
     complexity: int
+    source_sha256: str
 
 
 def _duplicate_safe_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -164,6 +169,7 @@ def build_code_risk_document(
     functions: list[dict[str, Any]] = []
     warning_count = 0
     unmeasured_count = 0
+    not_applicable_count = 0
     crap_load = Decimal(0)
     for function in complexities:
         identity = (function.path, function.qualified_name, function.line)
@@ -172,6 +178,8 @@ def build_code_risk_document(
         seen.add(identity)
         if function.complexity < 1 or function.line < 1 or function.end_line < function.line:
             raise ValueError(f"invalid Radon function record: {identity}")
+        if SHA256_PATTERN.fullmatch(function.source_sha256) is None:
+            raise ValueError(f"invalid function source hash: {identity}")
         module_entry = modules_by_path.get(function.path)
         if module_entry is None:
             raise ValueError(f"Radon function is outside the analysed package: {function.path}")
@@ -192,8 +200,12 @@ def build_code_risk_document(
         )
         score = _crap_score(function.complexity, covered, possible)
         if score is None:
-            status = "unmeasured"
-            unmeasured_count += 1
+            if reason == "coverage region has no measurable opportunities":
+                status = "not_applicable"
+                not_applicable_count += 1
+            else:
+                status = "unmeasured"
+                unmeasured_count += 1
         elif score > threshold:
             status = "warning"
             warning_count += 1
@@ -208,6 +220,7 @@ def build_code_risk_document(
                 "qualified_name": function.qualified_name,
                 "line": function.line,
                 "end_line": function.end_line,
+                "function_source_sha256": function.source_sha256,
             },
             "complexity": function.complexity,
             "coverage": {
@@ -255,8 +268,11 @@ def build_code_risk_document(
         },
         "summary": {
             "function_count": len(functions),
-            "measured_count": len(functions) - unmeasured_count,
+            "measured_count": len(functions)
+            - unmeasured_count
+            - not_applicable_count,
             "unmeasured_count": unmeasured_count,
+            "not_applicable_count": not_applicable_count,
             "warning_count": warning_count,
             "crap_load": _format_decimal(crap_load, "0.000001"),
         },
@@ -290,6 +306,7 @@ def collect_complexities(
     *,
     repository_root: Path,
     visitor: Callable[[str], Iterable[Any]],
+    definition_visitor: Callable[[str], Iterable[Any]] | None = None,
 ) -> list[ComplexityFunction]:
     result: list[ComplexityFunction] = []
     for module in sorted(architecture["modules"].values(), key=lambda item: item["path"]):
@@ -298,6 +315,13 @@ def collect_complexities(
         definitions_by_line = {
             int(item["line"]): item for item in module.get("function_definitions", [])
         }
+        source_lines = source.splitlines(keepends=True)
+
+        def function_source_sha256(line: int, end_line: int) -> str:
+            return hashlib.sha256(
+                "".join(source_lines[line - 1 : end_line]).encode("utf-8")
+            ).hexdigest()
+
         measured_lines: set[int] = set()
         for block in _flatten_radon_blocks(visitor(source)):
             line = int(block.lineno)
@@ -312,9 +336,39 @@ def collect_complexities(
                     line=line,
                     end_line=int(definition["end_line"]),
                     complexity=int(block.complexity),
+                    source_sha256=function_source_sha256(
+                        line, int(definition["end_line"])
+                    ),
                 )
             )
         missing = sorted(set(definitions_by_line) - measured_lines)
+        if missing and definition_visitor is not None:
+            for line in missing:
+                definition = definitions_by_line[line]
+                end_line = int(definition["end_line"])
+                snippet = textwrap.dedent(
+                    "".join(source_lines[line - 1 : end_line])
+                )
+                candidates = [
+                    block
+                    for block in _flatten_radon_blocks(definition_visitor(snippet))
+                    if int(block.lineno) == 1
+                ]
+                if len(candidates) != 1:
+                    continue
+                block = candidates[0]
+                measured_lines.add(line)
+                result.append(
+                    ComplexityFunction(
+                        path=str(module["path"]),
+                        qualified_name=str(definition["qualified_name"]),
+                        line=line,
+                        end_line=end_line,
+                        complexity=int(block.complexity),
+                        source_sha256=function_source_sha256(line, end_line),
+                    )
+                )
+            missing = sorted(set(definitions_by_line) - measured_lines)
         if missing:
             raise ValueError(
                 f"Radon omitted {len(missing)} functions in {module['path']}: {missing[:5]}"
@@ -349,14 +403,17 @@ def generate_code_risk_report(
         raise ValueError("source root must be inside repository root") from error
     coverage, _ = read_coverage_json(coverage_json)
     architecture = analyse_source_tree(source_root, repository_root=repository_root)
+    definition_visitor = None
     if visitor is None:
         radon_version, visitor = _radon_backend()
+        definition_visitor = visitor
     if not radon_version:
         raise ValueError("Radon version is required")
     complexities = collect_complexities(
         architecture,
         repository_root=repository_root,
         visitor=visitor,
+        definition_visitor=definition_visitor,
     )
     return build_code_risk_document(
         architecture,
@@ -372,6 +429,42 @@ def serialize_report(document: Mapping[str, Any]) -> bytes:
         json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False)
         + "\n"
     ).encode("utf-8")
+
+
+def build_coverage_binding_document(
+    architecture: Mapping[str, Any],
+    coverage: Mapping[str, Any],
+    coverage_raw: bytes,
+    *,
+    source_tree_sha256_before: str,
+) -> dict[str, Any]:
+    """Bind coverage.py output to unchanged, exact source bytes."""
+
+    if SHA256_PATTERN.fullmatch(source_tree_sha256_before) is None:
+        raise ValueError("pre-run source-tree SHA-256 must be 64 lowercase hex characters")
+    source_tree_sha256_after = str(architecture.get("source_tree_sha256", ""))
+    if source_tree_sha256_before != source_tree_sha256_after:
+        raise ValueError("source tree changed during coverage measurement")
+    files = coverage.get("files")
+    if not isinstance(files, Mapping):
+        raise ValueError("coverage JSON requires a files object")
+    modules_by_path = {
+        str(module["path"]): module for module in architecture["modules"].values()
+    }
+    file_hashes: dict[str, str] = {}
+    for raw_path in files:
+        path = _relative_path(raw_path)
+        module = modules_by_path.get(path)
+        if module is None:
+            raise ValueError(f"coverage file is outside the analysed package: {path}")
+        file_hashes[path] = str(module["source_sha256"])
+    return {
+        "schema": "sunofriend-coverage-binding.v1",
+        "coverage_json_sha256": hashlib.sha256(coverage_raw).hexdigest(),
+        "source_tree_sha256_before": source_tree_sha256_before,
+        "source_tree_sha256_after": source_tree_sha256_after,
+        "files": dict(sorted(file_hashes.items())),
+    }
 
 
 def write_fresh_report(path: Path, document: Mapping[str, Any]) -> None:
@@ -396,7 +489,8 @@ def _print_summary(document: Mapping[str, Any], *, limit: int) -> None:
     summary = document["summary"]
     print(
         f"{document['status']}: {summary['measured_count']}/{summary['function_count']} "
-        f"functions measured; {summary['warning_count']} above CRAP {document['formula']['threshold']}"
+        f"functions measured, {summary['not_applicable_count']} not applicable; "
+        f"{summary['warning_count']} above CRAP {document['formula']['threshold']}"
     )
     print("CRAP       complexity  coverage   function")
     for record in document["functions"][:limit]:
@@ -418,6 +512,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-root", type=Path, default=repository_root / "src" / "sunofriend")
     parser.add_argument("--threshold", type=Decimal, default=DEFAULT_THRESHOLD)
     parser.add_argument("--top", type=int, default=25, help="Rows to print (default: 25)")
+    parser.add_argument(
+        "--coverage-binding-out",
+        type=Path,
+        help="Optional fresh source/hash binding for the coverage JSON",
+    )
+    parser.add_argument(
+        "--source-tree-sha256-before",
+        help="Required pre-run architecture source-tree hash for a coverage binding",
+    )
     return parser
 
 
@@ -426,6 +529,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.top < 0 or args.top > 1_000:
         parser.error("--top must be between 0 and 1000")
+    if (args.coverage_binding_out is None) != (
+        args.source_tree_sha256_before is None
+    ):
+        parser.error(
+            "--coverage-binding-out and --source-tree-sha256-before are required together"
+        )
     repository_root = Path(__file__).resolve().parents[1]
     try:
         document = generate_code_risk_report(
@@ -441,10 +550,36 @@ def main(argv: Sequence[str] | None = None) -> int:
             pass
         else:
             raise ValueError("code-risk output must be outside the source tree")
+        binding_output = None
+        binding_document = None
+        if args.coverage_binding_out is not None:
+            binding_output = args.coverage_binding_out.resolve()
+            try:
+                binding_output.relative_to(args.source_root.resolve())
+            except ValueError:
+                pass
+            else:
+                raise ValueError("coverage binding output must be outside the source tree")
+            if binding_output == output:
+                raise ValueError("code-risk and coverage binding outputs must differ")
+            coverage, coverage_raw = read_coverage_json(args.coverage_json)
+            architecture = analyse_source_tree(
+                args.source_root.resolve(), repository_root=repository_root
+            )
+            binding_document = build_coverage_binding_document(
+                architecture,
+                coverage,
+                coverage_raw,
+                source_tree_sha256_before=args.source_tree_sha256_before,
+            )
         write_fresh_report(output, document)
+        if binding_output is not None and binding_document is not None:
+            write_fresh_report(binding_output, binding_document)
     except (FileExistsError, RuntimeError, ValueError) as error:
         parser.exit(2, f"code-risk report blocked: {error}\n")
     print(output)
+    if binding_output is not None:
+        print(binding_output)
     _print_summary(document, limit=args.top)
     return 1 if document["status"] == "incomplete" else 0
 
