@@ -492,6 +492,66 @@ def test_preflight_binds_exact_tree_and_hashes_guitar_without_writes(
     assert _tree_bytes(failed) == before
 
 
+@pytest.mark.parametrize(
+    ("relative_path", "field_path", "replacement", "message"),
+    [
+        (
+            "TEMP/scnet-request.json",
+            ("expected_forward_calls",),
+            -1,
+            "forward budget",
+        ),
+        (
+            "TEMP/scnet-request.json",
+            ("cases", 0, "source", "channels"),
+            1,
+            "source binding",
+        ),
+        (
+            "TEMP/scnet-request.json",
+            ("cases", 0, "outputs", "vocals"),
+            "TEMP/scnet/both/not-vocals.npy",
+            "SCNet request paths",
+        ),
+        (
+            "TEMP/mega53-synth-request.json",
+            ("cases", 0, "output"),
+            "TEMP/synth/both/not-synth.npy",
+            "specialist request path",
+        ),
+        (
+            "TEMP/sw-guitar-request.json",
+            ("network_denied",),
+            False,
+            "worker request differs",
+        ),
+    ],
+)
+def test_preflight_rejects_each_worker_request_boundary(
+    tmp_path: Path,
+    relative_path: str,
+    field_path: tuple[object, ...],
+    replacement: object,
+    message: str,
+) -> None:
+    plan, failed, prior = _failed_fixture(tmp_path)
+    path = failed / relative_path
+    value = json.loads(path.read_text(encoding="utf-8"))
+    target = value
+    for key in field_path[:-1]:
+        target = target[key]
+    target[field_path[-1]] = replacement
+    _write_json(path, value)
+
+    with pytest.raises(ValueError, match=message):
+        build_recovery_request(
+            plan,
+            failed,
+            proposed_output=tmp_path / "recovered",
+            prior_failed_root_value=prior,
+        )
+
+
 def test_historical_request_without_atomic_helper_remains_reviewable_only(
     tmp_path: Path,
 ) -> None:

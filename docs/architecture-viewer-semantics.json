@@ -71,6 +71,23 @@
       "authority_boundary": "Automated scores and defaults never create a human-reviewed decision."
     },
     {
+      "target": {"module": "sunofriend.separation_fine_stem_full_song_recovery"},
+      "claim_kind": "intent",
+      "roles": ["facade", "guard", "persistence"],
+      "surface": "internal",
+      "stability": "internal",
+      "responsibility": "Bind retained full-song recovery evidence, expose the stable request/report facade and perform only an explicitly approved no-model recovery publication.",
+      "supported_entry_points": ["build_recovery_request", "recovery_request_sha256", "validate_recovery_request", "execute_recovery", "recovery_report_sha256", "validate_recovery_report"],
+      "inputs": ["approved full-song plan", "exact retained failed packages", "explicit recovery hash and rights confirmation"],
+      "outputs": ["no-write recovery request", "resource-incomplete private review package or retained failure evidence"],
+      "knowledge_owned": ["retained-tree preflight", "verified private payload reads", "model-free projection and PCM24 persistence", "exclusive private publication"],
+      "caller_obligations": ["treat planning as no-write", "supply exact approval only for execution", "preserve both failed packages", "retain incomplete guitar and aggregate resource gates"],
+      "side_effects": ["preflight reads and hashes exact private evidence", "approved execution may publish one fresh owner-only private recovery directory"],
+      "errors": ["identity drift, unsafe paths, changed evidence, missing authority and publication collisions fail closed"],
+      "schemas": ["sunofriend.fine-stem-full-song-six-role-recovery-request.v1", "sunofriend.fine-stem-full-song-six-role-recovery-report.v1"],
+      "authority_boundary": "Planning grants no execution. Recovery remains resource-incomplete evidence and grants no retry, activation, source selection, MIDI, hosting, redistribution, upload or musical approval."
+    },
+    {
       "target": {"module": "sunofriend.separation_fine_stem_full_song_recovery_contract"},
       "claim_kind": "intent",
       "roles": ["contract", "guard"],

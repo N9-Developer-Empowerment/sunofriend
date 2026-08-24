@@ -59,6 +59,10 @@ The facade still contains three accepted historical warnings:
 and `_build_recovery_request_with_documents` at 30.320988. They were not
 worsened by this refactor and remain separate follow-up candidates.
 
+The first subsequent Phase 4 increment has now removed the
+`_validate_worker_request_binding` warning without changing the facade. See
+[`CODE_QUALITY_RECOVERY_PREFLIGHT_REFACTOR_2026-08-24.md`](CODE_QUALITY_RECOVERY_PREFLIGHT_REFACTOR_2026-08-24.md).
+
 ## Deterministic evidence
 
 The final unrestricted macOS branch-coverage run completed with 3,853 tests

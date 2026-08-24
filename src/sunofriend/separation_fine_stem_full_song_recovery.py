@@ -410,12 +410,12 @@ def _validate_completed_result(
     return cases
 
 
-def _validate_worker_request_binding(
+def _worker_request_cases(
     request: Mapping[str, Any],
     *,
     mode: str,
     plan: Mapping[str, Any],
-) -> None:
+) -> list[Mapping[str, Any]]:
     cases = request.get("cases")
     if (
         request.get("schema") != WORKER_REQUEST_SCHEMA
@@ -425,49 +425,94 @@ def _validate_worker_request_binding(
         or [case.get("track_id") for case in cases] != _case_ids(plan)
     ):
         raise ValueError("full-song recovery worker request differs")
+    return cases  # type: ignore[return-value]
+
+
+def _expected_worker_forward_calls(
+    mode: str, plan: Mapping[str, Any]
+) -> int:
     budget = full_song_forward_budget(plan)
-    expected_calls = {
+    return {
         "scnet": budget["scnet_forward_calls"],
         "mega53-synth": budget["mega53_forward_calls"],
         "sw-guitar": budget["sw_forward_calls"],
     }[mode]
+
+
+def _validate_worker_source_binding(
+    case: Mapping[str, Any], planned: Mapping[str, Any]
+) -> None:
+    track = planned["track_id"]
+    source = case.get("source", {})
+    canonical_relative = f"TEMP/canonical/{track}/reference.wav"
+    if (
+        _recorded_relative_path(source.get("path")) != canonical_relative
+        or source.get("frames")
+        != planned["full_song_source"]["expected_canonical_frames"]
+        or source.get("sample_rate_hz") != 44_100
+        or source.get("channels") != 2
+        or source.get("subtype") != "PCM_24"
+        or not isinstance(source.get("bytes"), int)
+        or source["bytes"] <= 0
+        or not isinstance(source.get("sha256"), str)
+        or len(source["sha256"]) != 64
+    ):
+        raise ValueError("full-song recovery worker source binding differs")
+
+
+def _validate_scnet_output_binding(
+    case: Mapping[str, Any], *, track: str
+) -> None:
+    expected_outputs = {
+        role: f"TEMP/scnet/{track}/{role}.npy"
+        for role in ("vocals", "drums", "bass", "other")
+    }
+    outputs = case.get("outputs")
+    if not isinstance(outputs, dict) or set(outputs) != set(expected_outputs):
+        raise ValueError("full-song recovery SCNet request roles differ")
+    if any(
+        _recorded_relative_path(outputs[role]) != relative
+        for role, relative in expected_outputs.items()
+    ):
+        raise ValueError("full-song recovery SCNet request paths differ")
+
+
+def _validate_specialist_output_binding(
+    case: Mapping[str, Any], *, mode: str, track: str
+) -> None:
+    role = "synth" if mode == "mega53-synth" else "guitar"
+    expected_output = f"TEMP/{role}/{track}/{role}.npy"
+    if _recorded_relative_path(case.get("output")) != expected_output:
+        raise ValueError("full-song recovery specialist request path differs")
+
+
+def _validate_worker_case_binding(
+    case: Mapping[str, Any],
+    planned: Mapping[str, Any],
+    *,
+    mode: str,
+) -> None:
+    _validate_worker_source_binding(case, planned)
+    if mode == "scnet":
+        _validate_scnet_output_binding(case, track=planned["track_id"])
+    else:
+        _validate_specialist_output_binding(
+            case, mode=mode, track=planned["track_id"]
+        )
+
+
+def _validate_worker_request_binding(
+    request: Mapping[str, Any],
+    *,
+    mode: str,
+    plan: Mapping[str, Any],
+) -> None:
+    cases = _worker_request_cases(request, mode=mode, plan=plan)
+    expected_calls = _expected_worker_forward_calls(mode, plan)
     if request.get("expected_forward_calls") != expected_calls:
         raise ValueError("full-song recovery worker forward budget differs")
     for case, planned in zip(cases, plan["cases"]):
-        track = planned["track_id"]
-        source = case.get("source", {})
-        canonical_relative = f"TEMP/canonical/{track}/reference.wav"
-        if (
-            _recorded_relative_path(source.get("path")) != canonical_relative
-            or source.get("frames")
-            != planned["full_song_source"]["expected_canonical_frames"]
-            or source.get("sample_rate_hz") != 44_100
-            or source.get("channels") != 2
-            or source.get("subtype") != "PCM_24"
-            or not isinstance(source.get("bytes"), int)
-            or source["bytes"] <= 0
-            or not isinstance(source.get("sha256"), str)
-            or len(source["sha256"]) != 64
-        ):
-            raise ValueError("full-song recovery worker source binding differs")
-        if mode == "scnet":
-            expected_outputs = {
-                role: f"TEMP/scnet/{track}/{role}.npy"
-                for role in ("vocals", "drums", "bass", "other")
-            }
-            outputs = case.get("outputs")
-            if not isinstance(outputs, dict) or set(outputs) != set(expected_outputs):
-                raise ValueError("full-song recovery SCNet request roles differ")
-            if any(
-                _recorded_relative_path(outputs[role]) != relative
-                for role, relative in expected_outputs.items()
-            ):
-                raise ValueError("full-song recovery SCNet request paths differ")
-        else:
-            role = "synth" if mode == "mega53-synth" else "guitar"
-            expected_output = f"TEMP/{role}/{track}/{role}.npy"
-            if _recorded_relative_path(case.get("output")) != expected_output:
-                raise ValueError("full-song recovery specialist request path differs")
+        _validate_worker_case_binding(case, planned, mode=mode)
 
 
 def _worker_source_bindings(request: Mapping[str, Any]) -> list[dict[str, Any]]:

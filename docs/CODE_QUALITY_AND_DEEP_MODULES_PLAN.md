@@ -606,7 +606,13 @@ ratchet rather than silently treating all historical functions as new.
 
 ### Phase 4 — repeat and broaden
 
-- Continue recovery seams one at a time.
+- **Increment 1 complete on 2026-08-24.** The recovery worker-request preflight
+  warning was split into focused identity, budget, source and output checks.
+  CRAP fell from 44.252000 to a 3.000000 coordinator, five boundary cases were
+  added, and both architecture and changed-code ratchets pass. See
+  [`CODE_QUALITY_RECOVERY_PREFLIGHT_REFACTOR_2026-08-24.md`](CODE_QUALITY_RECOVERY_PREFLIGHT_REFACTOR_2026-08-24.md).
+- Continue recovery seams one at a time; retained-package evidence capture is
+  the next bounded candidate.
 - Introduce the lossless MIDI codec and migrate one caller per change.
 - Consolidate remaining review transport mechanics.
 - Add Import Linter with the planned package structure.
