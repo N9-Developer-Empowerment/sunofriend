@@ -23,6 +23,12 @@ import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from .midi_codec import (
+    MidiEvent as _CodecMidiEvent,
+    MidiTrack as _CodecMidiTrack,
+    _inspect_midi_header_structure,
+    _parse_midi_structure,
+)
 from .midi_tempo import MidiTempoChange, retime_midi_bytes
 
 
@@ -369,181 +375,57 @@ def _validated_tuning_limit(value: float) -> float:
 
 
 def _parse_midi(data: bytes) -> _Layout:
-    if len(data) < 14 or data[:4] != b"MThd":
-        raise ValueError("not a Standard MIDI File")
-    header_length = struct.unpack(">I", data[4:8])[0]
-    if header_length < 6 or len(data) < 8 + header_length:
-        raise ValueError("invalid or truncated MIDI header")
-    midi_format, track_count, division = struct.unpack(">HHH", data[8:14])
-    if midi_format not in {0, 1}:
+    source = bytes(data)
+    header = _inspect_midi_header_structure(source)
+    if header.midi_format not in {0, 1}:
         raise ValueError("only Standard MIDI File format 0 and 1 are supported")
-    if track_count < 1:
+    if header.track_count < 1:
         raise ValueError("MIDI file contains no tracks")
-    if division & 0x8000:
+    if header.division & 0x8000:
         raise ValueError("SMPTE-time MIDI is not supported")
-    if division == 0:
+    if header.division == 0:
         raise ValueError("MIDI ticks per beat must be greater than zero")
 
-    position = 8 + header_length
-    tracks = []
-    for track_index in range(track_count):
-        if position + 8 > len(data) or data[position : position + 4] != b"MTrk":
-            raise ValueError(f"missing or truncated MIDI track {track_index}")
-        length = struct.unpack(">I", data[position + 4 : position + 8])[0]
-        data_offset = position + 8
-        end = data_offset + length
-        if end > len(data):
-            raise ValueError(f"truncated MIDI track {track_index}")
-        tracks.append(
-            _Track(
-                track_index,
-                position,
-                data_offset,
-                length,
-                tuple(_parse_track(data[data_offset:end], data_offset, track_index)),
-            )
-        )
-        position = end
-    return _Layout(midi_format, division, tuple(tracks))
+    document = _parse_midi_structure(source)
+    return _Layout(
+        document.midi_format,
+        document.division,
+        tuple(_project_codec_track(document.source, track) for track in document.tracks),
+    )
 
 
-def _parse_track(data: bytes, base_offset: int, track_index: int) -> list[_Event]:
-    position = 0
-    tick = 0
-    running_status: int | None = None
-    result = []
-    while position < len(data):
-        raw_start = position
-        delta, position = _read_varlen(data, position)
-        tick += delta
-        if position >= len(data):
-            raise ValueError(f"truncated event in MIDI track {track_index}")
+def _project_codec_track(source: bytes, track: _CodecMidiTrack) -> _Track:
+    return _Track(
+        track.index,
+        track.header_offset,
+        track.data_offset,
+        track.length,
+        tuple(_project_codec_event(source, event) for event in track.events),
+    )
 
-        status_byte = data[position]
-        explicit_status = bool(status_byte & 0x80)
-        if explicit_status:
-            status = status_byte
-            position += 1
-            if status < 0xF0:
-                running_status = status
-        else:
-            if running_status is None:
-                raise ValueError(
-                    f"running status used before a status byte in MIDI track {track_index}"
-                )
-            status = running_status
 
-        if status == 0xFF:
-            running_status = None
-            if position >= len(data):
-                raise ValueError(f"truncated meta event in MIDI track {track_index}")
-            kind = data[position]
-            position += 1
-            length, position = _read_varlen(data, position)
-            end = position + length
-            if end > len(data):
-                raise ValueError(f"truncated meta payload in MIDI track {track_index}")
-            position = end
-            result.append(
-                _Event(
-                    track_index,
-                    tick,
-                    delta,
-                    base_offset + raw_start,
-                    base_offset + position,
-                    status,
-                    explicit_status,
-                    "meta",
-                    data=(kind,),
-                )
-            )
-            if kind == 0x2F:
-                break
-            continue
-
-        if status in {0xF0, 0xF7}:
-            running_status = None
-            length, position = _read_varlen(data, position)
-            end = position + length
-            if end > len(data):
-                raise ValueError(f"truncated SysEx event in MIDI track {track_index}")
-            position = end
-            result.append(
-                _Event(
-                    track_index,
-                    tick,
-                    delta,
-                    base_offset + raw_start,
-                    base_offset + position,
-                    status,
-                    explicit_status,
-                    "sysex",
-                )
-            )
-            continue
-
-        if status >= 0xF0:
-            lengths = {
-                0xF1: 1,
-                0xF2: 2,
-                0xF3: 1,
-                0xF6: 0,
-                0xF8: 0,
-                0xFA: 0,
-                0xFB: 0,
-                0xFC: 0,
-                0xFE: 0,
-            }
-            if status not in lengths:
-                raise ValueError(f"unsupported MIDI system event 0x{status:02x}")
-            if status < 0xF8:
-                running_status = None
-            data_start = position
-            position += lengths[status]
-            if position > len(data):
-                raise ValueError(f"truncated system event in MIDI track {track_index}")
-            result.append(
-                _Event(
-                    track_index,
-                    tick,
-                    delta,
-                    base_offset + raw_start,
-                    base_offset + position,
-                    status,
-                    explicit_status,
-                    "system",
-                    tuple(base_offset + offset for offset in range(data_start, position)),
-                    tuple(data[data_start:position]),
-                )
-            )
-            continue
-
-        event_type = status & 0xF0
-        if event_type not in {0x80, 0x90, 0xA0, 0xB0, 0xC0, 0xD0, 0xE0}:
-            raise ValueError(f"unsupported channel event 0x{status:02x}")
-        length = 1 if event_type in {0xC0, 0xD0} else 2
-        data_start = position
-        end = data_start + length
-        if end > len(data):
-            raise ValueError(f"truncated channel event in MIDI track {track_index}")
-        if any(byte & 0x80 for byte in data[data_start:end]):
-            raise ValueError(f"invalid channel-event data in MIDI track {track_index}")
-        position = end
-        result.append(
-            _Event(
-                track_index,
-                tick,
-                delta,
-                base_offset + raw_start,
-                base_offset + position,
-                status,
-                explicit_status,
-                "channel",
-                tuple(base_offset + offset for offset in range(data_start, end)),
-                tuple(data[data_start:end]),
-            )
-        )
-    return result
+def _project_codec_event(source: bytes, event: _CodecMidiEvent) -> _Event:
+    if event.category == "meta":
+        data = () if event.meta_type is None else (event.meta_type,)
+        data_offsets = ()
+    elif event.category in {"channel", "system"}:
+        data = tuple(source[event.data_start : event.data_end])
+        data_offsets = tuple(range(event.data_start, event.data_end))
+    else:
+        data = ()
+        data_offsets = ()
+    return _Event(
+        event.track_index,
+        event.tick,
+        event.delta,
+        event.raw_start,
+        event.raw_end,
+        event.status,
+        event.explicit_status,
+        event.category,
+        data_offsets,
+        data,
+    )
 
 
 def _find_tuning_candidates(layout: _Layout, max_cents: float) -> tuple[_TuningCandidate, ...]:

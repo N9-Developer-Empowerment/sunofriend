@@ -3,7 +3,14 @@ from __future__ import annotations
 import struct
 import unittest
 
-from sunofriend.midi_codec import MidiEdit, parse_midi, rewrite_midi
+from sunofriend.midi_codec import (
+    MidiEdit,
+    _inspect_midi_header_structure,
+    _parse_midi_structure,
+    inspect_midi_header,
+    parse_midi,
+    rewrite_midi,
+)
 from sunofriend.midi_tempo import retime_midi_bytes
 
 
@@ -62,6 +69,23 @@ def _lossless_fixture() -> bytes:
 
 
 class MidiCodecInspectionTests(unittest.TestCase):
+    def test_private_header_structure_leaves_policy_to_compatibility_callers(self) -> None:
+        source = b"MThd" + struct.pack(">IHHH", 6, 3, 0, 0)
+
+        header = _inspect_midi_header_structure(source)
+
+        self.assertEqual(
+            (header.midi_format, header.track_count, header.division),
+            (3, 0, 0),
+        )
+        with self.assertRaisesRegex(ValueError, "format 0, 1 and 2"):
+            inspect_midi_header(source)
+        with self.assertRaisesRegex(ValueError, "format 0, 1 and 2"):
+            parse_midi(source)
+        no_tracks_smpte = b"MThd" + struct.pack(">IHHH", 6, 1, 0, 0xE728)
+        with self.assertRaisesRegex(ValueError, "MIDI file contains no tracks"):
+            retime_midi_bytes(no_tracks_smpte, target_bpm=125)
+
     def test_inspection_retains_extended_header_padding_trailing_and_event_spans(self) -> None:
         source = _lossless_fixture()
 
@@ -183,6 +207,20 @@ class MidiCodecInspectionTests(unittest.TestCase):
             "Set Tempo meta event must contain exactly three bytes",
         ):
             parse_midi(source)
+
+    def test_tempo_validation_can_be_deferred_to_a_compatibility_adapter(self) -> None:
+        for payload in (b"\x07\xa1", b"\x00\x00\x00"):
+            source = _midi(_track(_event(0, _meta(0x51, payload))))
+            with self.subTest(payload=payload):
+                document = _parse_midi_structure(source)
+                tempo = document.tracks[0].events[0]
+                self.assertEqual(tempo.meta_type, 0x51)
+                self.assertEqual(
+                    source[tempo.data_start : tempo.data_end],
+                    payload,
+                )
+                with self.assertRaises(ValueError):
+                    parse_midi(source)
 
 
 class MidiCodecRewriteTests(unittest.TestCase):

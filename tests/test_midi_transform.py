@@ -9,6 +9,7 @@ from pathlib import Path
 from sunofriend.midi import pitch_bend_value
 from sunofriend.midi_tempo import retime_midi_bytes
 from sunofriend.midi_transform import (
+    _parse_midi,
     transform_midi_bytes,
     transform_midi_file,
     transform_midi_path,
@@ -117,6 +118,119 @@ def _tuned_fixture(*, include_setup: bool = True, later_bend: bool = False) -> b
     if later_bend:
         events.append(_event(120, bytes((0xE2, 0, 64))))
     return _midi(_conductor(93), _track(*events))
+
+
+class MidiTransformCodecAdapterTests(unittest.TestCase):
+    def test_parser_projection_preserves_events_offsets_padding_and_trailing_bytes(self) -> None:
+        body = b"".join(
+            (
+                _event(0, _meta(0x7F, b"\x01\x02")),
+                _event(120, bytes((0x90, 60, 90))),
+                _event(0, bytes((0xF8,))),
+                _event(120, bytes((60, 0))),
+                _event(0, bytes((0xF2, 1, 2))),
+                _event(0, b"\xf0\x03\x7d\xf7\x01"),
+                _event(0, _meta(0x2F, b"")),
+            )
+        )
+        padding = b"\xde\xad\x00\x90\x3c"
+        track_payload = body + padding
+        track = b"MTrk" + struct.pack(">I", len(track_payload)) + track_payload
+        source = (
+            b"MThd"
+            + struct.pack(">IHHH", 8, 1, 1, TICKS_PER_BEAT)
+            + b"\xaa\xbb"
+            + track
+            + b"TAIL"
+        )
+
+        layout = _parse_midi(source)
+
+        self.assertEqual((layout.midi_format, layout.ticks_per_beat), (1, 480))
+        self.assertEqual(len(layout.tracks), 1)
+        parsed_track = layout.tracks[0]
+        self.assertEqual(parsed_track.header_offset, 16)
+        self.assertEqual(parsed_track.data_offset, 24)
+        self.assertEqual(parsed_track.length, len(track_payload))
+        self.assertEqual(
+            [event.category for event in parsed_track.events],
+            ["meta", "channel", "system", "channel", "system", "sysex", "meta"],
+        )
+        meta, note_on, realtime, running_note, common, sysex, end = parsed_track.events
+        self.assertEqual(meta.data, (0x7F,))
+        self.assertEqual(meta.data_offsets, ())
+        self.assertEqual((note_on.tick, running_note.tick), (120, 240))
+        self.assertEqual(note_on.data, (60, 90))
+        self.assertEqual(
+            tuple(source[offset] for offset in note_on.data_offsets),
+            note_on.data,
+        )
+        self.assertEqual(realtime.data, ())
+        self.assertFalse(running_note.explicit_status)
+        self.assertEqual(running_note.status, 0x90)
+        self.assertEqual(common.data, (1, 2))
+        self.assertEqual(len(common.data_offsets), 2)
+        self.assertEqual(sysex.data, ())
+        self.assertEqual(end.data, (0x2F,))
+        self.assertEqual(source[end.raw_end : parsed_track.data_offset + parsed_track.length], padding)
+        self.assertTrue(source.endswith(b"TAIL"))
+
+    def test_transform_header_policy_and_error_precedence_remain_compatible(self) -> None:
+        valid_track = _track(_event(0, bytes((0x90, 60, 90))))
+        no_tracks = b"MThd" + struct.pack(">IHHH", 6, 1, 0, 0xE728)
+        cases = (
+            (
+                _midi(valid_track, midi_format=2),
+                "only Standard MIDI File format 0 and 1 are supported",
+            ),
+            (
+                b"MThd" + struct.pack(">IHHH", 6, 2, 0, 0xE728),
+                "only Standard MIDI File format 0 and 1 are supported",
+            ),
+            (no_tracks, "MIDI file contains no tracks"),
+            (
+                b"MThd" + struct.pack(">IHHH", 6, 1, 1, 0xE728) + valid_track,
+                "SMPTE-time MIDI is not supported",
+            ),
+            (
+                b"MThd" + struct.pack(">IHHH", 6, 1, 1, 0) + valid_track,
+                "MIDI ticks per beat must be greater than zero",
+            ),
+        )
+        for source, message in cases:
+            with self.subTest(message=message), self.assertRaisesRegex(
+                ValueError,
+                message,
+            ):
+                _parse_midi(source)
+
+    def test_transpose_only_retains_legacy_tempo_tolerance_but_retime_is_strict(self) -> None:
+        for payload, message in (
+            (b"\x07\xa1", "exactly three bytes"),
+            (b"\x00\x00\x00", "cannot be zero"),
+        ):
+            source = _midi(
+                _track(
+                    _event(0, _meta(0x51, payload)),
+                    _event(120, bytes((0x90, 60, 90))),
+                    _event(120, bytes((60, 0))),
+                )
+            )
+            layout = _parse_midi(source)
+            note_events = [
+                event
+                for event in layout.tracks[0].events
+                if event.category == "channel" and event.event_type in {0x80, 0x90}
+            ]
+            expected = bytearray(source)
+            for event in note_events:
+                expected[event.data_offsets[0]] += 1
+
+            with self.subTest(payload=payload):
+                transformed, _ = transform_midi_bytes(source, semitones=1)
+                self.assertEqual(transformed, bytes(expected))
+                with self.assertRaisesRegex(ValueError, message):
+                    transform_midi_bytes(source, target_bpm=125)
 
 
 class MidiTransformByteTests(unittest.TestCase):

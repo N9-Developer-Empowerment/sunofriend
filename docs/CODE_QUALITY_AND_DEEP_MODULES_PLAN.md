@@ -627,10 +627,18 @@ ratchet rather than silently treating all historical functions as new.
   warning is removed, repository CRAP load fell by 12.554470, and both ratchets
   pass. See
   [`CODE_QUALITY_MIDI_CODEC_REFACTOR_2026-08-25.md`](CODE_QUALITY_MIDI_CODEC_REFACTOR_2026-08-25.md).
+- **Increment 5 complete on 2026-08-25.** The transform compatibility facade
+  now projects the shared codec representation instead of owning a second
+  track/event parser. The old `_parse_track` warning is removed, repository
+  CRAP load fell by 12.592593, and transform validation order, event
+  projections and transpose-only tempo tolerance remain characterized. Both
+  ratchets pass. See
+  [`CODE_QUALITY_MIDI_TRANSFORM_CODEC_REFACTOR_2026-08-25.md`](CODE_QUALITY_MIDI_TRANSFORM_CODEC_REFACTOR_2026-08-25.md).
 - The accepted recovery-facade warning queue is exhausted. Continue one bounded
   seam independently rather than combining the following tracks.
-- Migrate one additional lossless-MIDI caller per change; prefer
-  `midi_transform._parse_midi` next and keep `Clip` separate.
+- Split the remaining `midi_transform.transform_midi_path` warning behind
+  private batch-discovery, destination-preflight and prepared-write helpers;
+  keep Clip and anchor delta rewriting separate.
 - Consolidate remaining review transport mechanics.
 - Add Import Linter with the planned package structure.
 - Consider JavaScript mutation testing only after focused web/browser unit

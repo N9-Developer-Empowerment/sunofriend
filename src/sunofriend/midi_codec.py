@@ -31,7 +31,7 @@ _CHANNEL_EVENT_TYPES = {0x80, 0x90, 0xA0, 0xB0, 0xC0, 0xD0, 0xE0}
 
 @dataclass(frozen=True)
 class MidiHeader:
-    """Structurally validated SMF header fields without parsing track events."""
+    """Fields from a structurally complete SMF header chunk."""
 
     midi_format: int
     track_count: int
@@ -147,6 +147,18 @@ class MidiEdit:
 def inspect_midi_header(data: bytes) -> MidiHeader:
     """Validate and return header fields before any track event is parsed."""
 
+    header = _inspect_midi_header_structure(data)
+    _validate_document_header(header)
+    return header
+
+
+def _inspect_midi_header_structure(data: bytes) -> MidiHeader:
+    """Return complete header fields without selecting a document policy.
+
+    This private seam lets a compatibility adapter preserve its own validation
+    order before the strict public inspection and event parser are applied.
+    """
+
     source = bytes(data)
     if len(source) < 14 or source[:4] != b"MThd":
         raise ValueError("not a Standard MIDI File")
@@ -154,17 +166,32 @@ def inspect_midi_header(data: bytes) -> MidiHeader:
     if header_length < 6 or len(source) < 8 + header_length:
         raise ValueError("invalid or truncated MIDI header")
     midi_format, track_count, division = struct.unpack(">HHH", source[8:14])
-    if midi_format not in {0, 1, 2}:
-        raise ValueError("only Standard MIDI File format 0, 1 and 2 are supported")
-    if track_count < 1:
-        raise ValueError("MIDI file contains no tracks")
-    if division == 0:
-        raise ValueError("MIDI division must be greater than zero")
     return MidiHeader(midi_format, track_count, division, header_length)
 
 
+def _validate_document_header(header: MidiHeader) -> None:
+    if header.midi_format not in {0, 1, 2}:
+        raise ValueError("only Standard MIDI File format 0, 1 and 2 are supported")
+    if header.track_count < 1:
+        raise ValueError("MIDI file contains no tracks")
+    if header.division == 0:
+        raise ValueError("MIDI division must be greater than zero")
+
+
 def parse_midi(data: bytes) -> MidiDocument:
-    """Inspect an SMF without normalising or discarding any source bytes."""
+    """Strictly inspect an SMF without normalising or discarding source bytes."""
+
+    return _parse_midi_document(data, validate_tempo=True)
+
+
+def _parse_midi_structure(data: bytes) -> MidiDocument:
+    """Inspect structure for legacy adapters that own event-specific policy."""
+
+    return _parse_midi_document(data, validate_tempo=False)
+
+
+def _parse_midi_document(data: bytes, *, validate_tempo: bool) -> MidiDocument:
+    """Build the shared source-bound representation under one validation mode."""
 
     source = bytes(data)
     header = inspect_midi_header(source)
@@ -172,7 +199,12 @@ def parse_midi(data: bytes) -> MidiDocument:
     position = 8 + header.header_length
     tracks = []
     for track_index in range(header.track_count):
-        track, position = _parse_track_chunk(source, position, track_index)
+        track, position = _parse_track_chunk(
+            source,
+            position,
+            track_index,
+            validate_tempo=validate_tempo,
+        )
         tracks.append(track)
     return MidiDocument(
         source=source,
@@ -231,6 +263,8 @@ def _parse_track_chunk(
     source: bytes,
     position: int,
     track_index: int,
+    *,
+    validate_tempo: bool,
 ) -> tuple[MidiTrack, int]:
     if position + 8 > len(source) or source[position : position + 4] != b"MTrk":
         raise ValueError(f"missing or truncated MIDI track {track_index}")
@@ -239,7 +273,13 @@ def _parse_track_chunk(
     data_end = data_offset + length
     if data_end > len(source):
         raise ValueError(f"truncated MIDI track {track_index}")
-    events = _parse_track_events(source, data_offset, data_end, track_index)
+    events = _parse_track_events(
+        source,
+        data_offset,
+        data_end,
+        track_index,
+        validate_tempo=validate_tempo,
+    )
     return (
         MidiTrack(track_index, position, data_offset, length, events),
         data_end,
@@ -251,6 +291,8 @@ def _parse_track_events(
     data_offset: int,
     data_end: int,
     track_index: int,
+    *,
+    validate_tempo: bool,
 ) -> tuple[MidiEvent, ...]:
     position = data_offset
     tick = 0
@@ -264,6 +306,7 @@ def _parse_track_events(
             track_index,
             tick,
             running_status,
+            validate_tempo=validate_tempo,
         )
         tick = event.tick
         events.append(event)
@@ -279,6 +322,8 @@ def _parse_event(
     track_index: int,
     prior_tick: int,
     running_status: int | None,
+    *,
+    validate_tempo: bool,
 ) -> tuple[MidiEvent, int, int | None]:
     raw_start = position
     delta, position = _read_varlen(source, position, limit=data_end)
@@ -302,7 +347,13 @@ def _parse_event(
 
     common = (track_index, tick, delta, raw_start, status, explicit_status)
     if status == 0xFF:
-        return _parse_meta_event(source, position, data_end, common)
+        return _parse_meta_event(
+            source,
+            position,
+            data_end,
+            common,
+            validate_tempo=validate_tempo,
+        )
     if status in {0xF0, 0xF7}:
         return _parse_sysex_event(source, position, data_end, common)
     if status >= 0xF0:
@@ -321,6 +372,8 @@ def _parse_meta_event(
     position: int,
     data_end: int,
     common: tuple[int, int, int, int, int, bool],
+    *,
+    validate_tempo: bool,
 ) -> tuple[MidiEvent, int, None]:
     track_index, tick, delta, raw_start, status, explicit_status = common
     if position >= data_end:
@@ -331,10 +384,10 @@ def _parse_meta_event(
     if event_end > data_end:
         raise ValueError(f"truncated meta payload in MIDI track {track_index}")
     if meta_type == 0x51:
-        if length != 3:
-            raise ValueError("Set Tempo meta event must contain exactly three bytes")
-        if int.from_bytes(source[data_start:event_end], "big") == 0:
-            raise ValueError("Set Tempo meta event cannot be zero")
+        _validate_tempo_event(
+            source[data_start:event_end],
+            validate=validate_tempo,
+        )
     return (
         MidiEvent(
             track_index,
@@ -352,6 +405,15 @@ def _parse_meta_event(
         event_end,
         None,
     )
+
+
+def _validate_tempo_event(payload: bytes, *, validate: bool) -> None:
+    if not validate:
+        return
+    if len(payload) != 3:
+        raise ValueError("Set Tempo meta event must contain exactly three bytes")
+    if int.from_bytes(payload, "big") == 0:
+        raise ValueError("Set Tempo meta event cannot be zero")
 
 
 def _parse_sysex_event(
@@ -521,6 +583,7 @@ def _validate_inserted_event(encoded_event: bytes) -> None:
         0,
         0,
         None,
+        validate_tempo=True,
     )
     if position != len(encoded_event):
         raise ValueError("MIDI insertion must contain exactly one complete event")
