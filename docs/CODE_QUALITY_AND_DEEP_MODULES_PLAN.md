@@ -634,11 +634,16 @@ ratchet rather than silently treating all historical functions as new.
   projections and transpose-only tempo tolerance remain characterized. Both
   ratchets pass. See
   [`CODE_QUALITY_MIDI_TRANSFORM_CODEC_REFACTOR_2026-08-25.md`](CODE_QUALITY_MIDI_TRANSFORM_CODEC_REFACTOR_2026-08-25.md).
-- The accepted recovery-facade warning queue is exhausted. Continue one bounded
-  seam independently rather than combining the following tracks.
-- Split the remaining `midi_transform.transform_midi_path` warning behind
-  private batch-discovery, destination-preflight and prepared-write helpers;
-  keep Clip and anchor delta rewriting separate.
+- **Increment 6 complete on 2026-08-25.** MIDI path discovery, destination
+  preflight, whole-batch preparation and publication now sit behind the
+  unchanged transform facade. `transform_midi_path` fell from CRAP 46.285714
+  to 1.000000, eight path-boundary tests brought the old and new boundaries to
+  full branch coverage, and repository CRAP load fell by 16.285714. Both
+  ratchets pass. See
+  [`CODE_QUALITY_MIDI_PATH_ORCHESTRATION_REFACTOR_2026-08-25.md`](CODE_QUALITY_MIDI_PATH_ORCHESTRATION_REFACTOR_2026-08-25.md).
+- The accepted recovery-facade and `midi_transform` warning queues are
+  exhausted. Continue one bounded seam independently rather than combining
+  the following tracks.
 - Consolidate remaining review transport mechanics.
 - Add Import Linter with the planned package structure.
 - Consider JavaScript mutation testing only after focused web/browser unit

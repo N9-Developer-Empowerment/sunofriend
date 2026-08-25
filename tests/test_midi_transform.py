@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import math
+import os
 import struct
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from sunofriend.midi import pitch_bend_value
 from sunofriend.midi_tempo import retime_midi_bytes
@@ -319,6 +321,229 @@ class MidiTransformByteTests(unittest.TestCase):
 
 
 class MidiTransformPathTests(unittest.TestCase):
+    def test_rejects_missing_and_unsupported_input_shapes_before_transform_options(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            missing = root / "missing.mid"
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(missing, root / "output.mid", semitones=True)
+            self.assertEqual(str(caught.exception), f"input does not exist: {missing}")
+
+            text = root / "notes.txt"
+            text.write_text("not MIDI", encoding="utf-8")
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(text, root / "output.mid")
+            self.assertEqual(str(caught.exception), "file input must end in .mid or .midi")
+
+            if hasattr(os, "mkfifo"):
+                fifo = root / "input.mid"
+                os.mkfifo(fifo)
+                with self.assertRaises(ValueError) as caught:
+                    transform_midi_path(fifo, root / "fifo-output.mid")
+                self.assertEqual(
+                    str(caught.exception),
+                    f"input must be a MIDI file or directory: {fifo}",
+                )
+
+    def test_rejects_file_and_directory_output_shape_mismatches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_file = root / "source.MIDI"
+            source_file.write_bytes(_multitrack_fixture())
+            output_directory = root / "file-output"
+            output_directory.mkdir()
+
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source_file, output_directory)
+            self.assertEqual(
+                str(caught.exception),
+                "a file input requires a MIDI file output path",
+            )
+
+            source_directory = root / "source-tree"
+            source_directory.mkdir()
+            (source_directory / "song.mid").write_bytes(_multitrack_fixture())
+            output_file = root / "directory-output.mid"
+            output_file.write_bytes(b"occupied")
+
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source_directory, output_file)
+            self.assertEqual(
+                str(caught.exception),
+                "a directory input requires a directory output path",
+            )
+
+    def test_directory_plan_rejects_nested_output_and_empty_midi_set(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            source.mkdir()
+
+            nested_output = source / "generated"
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, nested_output)
+            self.assertEqual(
+                str(caught.exception),
+                "output directory must not be the input directory or inside it",
+            )
+
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, root / "outside")
+            self.assertEqual(
+                str(caught.exception),
+                f"no .mid or .midi files found under: {source}",
+            )
+
+    def test_output_preflight_rejects_same_path_symlinks_and_invalid_parents(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.mid"
+            source.write_bytes(_multitrack_fixture())
+
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, source, overwrite=True)
+            self.assertEqual(
+                str(caught.exception),
+                f"input and output must be different: {source}",
+            )
+
+            symlink_target = root / "symlink-target.mid"
+            symlink_target.write_bytes(b"untouched")
+            symlink_output = root / "symlink-output.mid"
+            symlink_output.symlink_to(symlink_target)
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, symlink_output, overwrite=True)
+            self.assertEqual(
+                str(caught.exception),
+                f"output must not be a symbolic link: {symlink_output}",
+            )
+            self.assertEqual(symlink_target.read_bytes(), b"untouched")
+
+            real_parent = root / "real-parent"
+            real_parent.mkdir()
+            symlink_parent = root / "symlink-parent"
+            symlink_parent.symlink_to(real_parent, target_is_directory=True)
+            child_output = symlink_parent / "child.mid"
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, child_output)
+            self.assertEqual(
+                str(caught.exception),
+                f"output parent must not be a symbolic link: {symlink_parent}",
+            )
+
+            file_parent = root / "not-a-directory"
+            file_parent.write_text("occupied", encoding="utf-8")
+            invalid_child = file_parent / "child.mid"
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, invalid_child)
+            self.assertEqual(
+                str(caught.exception),
+                f"output parent is not a directory: {file_parent}",
+            )
+
+    def test_batch_preflight_rejects_existing_directory_and_existing_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            source.mkdir()
+            (source / "first.mid").write_bytes(_multitrack_fixture())
+            (source / "second.mid").write_bytes(_multitrack_fixture())
+            output = root / "output"
+            output.mkdir()
+            (output / "first.mid").mkdir()
+
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, output)
+            self.assertEqual(
+                str(caught.exception),
+                f"output MIDI path is a directory: {output / 'first.mid'}",
+            )
+
+            (output / "first.mid").rmdir()
+            occupied = output / "second.mid"
+            occupied.write_bytes(b"untouched")
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, output)
+            self.assertEqual(
+                str(caught.exception),
+                f"output already exists: {occupied}",
+            )
+            self.assertEqual(occupied.read_bytes(), b"untouched")
+            self.assertFalse((output / "first.mid").exists())
+
+    def test_duplicate_resolved_outputs_are_rejected_before_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            source.mkdir()
+            (source / "first.mid").write_bytes(_multitrack_fixture())
+            (source / "second.mid").write_bytes(_multitrack_fixture())
+            output = root / "output"
+            canonical = root / "canonical.mid"
+            real_resolve = Path.resolve
+
+            def resolve_with_collision(path: Path, *args, **kwargs) -> Path:
+                if path.parent == output and path.suffix.lower() in {".mid", ".midi"}:
+                    return canonical
+                return real_resolve(path, *args, **kwargs)
+
+            with patch.object(Path, "resolve", resolve_with_collision):
+                with self.assertRaises(ValueError) as caught:
+                    transform_midi_path(source, output)
+
+            self.assertEqual(
+                str(caught.exception),
+                f"multiple inputs resolve to the same output: {output / 'second.mid'}",
+            )
+            self.assertFalse(output.exists())
+
+    def test_all_output_collisions_are_checked_before_decoding_any_input(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            source.mkdir()
+            (source / "a-invalid.mid").write_bytes(b"not MIDI")
+            (source / "z-valid.mid").write_bytes(_multitrack_fixture())
+            output = root / "output"
+            output.mkdir()
+            occupied = output / "z-valid.mid"
+            occupied.write_bytes(b"untouched")
+
+            with self.assertRaises(ValueError) as caught:
+                transform_midi_path(source, output)
+
+            self.assertEqual(
+                str(caught.exception),
+                f"output already exists: {occupied}",
+            )
+            self.assertEqual(occupied.read_bytes(), b"untouched")
+            self.assertFalse((output / "a-invalid.mid").exists())
+
+    def test_directory_results_are_casefold_sorted_and_overwrite_is_explicit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            (source / "nested").mkdir(parents=True)
+            for relative in ("z.mid", "A.MIDI", "nested/b.mid"):
+                (source / relative).write_bytes(_multitrack_fixture())
+            output = root / "output"
+            output.mkdir()
+            existing = output / "z.mid"
+            existing.write_bytes(b"replace me")
+
+            results = transform_midi_path(source, output, semitones=1, overwrite=True)
+
+            self.assertEqual(
+                [result.input_path.relative_to(source).as_posix() for result in results],
+                ["A.MIDI", "nested/b.mid", "z.mid"],
+            )
+            self.assertEqual(
+                [result.output_path.relative_to(output).as_posix() for result in results],
+                ["A.MIDI", "nested/b.mid", "z.mid"],
+            )
+            self.assertEqual(existing.read_bytes(), _multitrack_fixture(shift=1))
+            self.assertFalse(any(path.name.endswith(".tmp") for path in output.rglob("*")))
+
     def test_recursive_batch_preserves_paths_and_ignores_non_midi(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -353,7 +578,8 @@ class MidiTransformPathTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source = root / "source.mid"
-            output = root / "output.mid"
+            # The path facade deliberately does not impose an output suffix.
+            output = root / "requested-output.bin"
             source.write_bytes(_multitrack_fixture())
 
             result = transform_midi_file(source, output, semitones=1)
@@ -361,7 +587,27 @@ class MidiTransformPathTests(unittest.TestCase):
             self.assertEqual(result.input_path, source)
             self.assertEqual(result.output_path, output)
             self.assertEqual(output.read_bytes(), _multitrack_fixture(shift=1))
-            self.assertEqual(result.to_dict()["semitones"], 1)
+            report = result.to_dict()
+            self.assertEqual(
+                set(report),
+                {
+                    "semitones",
+                    "note_events_transposed",
+                    "drum_note_events_preserved",
+                    "tempo_change",
+                    "tuning_removals",
+                    "midi_format",
+                    "ticks_per_beat",
+                    "track_count",
+                    "tuning_setups_removed",
+                    "tuning_events_removed",
+                    "input",
+                    "output",
+                },
+            )
+            self.assertEqual(report["semitones"], 1)
+            self.assertEqual(report["input"], str(source))
+            self.assertEqual(report["output"], str(output))
 
     def test_batch_preflights_every_input_before_writing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

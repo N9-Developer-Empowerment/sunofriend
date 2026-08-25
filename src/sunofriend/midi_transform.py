@@ -89,6 +89,29 @@ class MidiTransformFileResult:
 
 
 @dataclass(frozen=True)
+class _TransformPathPlan:
+    pairs: tuple[tuple[Path, Path], ...]
+    output_root: Path
+
+
+@dataclass(frozen=True)
+class _TransformOptions:
+    semitones: int
+    target_bpm: float | None
+    source_bpm: float | None
+    concert_pitch: bool
+    max_tuning_cents: float
+
+
+@dataclass(frozen=True)
+class _PreparedTransform:
+    input_path: Path
+    output_path: Path
+    payload: bytes
+    change: MidiTransformChange
+
+
+@dataclass(frozen=True)
 class _Event:
     track_index: int
     tick: int
@@ -278,78 +301,133 @@ def transform_midi_path(
     a partial batch.
     """
 
-    source = Path(input_path)
-    destination = Path(output_path)
+    plan = _plan_transform_paths(Path(input_path), Path(output_path))
+    _preflight_transform_destinations(plan, overwrite=overwrite)
+    prepared = _prepare_transforms(
+        plan.pairs,
+        _TransformOptions(
+            semitones,
+            target_bpm,
+            source_bpm,
+            concert_pitch,
+            max_tuning_cents,
+        ),
+    )
+    return _publish_prepared_transforms(prepared)
+
+
+def _plan_transform_paths(source: Path, destination: Path) -> _TransformPathPlan:
     if not source.exists():
         raise ValueError(f"input does not exist: {source}")
-
     if source.is_file():
-        if source.suffix.lower() not in MIDI_SUFFIXES:
-            raise ValueError("file input must end in .mid or .midi")
-        if destination.exists() and destination.is_dir():
-            raise ValueError("a file input requires a MIDI file output path")
-        pairs = [(source, destination)]
-        output_root = destination.parent
-    elif source.is_dir():
-        if destination.exists() and not destination.is_dir():
-            raise ValueError("a directory input requires a directory output path")
-        source_resolved = source.resolve()
-        destination_resolved = destination.resolve()
-        if destination_resolved == source_resolved or source_resolved in destination_resolved.parents:
-            raise ValueError("output directory must not be the input directory or inside it")
-        inputs = sorted(
-            (
-                path
-                for path in source.rglob("*")
-                if path.is_file() and path.suffix.lower() in MIDI_SUFFIXES
-            ),
-            key=lambda path: str(path.relative_to(source)).casefold(),
-        )
-        if not inputs:
-            raise ValueError(f"no .mid or .midi files found under: {source}")
-        pairs = [(path, destination / path.relative_to(source)) for path in inputs]
-        output_root = destination
-    else:
-        raise ValueError(f"input must be a MIDI file or directory: {source}")
+        return _plan_file_transform(source, destination)
+    if source.is_dir():
+        return _plan_directory_transform(source, destination)
+    raise ValueError(f"input must be a MIDI file or directory: {source}")
 
+
+def _plan_file_transform(source: Path, destination: Path) -> _TransformPathPlan:
+    if source.suffix.lower() not in MIDI_SUFFIXES:
+        raise ValueError("file input must end in .mid or .midi")
+    if destination.exists() and destination.is_dir():
+        raise ValueError("a file input requires a MIDI file output path")
+    return _TransformPathPlan(((source, destination),), destination.parent)
+
+
+def _plan_directory_transform(source: Path, destination: Path) -> _TransformPathPlan:
+    if destination.exists() and not destination.is_dir():
+        raise ValueError("a directory input requires a directory output path")
+    source_resolved = source.resolve()
+    destination_resolved = destination.resolve()
+    if destination_resolved == source_resolved or source_resolved in destination_resolved.parents:
+        raise ValueError("output directory must not be the input directory or inside it")
+    inputs = sorted(
+        (
+            path
+            for path in source.rglob("*")
+            if path.is_file() and path.suffix.lower() in MIDI_SUFFIXES
+        ),
+        key=lambda path: str(path.relative_to(source)).casefold(),
+    )
+    if not inputs:
+        raise ValueError(f"no .mid or .midi files found under: {source}")
+    return _TransformPathPlan(
+        tuple((path, destination / path.relative_to(source)) for path in inputs),
+        destination,
+    )
+
+
+
+def _preflight_transform_destinations(
+    plan: _TransformPathPlan,
+    *,
+    overwrite: bool,
+) -> None:
     resolved_outputs: set[Path] = set()
-    for input_file, output_file in pairs:
-        resolved = output_file.resolve()
-        if input_file.resolve() == resolved:
-            raise ValueError(f"input and output must be different: {input_file}")
-        if resolved in resolved_outputs:
-            raise ValueError(f"multiple inputs resolve to the same output: {output_file}")
-        resolved_outputs.add(resolved)
-        if output_file.is_symlink():
-            raise ValueError(f"output must not be a symbolic link: {output_file}")
-        if output_file.exists() and output_file.is_dir():
-            raise ValueError(f"output MIDI path is a directory: {output_file}")
-        if output_file.exists() and not overwrite:
-            raise ValueError(f"output already exists: {output_file}")
-        _validate_output_parents(output_file.parent, stop=output_root)
+    for input_path, output_path in plan.pairs:
+        _preflight_transform_destination(
+            input_path,
+            output_path,
+            resolved_outputs=resolved_outputs,
+            output_root=plan.output_root,
+            overwrite=overwrite,
+        )
 
-    prepared: list[tuple[Path, Path, bytes, MidiTransformChange]] = []
+
+def _preflight_transform_destination(
+    input_path: Path,
+    output_path: Path,
+    *,
+    resolved_outputs: set[Path],
+    output_root: Path,
+    overwrite: bool,
+) -> None:
+    resolved = output_path.resolve()
+    if input_path.resolve() == resolved:
+        raise ValueError(f"input and output must be different: {input_path}")
+    if resolved in resolved_outputs:
+        raise ValueError(f"multiple inputs resolve to the same output: {output_path}")
+    resolved_outputs.add(resolved)
+    if output_path.is_symlink():
+        raise ValueError(f"output must not be a symbolic link: {output_path}")
+    if output_path.exists() and output_path.is_dir():
+        raise ValueError(f"output MIDI path is a directory: {output_path}")
+    if output_path.exists() and not overwrite:
+        raise ValueError(f"output already exists: {output_path}")
+    _validate_output_parents(output_path.parent, stop=output_root)
+
+
+def _prepare_transforms(
+    pairs: tuple[tuple[Path, Path], ...],
+    options: _TransformOptions,
+) -> tuple[_PreparedTransform, ...]:
+    prepared = []
     for input_file, output_file in pairs:
         transformed, change = transform_midi_bytes(
             input_file.read_bytes(),
-            semitones=semitones,
-            target_bpm=target_bpm,
-            source_bpm=source_bpm,
-            concert_pitch=concert_pitch,
-            max_tuning_cents=max_tuning_cents,
+            semitones=options.semitones,
+            target_bpm=options.target_bpm,
+            source_bpm=options.source_bpm,
+            concert_pitch=options.concert_pitch,
+            max_tuning_cents=options.max_tuning_cents,
         )
-        prepared.append((input_file, output_file, transformed, change))
+        prepared.append(_PreparedTransform(input_file, output_file, transformed, change))
+    return tuple(prepared)
 
+
+def _publish_prepared_transforms(
+    prepared: tuple[_PreparedTransform, ...],
+) -> list[MidiTransformFileResult]:
     for parent in sorted(
-        {output_file.parent for _, output_file, _, _ in prepared},
+        {item.output_path.parent for item in prepared},
         key=lambda path: (len(path.parts), str(path)),
     ):
         parent.mkdir(parents=True, exist_ok=True)
 
     results = []
-    for input_file, output_file, payload, change in prepared:
-        _write_bytes_atomic(output_file, payload)
-        results.append(MidiTransformFileResult(input_file, output_file, change))
+    for item in prepared:
+        _write_bytes_atomic(item.output_path, item.payload)
+        results.append(MidiTransformFileResult(item.input_path, item.output_path, item.change))
     return results
 
 
