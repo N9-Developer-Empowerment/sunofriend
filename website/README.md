@@ -119,7 +119,8 @@ The deployment uses CloudFormation to create:
 - one encrypted, versioned, private S3 bucket;
 - one CloudFront distribution with Origin Access Control;
 - one viewer-request function that maps clean routes such as `/demo/` to their
-  generated static `index.html` files;
+  generated static `index.html` files and 301-redirects the `www` alternate
+  domain to the apex domain, preserving the path and query string;
 - a branded `/404.html` response for missing or inaccessible objects, retaining
   an HTTP 404 status rather than silently serving the homepage;
 - HTTPS, compression and security headers; and

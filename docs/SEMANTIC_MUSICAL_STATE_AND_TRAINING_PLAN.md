@@ -2,6 +2,11 @@
 
 Prepared: 19 August 2026
 
+The companion
+[Semantic Musical State, vocal comping and training plan](SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md)
+extends this programme with the audio-native vocal-comping architecture. Keep
+the two documents aligned when their shared Musical State contract changes.
+
 Status: proposed programme plan based on the complete repository history, the
 current Windows/ACE-Step branch, the reference-conditioned generation trials,
 the accompaniment-first listening results and the vocal-comping research.

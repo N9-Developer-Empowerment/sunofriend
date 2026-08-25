@@ -23,6 +23,8 @@ export const links = {
     "https://github.com/mrbumpy409/GeneralUser-GS/blob/684543d5e5efaef08d02be50dcda8d552478fa60/documentation/LICENSE.txt",
   separationDeveloperGuide:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEPARATION_DEVELOPER_PREVIEW.md",
+  semanticStatePlan:
+    "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md",
   stemGuide:
     "https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/STEMS.md",
   outOfPlace:

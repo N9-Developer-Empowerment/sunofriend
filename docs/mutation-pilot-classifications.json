@@ -1,0 +1,15 @@
+{
+  "default_survivor": {
+    "classification": "test_gap",
+    "rationale": "conservative pilot classification: the selected tests did not distinguish this mutation"
+  },
+  "rules": [
+    {
+      "classification": "tool_model_limitation",
+      "module": "sunofriend.source_roles",
+      "qualified_name": "_definition",
+      "rationale": "mutmut selects function trampolines after module initialization, but this private builder has already populated the immutable registry"
+    }
+  ],
+  "schema": "sunofriend-mutation-classifications.v1"
+}

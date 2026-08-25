@@ -91,6 +91,15 @@ dev = [
     "setuptools>=77,<81",
     "twine>=6,<7",
 ]
+quality = [
+    # Measurement-only tooling, run in a separate Python 3.11 environment.
+    "coverage==7.15.3",
+    "radon==6.0.1",
+]
+mutation = [
+    # Mutation-only tooling, run in the same isolated quality environment.
+    "mutmut==3.7.0",
+]
 
 [project.scripts]
 sunofriend = "sunofriend.cli:main"
@@ -124,8 +133,37 @@ markers = [
     "trusted_local: live security probe that requires a locally owned macOS toolchain and Python runtime",
 ]
 
+[tool.coverage.run]
+branch = true
+data_file = "work/quality/.coverage"
+relative_files = true
+source = ["src/sunofriend"]
+
+[tool.coverage.json]
+output = "work/quality/coverage.json"
+pretty_print = true
+show_contexts = false
+
 [tool.ruff]
 target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
+
+[tool.mutmut]
+source_paths = ["src"]
+only_mutate = [
+    "src/sunofriend/source_roles.py",
+    "src/sunofriend/automatic_selection.py",
+    "src/sunofriend/separation_review_transport.py",
+]
+pytest_add_cli_args_test_selection = [
+    "-m",
+    "not trusted_local",
+    "tests/test_source_roles.py",
+    "tests/test_automatic_selection.py",
+    "tests/test_separation_review_transport.py",
+]
+mutate_only_covered_lines = false
+use_setproctitle = false
+use_git_change_detection = false

@@ -4,7 +4,7 @@ import { links } from "../../content";
 
 const title = "Vocal comping research";
 const description =
-  "Follow Sunofriend's private, local-first research into phrase-by-phrase recording, human-reviewed take comparison and natural whole-song vocal assembly.";
+  "Follow Sunofriend's private, local-first research into phrase-by-phrase recording, human-reviewed take comparison and natural whole-song vocal assembly—now planned as an audio-native workflow.";
 
 export const metadata: Metadata = {
   title,
@@ -103,6 +103,23 @@ export default function VocalCompingResearch() {
             before considering any gentle correction.
           </p>
         </header>
+
+        <section className="status-panel" aria-label="Direction update">
+          <span className="card-number">DIRECTION UPDATE · AUGUST 2026</span>
+          <h2>Now planned as audio-native: no MIDI file required.</h2>
+          <p>
+            Target MIDI is no longer the canonical or required representation
+            for vocal comping. The{" "}
+            <ExternalLink className="text-link" href={links.semanticStatePlan}>
+              Semantic Musical State programme
+            </ExternalLink>{" "}
+            defines the forward plan: a shared, time-aligned musical state
+            supports vocal comping and identity-preserving remix together, and a
+            reviewed phrase can be recorded, compared and chosen with no MIDI
+            input. The pilot below is the implemented v1 record and remains
+            reproducible as historical evidence.
+          </p>
+        </section>
 
         <section id="status" className="status-panel">
           <span className="card-number">WHAT EXISTS TODAY</span>
@@ -234,13 +251,28 @@ export default function VocalCompingResearch() {
 
         <section className="status-panel">
           <span className="card-number">NEXT RESEARCH INCREMENT</span>
-          <h2>Scale the calm pickup loop, then earn assembly.</h2>
+          <h2>Go audio-native, then earn assembly.</h2>
           <p>
-            The next useful step is not a one-click optimiser. It is a whole-song
-            phrase map that preserves progress, lets the singer record and review
-            one region without losing context, and creates an explicit base/redo/AI
-            decision for every phrase. Natural joins and gentle correction should
-            be added only after that workflow is comfortable over a complete song.
+            The next useful step is the programme&apos;s Cycle 1: a minimum no-MIDI
+            phrase decision with an exact source map, one or more fresh browser
+            pickups and a playable replacement phrase against the backing—then
+            the musical and workflow feedback, before adding analysis. In
+            parallel, the first label snapshot is frozen and tiny local training
+            experiments prove the pipeline; every trained output stays a
+            research challenger that can never select a take.
+          </p>
+          <p>
+            Whole-song assembly, reviewed joins and gentle correction follow
+            only after that audio-native loop is comfortable across complete
+            songs. See the{" "}
+            <ExternalLink className="text-link" href={links.semanticStatePlan}>
+              canonical programme plan ↗
+            </ExternalLink>{" "}
+            and the{" "}
+            <Link className="text-link" href="/research/remixing/">
+              remix research plan
+            </Link>
+            .
           </p>
         </section>
 

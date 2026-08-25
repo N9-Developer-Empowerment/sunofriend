@@ -70,6 +70,7 @@ export default function Home() {
           <Link href="/windows/">Windows notes</Link>
           <Link href="/research/separation/">Stem research</Link>
           <Link href="/research/vocal-comping/">Vocal comping</Link>
+          <Link href="/research/remixing/">Remix research</Link>
           <a href="#demo">Try the demo</a>
           <Link href="/for-agents">For AI agents</Link>
         </nav>
@@ -121,7 +122,7 @@ export default function Home() {
             <b>LOCAL OPT-IN SEPARATION →</b>
           </Link>
           <Image
-            src="/brand/sunofriend-listener-banner.png"
+            src="/brand/sunofriend-listener-banner.webp"
             alt="A waveform becoming the Sunofriend mark and editable MIDI notes"
             width={1672}
             height={941}
@@ -376,7 +377,7 @@ export default function Home() {
             </div>
           </div>
           <Image
-            src="/examples/out-of-place.png"
+            src="/examples/out-of-place.webp"
             alt="Out of Place, a Sunofriend musical interpolation"
             width={1254}
             height={1254}
@@ -395,7 +396,7 @@ export default function Home() {
               Sunofriend is exploring a local browser workflow for recording
               several attempts, comparing complete musical phrases and asking
               for focused pickups until your own vocal is ready to assemble.
-              Known lyrics and a reviewed melody guide the process; your ears
+              Known lyrics and a reviewed reference guide the process; your ears
               still make every musical choice.
             </p>
             <Link className="button button-hot" href="/research/vocal-comping/">
@@ -420,11 +421,42 @@ export default function Home() {
               <strong>Automatic selection, joins or tuning</strong>
             </article>
           </div>
+          <div>
+            <p className="kicker">CHANGE ONE THING. KEEP THE SONG.</p>
+            <h2 id="remix-lab-title">Identity-preserving remix is in the plan.</h2>
+            <p>
+              A bounded remix would change one instrument, role or region while
+              keeping the motifs, harmony and groove you recognise from the
+              source. It starts with deterministic controls and frozen
+              models—a trained remix model is not authorised yet.
+            </p>
+            <Link className="button button-hot" href="/research/remixing/">
+              See the remix research plan →
+            </Link>
+          </div>
+          <div className="vocal-lab-status" aria-label="Current remix research status">
+            <article>
+              <span>PRIVATE RESEARCH PLAN</span>
+              <strong>Canonical programme defined</strong>
+            </article>
+            <article>
+              <span>NOT IMPLEMENTED</span>
+              <strong>No remix command or model</strong>
+            </article>
+            <article>
+              <span>PLANNED FIRST</span>
+              <strong>Deterministic + frozen-model controls</strong>
+            </article>
+            <article>
+              <span>LATER, IF EARNED</span>
+              <strong>Learned conditioning challenger</strong>
+            </article>
+          </div>
         </div>
         <p className="guide-note">
-          This is a private research pilot, not a public recording service. The
-          website cannot receive audio, and no automatic finished vocal comp is
-          available yet.
+          These are private research programmes, not finished products. The
+          website cannot receive audio, and no automatic finished vocal comp or
+          remix is available yet.
         </p>
       </section>
 
@@ -514,7 +546,7 @@ export default function Home() {
       <footer>
         <div className="footer-brand">
           <Image
-            src="/brand/sunofriend-logo.png"
+            src="/brand/sunofriend-logo.webp"
             alt=""
             aria-hidden="true"
             width={1254}
@@ -536,6 +568,7 @@ export default function Home() {
           <Link href="/for-agents">For AI agents</Link>
           <Link href="/research/separation/">Separation research</Link>
           <Link href="/research/vocal-comping/">Vocal comping research</Link>
+          <Link href="/research/remixing/">Remix research</Link>
           <a href="/llms.txt">llms.txt</a>
           <ExternalLink href={links.repo}>GitHub ↗</ExternalLink>
           <ExternalLink href={links.license}>Apache 2.0 ↗</ExternalLink>

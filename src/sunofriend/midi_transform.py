@@ -23,6 +23,12 @@ import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from .midi_codec import (
+    MidiEvent as _CodecMidiEvent,
+    MidiTrack as _CodecMidiTrack,
+    _inspect_midi_header_structure,
+    _parse_midi_structure,
+)
 from .midi_tempo import MidiTempoChange, retime_midi_bytes
 
 
@@ -80,6 +86,29 @@ class MidiTransformFileResult:
         value["input"] = str(self.input_path)
         value["output"] = str(self.output_path)
         return value
+
+
+@dataclass(frozen=True)
+class _TransformPathPlan:
+    pairs: tuple[tuple[Path, Path], ...]
+    output_root: Path
+
+
+@dataclass(frozen=True)
+class _TransformOptions:
+    semitones: int
+    target_bpm: float | None
+    source_bpm: float | None
+    concert_pitch: bool
+    max_tuning_cents: float
+
+
+@dataclass(frozen=True)
+class _PreparedTransform:
+    input_path: Path
+    output_path: Path
+    payload: bytes
+    change: MidiTransformChange
 
 
 @dataclass(frozen=True)
@@ -272,78 +301,133 @@ def transform_midi_path(
     a partial batch.
     """
 
-    source = Path(input_path)
-    destination = Path(output_path)
+    plan = _plan_transform_paths(Path(input_path), Path(output_path))
+    _preflight_transform_destinations(plan, overwrite=overwrite)
+    prepared = _prepare_transforms(
+        plan.pairs,
+        _TransformOptions(
+            semitones,
+            target_bpm,
+            source_bpm,
+            concert_pitch,
+            max_tuning_cents,
+        ),
+    )
+    return _publish_prepared_transforms(prepared)
+
+
+def _plan_transform_paths(source: Path, destination: Path) -> _TransformPathPlan:
     if not source.exists():
         raise ValueError(f"input does not exist: {source}")
-
     if source.is_file():
-        if source.suffix.lower() not in MIDI_SUFFIXES:
-            raise ValueError("file input must end in .mid or .midi")
-        if destination.exists() and destination.is_dir():
-            raise ValueError("a file input requires a MIDI file output path")
-        pairs = [(source, destination)]
-        output_root = destination.parent
-    elif source.is_dir():
-        if destination.exists() and not destination.is_dir():
-            raise ValueError("a directory input requires a directory output path")
-        source_resolved = source.resolve()
-        destination_resolved = destination.resolve()
-        if destination_resolved == source_resolved or source_resolved in destination_resolved.parents:
-            raise ValueError("output directory must not be the input directory or inside it")
-        inputs = sorted(
-            (
-                path
-                for path in source.rglob("*")
-                if path.is_file() and path.suffix.lower() in MIDI_SUFFIXES
-            ),
-            key=lambda path: str(path.relative_to(source)).casefold(),
-        )
-        if not inputs:
-            raise ValueError(f"no .mid or .midi files found under: {source}")
-        pairs = [(path, destination / path.relative_to(source)) for path in inputs]
-        output_root = destination
-    else:
-        raise ValueError(f"input must be a MIDI file or directory: {source}")
+        return _plan_file_transform(source, destination)
+    if source.is_dir():
+        return _plan_directory_transform(source, destination)
+    raise ValueError(f"input must be a MIDI file or directory: {source}")
 
+
+def _plan_file_transform(source: Path, destination: Path) -> _TransformPathPlan:
+    if source.suffix.lower() not in MIDI_SUFFIXES:
+        raise ValueError("file input must end in .mid or .midi")
+    if destination.exists() and destination.is_dir():
+        raise ValueError("a file input requires a MIDI file output path")
+    return _TransformPathPlan(((source, destination),), destination.parent)
+
+
+def _plan_directory_transform(source: Path, destination: Path) -> _TransformPathPlan:
+    if destination.exists() and not destination.is_dir():
+        raise ValueError("a directory input requires a directory output path")
+    source_resolved = source.resolve()
+    destination_resolved = destination.resolve()
+    if destination_resolved == source_resolved or source_resolved in destination_resolved.parents:
+        raise ValueError("output directory must not be the input directory or inside it")
+    inputs = sorted(
+        (
+            path
+            for path in source.rglob("*")
+            if path.is_file() and path.suffix.lower() in MIDI_SUFFIXES
+        ),
+        key=lambda path: str(path.relative_to(source)).casefold(),
+    )
+    if not inputs:
+        raise ValueError(f"no .mid or .midi files found under: {source}")
+    return _TransformPathPlan(
+        tuple((path, destination / path.relative_to(source)) for path in inputs),
+        destination,
+    )
+
+
+
+def _preflight_transform_destinations(
+    plan: _TransformPathPlan,
+    *,
+    overwrite: bool,
+) -> None:
     resolved_outputs: set[Path] = set()
-    for input_file, output_file in pairs:
-        resolved = output_file.resolve()
-        if input_file.resolve() == resolved:
-            raise ValueError(f"input and output must be different: {input_file}")
-        if resolved in resolved_outputs:
-            raise ValueError(f"multiple inputs resolve to the same output: {output_file}")
-        resolved_outputs.add(resolved)
-        if output_file.is_symlink():
-            raise ValueError(f"output must not be a symbolic link: {output_file}")
-        if output_file.exists() and output_file.is_dir():
-            raise ValueError(f"output MIDI path is a directory: {output_file}")
-        if output_file.exists() and not overwrite:
-            raise ValueError(f"output already exists: {output_file}")
-        _validate_output_parents(output_file.parent, stop=output_root)
+    for input_path, output_path in plan.pairs:
+        _preflight_transform_destination(
+            input_path,
+            output_path,
+            resolved_outputs=resolved_outputs,
+            output_root=plan.output_root,
+            overwrite=overwrite,
+        )
 
-    prepared: list[tuple[Path, Path, bytes, MidiTransformChange]] = []
+
+def _preflight_transform_destination(
+    input_path: Path,
+    output_path: Path,
+    *,
+    resolved_outputs: set[Path],
+    output_root: Path,
+    overwrite: bool,
+) -> None:
+    resolved = output_path.resolve()
+    if input_path.resolve() == resolved:
+        raise ValueError(f"input and output must be different: {input_path}")
+    if resolved in resolved_outputs:
+        raise ValueError(f"multiple inputs resolve to the same output: {output_path}")
+    resolved_outputs.add(resolved)
+    if output_path.is_symlink():
+        raise ValueError(f"output must not be a symbolic link: {output_path}")
+    if output_path.exists() and output_path.is_dir():
+        raise ValueError(f"output MIDI path is a directory: {output_path}")
+    if output_path.exists() and not overwrite:
+        raise ValueError(f"output already exists: {output_path}")
+    _validate_output_parents(output_path.parent, stop=output_root)
+
+
+def _prepare_transforms(
+    pairs: tuple[tuple[Path, Path], ...],
+    options: _TransformOptions,
+) -> tuple[_PreparedTransform, ...]:
+    prepared = []
     for input_file, output_file in pairs:
         transformed, change = transform_midi_bytes(
             input_file.read_bytes(),
-            semitones=semitones,
-            target_bpm=target_bpm,
-            source_bpm=source_bpm,
-            concert_pitch=concert_pitch,
-            max_tuning_cents=max_tuning_cents,
+            semitones=options.semitones,
+            target_bpm=options.target_bpm,
+            source_bpm=options.source_bpm,
+            concert_pitch=options.concert_pitch,
+            max_tuning_cents=options.max_tuning_cents,
         )
-        prepared.append((input_file, output_file, transformed, change))
+        prepared.append(_PreparedTransform(input_file, output_file, transformed, change))
+    return tuple(prepared)
 
+
+def _publish_prepared_transforms(
+    prepared: tuple[_PreparedTransform, ...],
+) -> list[MidiTransformFileResult]:
     for parent in sorted(
-        {output_file.parent for _, output_file, _, _ in prepared},
+        {item.output_path.parent for item in prepared},
         key=lambda path: (len(path.parts), str(path)),
     ):
         parent.mkdir(parents=True, exist_ok=True)
 
     results = []
-    for input_file, output_file, payload, change in prepared:
-        _write_bytes_atomic(output_file, payload)
-        results.append(MidiTransformFileResult(input_file, output_file, change))
+    for item in prepared:
+        _write_bytes_atomic(item.output_path, item.payload)
+        results.append(MidiTransformFileResult(item.input_path, item.output_path, item.change))
     return results
 
 
@@ -369,181 +453,57 @@ def _validated_tuning_limit(value: float) -> float:
 
 
 def _parse_midi(data: bytes) -> _Layout:
-    if len(data) < 14 or data[:4] != b"MThd":
-        raise ValueError("not a Standard MIDI File")
-    header_length = struct.unpack(">I", data[4:8])[0]
-    if header_length < 6 or len(data) < 8 + header_length:
-        raise ValueError("invalid or truncated MIDI header")
-    midi_format, track_count, division = struct.unpack(">HHH", data[8:14])
-    if midi_format not in {0, 1}:
+    source = bytes(data)
+    header = _inspect_midi_header_structure(source)
+    if header.midi_format not in {0, 1}:
         raise ValueError("only Standard MIDI File format 0 and 1 are supported")
-    if track_count < 1:
+    if header.track_count < 1:
         raise ValueError("MIDI file contains no tracks")
-    if division & 0x8000:
+    if header.division & 0x8000:
         raise ValueError("SMPTE-time MIDI is not supported")
-    if division == 0:
+    if header.division == 0:
         raise ValueError("MIDI ticks per beat must be greater than zero")
 
-    position = 8 + header_length
-    tracks = []
-    for track_index in range(track_count):
-        if position + 8 > len(data) or data[position : position + 4] != b"MTrk":
-            raise ValueError(f"missing or truncated MIDI track {track_index}")
-        length = struct.unpack(">I", data[position + 4 : position + 8])[0]
-        data_offset = position + 8
-        end = data_offset + length
-        if end > len(data):
-            raise ValueError(f"truncated MIDI track {track_index}")
-        tracks.append(
-            _Track(
-                track_index,
-                position,
-                data_offset,
-                length,
-                tuple(_parse_track(data[data_offset:end], data_offset, track_index)),
-            )
-        )
-        position = end
-    return _Layout(midi_format, division, tuple(tracks))
+    document = _parse_midi_structure(source)
+    return _Layout(
+        document.midi_format,
+        document.division,
+        tuple(_project_codec_track(document.source, track) for track in document.tracks),
+    )
 
 
-def _parse_track(data: bytes, base_offset: int, track_index: int) -> list[_Event]:
-    position = 0
-    tick = 0
-    running_status: int | None = None
-    result = []
-    while position < len(data):
-        raw_start = position
-        delta, position = _read_varlen(data, position)
-        tick += delta
-        if position >= len(data):
-            raise ValueError(f"truncated event in MIDI track {track_index}")
+def _project_codec_track(source: bytes, track: _CodecMidiTrack) -> _Track:
+    return _Track(
+        track.index,
+        track.header_offset,
+        track.data_offset,
+        track.length,
+        tuple(_project_codec_event(source, event) for event in track.events),
+    )
 
-        status_byte = data[position]
-        explicit_status = bool(status_byte & 0x80)
-        if explicit_status:
-            status = status_byte
-            position += 1
-            if status < 0xF0:
-                running_status = status
-        else:
-            if running_status is None:
-                raise ValueError(
-                    f"running status used before a status byte in MIDI track {track_index}"
-                )
-            status = running_status
 
-        if status == 0xFF:
-            running_status = None
-            if position >= len(data):
-                raise ValueError(f"truncated meta event in MIDI track {track_index}")
-            kind = data[position]
-            position += 1
-            length, position = _read_varlen(data, position)
-            end = position + length
-            if end > len(data):
-                raise ValueError(f"truncated meta payload in MIDI track {track_index}")
-            position = end
-            result.append(
-                _Event(
-                    track_index,
-                    tick,
-                    delta,
-                    base_offset + raw_start,
-                    base_offset + position,
-                    status,
-                    explicit_status,
-                    "meta",
-                    data=(kind,),
-                )
-            )
-            if kind == 0x2F:
-                break
-            continue
-
-        if status in {0xF0, 0xF7}:
-            running_status = None
-            length, position = _read_varlen(data, position)
-            end = position + length
-            if end > len(data):
-                raise ValueError(f"truncated SysEx event in MIDI track {track_index}")
-            position = end
-            result.append(
-                _Event(
-                    track_index,
-                    tick,
-                    delta,
-                    base_offset + raw_start,
-                    base_offset + position,
-                    status,
-                    explicit_status,
-                    "sysex",
-                )
-            )
-            continue
-
-        if status >= 0xF0:
-            lengths = {
-                0xF1: 1,
-                0xF2: 2,
-                0xF3: 1,
-                0xF6: 0,
-                0xF8: 0,
-                0xFA: 0,
-                0xFB: 0,
-                0xFC: 0,
-                0xFE: 0,
-            }
-            if status not in lengths:
-                raise ValueError(f"unsupported MIDI system event 0x{status:02x}")
-            if status < 0xF8:
-                running_status = None
-            data_start = position
-            position += lengths[status]
-            if position > len(data):
-                raise ValueError(f"truncated system event in MIDI track {track_index}")
-            result.append(
-                _Event(
-                    track_index,
-                    tick,
-                    delta,
-                    base_offset + raw_start,
-                    base_offset + position,
-                    status,
-                    explicit_status,
-                    "system",
-                    tuple(base_offset + offset for offset in range(data_start, position)),
-                    tuple(data[data_start:position]),
-                )
-            )
-            continue
-
-        event_type = status & 0xF0
-        if event_type not in {0x80, 0x90, 0xA0, 0xB0, 0xC0, 0xD0, 0xE0}:
-            raise ValueError(f"unsupported channel event 0x{status:02x}")
-        length = 1 if event_type in {0xC0, 0xD0} else 2
-        data_start = position
-        end = data_start + length
-        if end > len(data):
-            raise ValueError(f"truncated channel event in MIDI track {track_index}")
-        if any(byte & 0x80 for byte in data[data_start:end]):
-            raise ValueError(f"invalid channel-event data in MIDI track {track_index}")
-        position = end
-        result.append(
-            _Event(
-                track_index,
-                tick,
-                delta,
-                base_offset + raw_start,
-                base_offset + position,
-                status,
-                explicit_status,
-                "channel",
-                tuple(base_offset + offset for offset in range(data_start, end)),
-                tuple(data[data_start:end]),
-            )
-        )
-    return result
+def _project_codec_event(source: bytes, event: _CodecMidiEvent) -> _Event:
+    if event.category == "meta":
+        data = () if event.meta_type is None else (event.meta_type,)
+        data_offsets = ()
+    elif event.category in {"channel", "system"}:
+        data = tuple(source[event.data_start : event.data_end])
+        data_offsets = tuple(range(event.data_start, event.data_end))
+    else:
+        data = ()
+        data_offsets = ()
+    return _Event(
+        event.track_index,
+        event.tick,
+        event.delta,
+        event.raw_start,
+        event.raw_end,
+        event.status,
+        event.explicit_status,
+        event.category,
+        data_offsets,
+        data,
+    )
 
 
 def _find_tuning_candidates(layout: _Layout, max_cents: float) -> tuple[_TuningCandidate, ...]:

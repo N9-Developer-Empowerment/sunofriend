@@ -500,6 +500,12 @@ export default function ForAgents() {
             <Link href="/research/separation/">
               /research/separation/ — public experiment status and feedback boundary
             </Link>
+            <Link href="/research/vocal-comping/">
+              /research/vocal-comping/ — private pilot status and whole-song concept
+            </Link>
+            <Link href="/research/remixing/">
+              /research/remixing/ — private plan for bounded identity-preserving remix
+            </Link>
           </div>
         </section>
 

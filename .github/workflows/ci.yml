@@ -28,6 +28,9 @@ jobs:
           python -m pip install -e '.[all,dev]'
       - name: Lint
         run: python -m ruff check src tests
+      - name: Enforce architecture contracts
+        if: runner.os == 'Linux' && matrix.python == '3.11'
+        run: python -m devtools.architecture_viewer --check
       - name: Test the complete macOS suite
         if: runner.os == 'macOS'
         run: python -m pytest -q -m 'not trusted_local'

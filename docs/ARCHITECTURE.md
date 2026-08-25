@@ -37,6 +37,12 @@ export effect. The Guided Local Studio supplies that flag by default when it
 starts Workbench; `tui --no-developer-inspector` keeps it absent. See the
 [technical tour](TECHNICAL_TOUR.md).
 
+For a drillable static view of the current Python modules, dependencies,
+interfaces, implementations and exact source lines, generate the local
+[architecture explorer](ARCHITECTURE_VIEWER.md). Its graph is descriptive and
+read-only; it does not replace the product and authority boundaries in this
+document.
+
 ## Current execution flow
 
 ```text
@@ -79,8 +85,10 @@ CLI/application services (`cli.py`)
         |       --> composite drums: review-required mixed-kit MIDI
         +--> stem refinement (`loop.py`)
         +--> vocal extraction (`vocal.py`)
-        +--> lossless MIDI transforms (`midi_tempo.py`, `midi_transform.py`,
-        |                            `midi_anchor.py`)
+        +--> source-bound lossless MIDI codec (`midi_codec.py`)
+        |       --> first migrated transform (`midi_tempo.py`)
+        |       --> transform compatibility projection (`midi_transform.py`)
+        |       --> pending anchor delta-rewrite boundary (`midi_anchor.py`)
         +--> creative grid rebuild (`midi_align.py`)
         +--> short MIDI-guided cleanup evidence (`midi_mask.py`)
         +--> isolated learned cleanup challenger (`ai_cleanup.py`,
@@ -2429,8 +2437,11 @@ The safest next boundaries are:
 3. Extend the new `workbench_instrument_policy.py` server-owned pair registry
    cautiously; keep broader role aliases, channels and GarageBand suggestions
    separate until their different evidence contracts can be unified safely.
-4. Introduce a lossless Standard MIDI File codec and shared batch/path-safety
-   utilities, then migrate one command at a time against a common fixture set.
+4. Continue the implemented lossless Standard MIDI File codec one seam at a
+   time. The tempo and transform-parser migrations are complete. Split the
+   remaining `midi_transform.transform_midi_path` batch/preflight warning next;
+   keep Clip semantics, anchor delta rewriting and any shared cross-module
+   path utility as separate changes against the common fixture set.
 5. Share phase-safe audio loading and an explicit beat-grid to `TempoMap`
    adapter.
 6. Split the large Clip and vocal modules only after compatibility re-exports

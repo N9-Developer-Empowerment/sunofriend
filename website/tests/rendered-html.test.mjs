@@ -30,13 +30,14 @@ async function loadCleanRouteHandler() {
     "utf8",
   );
   const block = template.match(
-    /FunctionCode: \|\r?\n(?<code>(?: {8}.+(?:\r?\n|$))+)/,
+    /FunctionCode:(?: !Sub)? \|\r?\n(?<code>(?: {8}.+(?:\r?\n|$))+)/,
   );
   assert.ok(block?.groups?.code, "CloudFront function code was not found");
   const code = block.groups.code
     .split(/\r?\n/)
     .map((line) => line.replace(/^ {8}/, ""))
-    .join("\n");
+    .join("\n")
+    .replaceAll("${DomainName}", "sunofriend.com");
   const handler = vm.runInNewContext(`${code}\nhandler;`);
   assert.equal(typeof handler, "function");
   return handler;
@@ -85,6 +86,23 @@ test("rewrites clean website routes to their static index files", async () => {
     rewrite("/_next/static/chunks/app.js"),
     "/_next/static/chunks/app.js",
   );
+
+  const wwwRedirect = handler({
+    request: {
+      uri: "/demo/",
+      headers: { host: { value: "www.sunofriend.com" } },
+      querystring: { a: { value: "b" } },
+    },
+  });
+  assert.equal(wwwRedirect.statusCode, 301);
+  assert.equal(
+    wwwRedirect.headers.location.value,
+    "https://sunofriend.com/demo/?a=b",
+  );
+  const apex = handler({
+    request: { uri: "/stems", headers: { host: { value: "sunofriend.com" } } },
+  });
+  assert.equal(apex.uri, "/stems/index.html");
 });
 
 test("server-renders an approachable skill-first musician page", async () => {
@@ -166,6 +184,12 @@ test("server-renders an approachable skill-first musician page", async () => {
   assert.match(html, /Phrase recording \+ aligned pickups/);
   assert.match(html, /Automatic selection, joins or tuning/);
   assert.match(html, /href="\/research\/vocal-comping\/"/);
+  assert.match(html, /Identity-preserving remix is in the plan/);
+  assert.match(html, /CHANGE ONE THING\. KEEP THE SONG/);
+  assert.match(html, /No remix command or model/);
+  assert.match(html, /a trained remix model is not authorised yet/);
+  assert.match(html, /href="\/research\/remixing\/"/);
+  assert.match(html, /no automatic finished vocal comp or remix is available yet/);
   assert.doesNotMatch(html, /brew install|git clone/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Starter Project/);
 });
@@ -266,6 +290,8 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /installing or starting a model service without approval/);
   assert.doesNotMatch(html, /remains\s*blocked and non-executable/);
   assert.match(html, /\/research\/separation\//);
+  assert.match(html, /\/research\/vocal-comping\/ — private pilot status and whole-song concept/);
+  assert.match(html, /\/research\/remixing\/ — private plan for bounded identity-preserving remix/);
 });
 
 test("publishes reproducible and bounded native Windows setup notes", async () => {
@@ -404,6 +430,34 @@ test("publishes an honest vocal-comping pilot and whole-song GUI concept", async
   assert.match(html, /the public website does not record, upload or process audio/i);
   assert.match(html, /No acceptable take is a valid result/);
   assert.match(html, /Correction is optional and downstream/);
+  assert.match(html, /DIRECTION UPDATE · AUGUST 2026/);
+  assert.match(html, /Now planned as audio-native: no MIDI file required/);
+  assert.match(html, /Semantic Musical State programme/);
+  assert.match(html, /implemented v1 record/);
+  assert.match(html, /Go audio-native, then earn assembly/);
+  assert.doesNotMatch(html, /\/Users\//);
+});
+
+test("publishes an honest private remix research plan", async () => {
+  const response = await render("/research/remixing/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /PRIVATE RESEARCH PLAN · NOTHING IMPLEMENTED YET/);
+  assert.match(html, /Change one thing\. Keep the song/);
+  assert.match(html, /identity-preserving remixing/);
+  assert.match(html, /No remix model is installed, trained or authorised yet/);
+  assert.match(html, /A canonical plan exists\. The feature does not/);
+  assert.match(html, /deterministic assembly or retrieval with frozen pretrained models/);
+  assert.match(html, /What counts as a remix here/);
+  assert.match(html, /Not unconstrained full-song regeneration/);
+  assert.match(html, /One permitted change\./);
+  assert.match(html, /8–16 bars, not a whole song/);
+  assert.match(html, /How the work is labelled/);
+  assert.match(html, /Human musical review/);
+  assert.match(html, /Generated audio is a labelled source class/);
+  assert.match(html, /One bounded remix on one authorised track/);
+  assert.match(html, /href="https:\/\/github\.com\/N9-Developer-Empowerment\/sunofriend\/blob\/main\/docs\/SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN\.md"/);
   assert.doesNotMatch(html, /\/Users\//);
 });
 
@@ -569,6 +623,11 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /not a song-project importer/);
   assert.match(text, /does not prove alignment/);
   assert.match(text, /Composite `drums` is preserved pending S2/);
+  assert.match(text, /canonical forward programme is now audio-native/);
+  assert.match(text, /## Remix research/);
+  assert.match(text, /private research plan; nothing implemented/);
+  assert.match(text, /deterministic assembly\/retrieval and frozen pretrained models/i);
+  assert.match(text, /sunofriend\.com\/research\/remixing/);
   assert.doesNotMatch(text, /No redistributable raw-stem conversion demo/);
 });
 
@@ -1100,6 +1159,22 @@ test("publishes a versioned machine-readable capability contract", async () => {
     "sunofriend.experimental-separation-review.v3",
   );
   assert.equal(data.interface_contract_version, "2026-08-19.2");
+  assert.equal(
+    data.experiments.vocal_comping.programme,
+    "semantic_musical_state_audio_native",
+  );
+  assert.equal(
+    data.experiments.vocal_comping.v1_midi_first_pilot,
+    "implemented and retained as the historical record",
+  );
+  const remixing = data.experiments.remixing;
+  assert.equal(remixing.status, "private_research_plan_not_implemented");
+  assert.equal(remixing.public_product_route_available, false);
+  assert.equal(remixing.model_installed, false);
+  assert.equal(remixing.model_trained, false);
+  assert.equal(remixing.current_effects.automatic_remix_generation, false);
+  assert.equal(remixing.current_effects.learned_conditioning, false);
+  assert.equal(remixing.human_authority.includes("human listening decides"), true);
   assert.equal(data.song_generation.generation_modes.remix.backend_task, "cover");
   assert.equal(data.song_generation.generation_modes.remix.quality_verified, false);
   assert.equal(data.song_generation.generation_modes.remix.advances, false);
@@ -1553,13 +1628,16 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(page, /SoftwareApplication/);
   assert.match(layout, /publisher: "Unsigned Media Ltd"/);
   assert.match(layout, /openGraph/);
-  assert.match(layout, /\/og\.png/);
+  assert.match(layout, /\/og\.(png|jpg)/);
+  assert.match(layout, /icon: "\/favicon\.ico"/);
+  assert.match(layout, /apple: "\/apple-touch-icon\.png"/);
   assert.match(robots, /Allow: \//);
   assert.match(robots, /sunofriend\.com\/sitemap\.xml/);
   assert.match(sitemap, /sunofriend\.com\/for-agents/);
   assert.match(sitemap, /sunofriend\.com\/windows/);
   assert.match(sitemap, /sunofriend\.com\/research\/separation/);
   assert.match(sitemap, /sunofriend\.com\/research\/vocal-comping/);
+  assert.match(sitemap, /sunofriend\.com\/research\/remixing/);
   assert.match(sitemap, /sunofriend\.com\/stems/);
   assert.match(sitemap, /sunofriend\.com\/glossary/);
   assert.match(sitemap, /sunofriend\.com\/contact/);
@@ -1580,6 +1658,7 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
     /CleanRouteFunction\.FunctionMetadata\.FunctionARN/,
   );
   assert.match(template, /AWS::CloudFront::OriginAccessControl/);
+  assert.match(template, /statusCode: 301/);
   assert.match(template, /BlockPublicAcls: true/);
   assert.match(template, /SSEAlgorithm: AES256/);
   assert.match(template, /AlternateDomainName/);

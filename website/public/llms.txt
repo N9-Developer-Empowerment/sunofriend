@@ -82,14 +82,26 @@ Sunofriend never downloads streaming audio or infers processing permission from 
 ## Vocal comping research
 
 - Status: private phrase-level pilot; whole-song browser workflow is being designed. It is not a public product route.
+- Direction: the canonical forward programme is now audio-native (Semantic Musical State). Target MIDI is no longer required or canonical input; the phrase pilot is the implemented v1 record.
 - Goal: lyric-aware, melody-aware vocal comping from the singer's own synchronized takes, with human-reviewed phrase choices, natural assembly and optional gentle correction.
 - Working private scope: reviewed phrase playback, aligned browser pickup recording, target-relative evidence and explicit listening feedback.
 - Current non-capabilities: no automatic take selection, phrase joining, finished comp rendering, pitch correction, AI voice generation, website recording or audio upload.
 - Known lyrics remain canonical. Local speech transcription is rough phonetic/timing evidence only and cannot silently rewrite words.
-- MIDI is only the melodic skeleton. Breath, diction, tone, expression, timbre continuity and safe edit boundaries require separate evidence and human listening.
+- MIDI is only a melodic skeleton where used. Breath, diction, tone, expression, timbre continuity and safe edit boundaries require separate evidence and human listening.
 - Recommended whole-song direction: retain one broad human base performance, then use a low-stress browser loop for focused phrase pickups; review transitions before any optional correction.
 - Use phrases or lines as the default edit unit. Word or syllable substitutions are rescue edits only after their boundaries are explicitly reviewed.
+- Canonical programme plan: https://github.com/N9-Developer-Empowerment/sunofriend/blob/main/docs/SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md
 - Canonical status and GUI concept: https://sunofriend.com/research/vocal-comping/
+
+## Remix research
+
+- Status: private research plan; nothing implemented. No remix command, trained model, generation or public product route exists yet.
+- Goal: bounded, editable remixes that make one intentional change (instrument, role or region) while retaining musical relationships the owner recognises from the source.
+- First planned lane: deterministic assembly/retrieval and frozen pretrained models (D+I+H). Learned conditioning (T+I+H) begins only after repeated bounded remix evidence beats those controls.
+- Human listening is the selection authority; a result that loses every owner-named identity anchor fails.
+- Generated audio remains a labelled source class; a human/AI duet is valid only when chosen by the user and is never described as fully human.
+- Cloud compute is gated: local work only today; larger training requires separate authorisation and never uploads private audio.
+- Canonical status: https://sunofriend.com/research/remixing/
 
 ### Source preparation
 

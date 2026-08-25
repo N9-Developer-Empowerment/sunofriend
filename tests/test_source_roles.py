@@ -15,6 +15,7 @@ from sunofriend.source_roles import (
     is_context_source_role,
     is_derived_source_role,
     is_prepared_source_role,
+    iter_source_role_definitions,
     prepared_source_role_ids,
     source_role_definition,
     source_role_ids,
@@ -22,6 +23,24 @@ from sunofriend.source_roles import (
 
 
 class SourceRoleRegistryTests(unittest.TestCase):
+    def test_registry_iteration_and_enum_inputs_are_stable(self) -> None:
+        definitions = tuple(iter_source_role_definitions())
+
+        self.assertEqual(
+            [definition.role for definition in definitions],
+            list(SourceRole),
+        )
+        self.assertTrue(
+            all(
+                definition.aliases[0]
+                == definition.role.value.replace("_", " ")
+                for definition in definitions
+            )
+        )
+        self.assertEqual(canonical_source_role(SourceRole.BASS), "bass")
+        self.assertEqual(canonical_source_role(SourceRole.BACKING_VOCALS), "backing_vocals")
+        self.assertEqual(infer_source_roles(SourceRole.BASS), {"bass"})
+
     def test_compounds_suppress_only_their_broad_components(self) -> None:
         cases = {
             "song-backing_vocals.wav": {"backing_vocals"},
