@@ -70,58 +70,12 @@ parameters exactly and every metric is finite. It reads no audio or real
 labels, uses no network or downloads and changes no product behaviour. Its
 result is technical pipeline evidence only.
 
-The Windows handoff is a separate CUDA/PyTorch execution, not the local
-reference result. A legacy request remains reproducible for verification of
-already completed evidence. Every new execution must additionally carry a
-unique 32-character lowercase hexadecimal `execution_attempt_id`. The request
-fixes `maximum_training_executions` to one while retaining zero retries.
-
-If an earlier invocation failed before training, first record a path-free
-failure receipt. The receipt can represent CLI, request, repository or CUDA
-preflight failure only and hard-codes zero training executions, optimisation
-steps, artifacts, result documents, network attempts, downloads and automatic
-retries. It records failure evidence but cannot authorise another run:
-
-```text
-python scripts/record-vocal-pairwise-gpu-pretraining-failure.py \
-  PRIOR-REQUEST.json \
-  --failure-stage cli_argument_validation \
-  --failure-code missing-out-dir \
-  --out PRIOR-FAILURE.json
-```
-
-After a separately reviewed new-attempt decision, create a new request identity
-which embeds that exact failure receipt:
-
-```text
-python scripts/create-vocal-pairwise-gpu-canary-request.py \
-  --repository-commit COMMIT \
-  --execution-attempt-id 0123456789abcdef0123456789abcdef \
-  --prior-failure-receipt PRIOR-FAILURE.json \
-  --out REQUEST.json
-```
-
-On the clean checkout of that exact commit, run exactly once:
-
-```text
-python scripts/run-vocal-pairwise-gpu-canary.py REQUEST.json \
-  --out-dir FRESH-OUTPUT
-```
-
-The worker stops if CUDA is unavailable or the commit, fixture, request,
-deterministic CuBLAS setting or resource ceilings do not match. It runs 192
-synthetic six-feature pairs (128 train, 64 held-out), 300 steps per arm and a
-step-120 checkpoint. The result records CUDA/PyTorch/device identity, peak GPU
-and process memory, wall time, output hashes/bytes, zero permitted network and
-downloads, and zero retries. It remains technical-only even if every check
-passes. Checkpoints, metrics, the worker result and independent verification
-all bind the new request hash; the worker result and verification additionally
-repeat the exact attempt ID and prior-failure receipt hash. A result from a
-different attempt is rejected. The request and result should be independently
-hash-verified before being retained as evidence. Use the read-only
-`scripts/verify-vocal-pairwise-gpu-canary.py` command and the exact return-file
-contract in
-[`VOCAL_PAIRWISE_GPU_VERIFICATION.md`](VOCAL_PAIRWISE_GPU_VERIFICATION.md).
+The executable CUDA worker and checkpoint verifier are not part of this
+foundation. They remain a follow-up gate that must first provide hermetic
+runtime characterization and satisfy the repository's CRAP and architecture
+contracts. This document therefore authorizes no GPU execution, checkpoint
+creation or training run. The deterministic synthetic pairwise fixture remains
+available for testing the label and admission contracts without private audio.
 
 ## Next owner-facing step
 

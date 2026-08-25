@@ -73,20 +73,12 @@ select a take, correct a vocal, assemble a final comp, generate a remix or add
 a public product command. Those capabilities require their own gates and
 listening evidence.
 
-The branch also contains an executable **C0 synthetic training canary**. Its
-request is tied to one repository commit and a deterministic, non-private,
-composition-grouped fixture. The CUDA worker must run a clean arm, a
-shuffled-label control and a checkpoint/resume arm within fixed time, memory,
-step and output ceilings. The result can prove that the training machinery is
-reproducible; it cannot claim that a musical model has been trained or
-validated. It uses the worker's already approved PyTorch runtime and neither
-downloads nor installs anything.
-The request fixes the process-local deterministic CuBLAS workspace before
-PyTorch starts so the checkpoint comparison is meaningful on CUDA.
-Windows resource receipts use a typed 64-bit process handle and record peak
-working-set bytes through the modern or legacy documented system entry point.
-The exact request, limits and clean-checkout Windows worker commands are in
-[`C0_SYNTHETIC_GPU_CANARY.md`](C0_SYNTHETIC_GPU_CANARY.md).
+This foundation retains path-free worker request/result contracts, but it does
+not expose an executable CUDA canary. GPU execution belongs to a separately
+qualified follow-up with hermetic runtime tests, bounded resource evidence and
+the same CRAP and architecture gates. A future canary may prove reproducible
+training mechanics; it still cannot claim that a musical model is musically
+valid, selected for product use or authorized to open private audio.
 
 ## Privacy and authority
 

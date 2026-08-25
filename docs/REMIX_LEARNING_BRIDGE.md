@@ -165,39 +165,14 @@ destination or making a network request. It retains the bundle inside the new
 runtime for later verification. Callers must execute the handoff directly and
 must not reproduce its schema checks externally.
 
-After setup succeeds, `scripts/create-remix-musicfm-synthetic-canary-request.py`
-binds one canary request to the exact commit and setup receipt. The request
-allows one CUDA execution with no retry, network, download, private audio or
-training. `scripts/run-remix-musicfm-synthetic-canary.py` constructs the model
-from the pinned local configuration, loads the exact checkpoint with
-`weights_only=True`, requires an exact state-key/shape/dtype match, freezes the
-model in evaluation mode and extracts layer-7 features twice from a generated
-two-second 24 kHz waveform. The expected result is exactly 50 by 1,024 finite
-float32 feature values per batch item with byte-identical repeats.
-The only admitted key migration is PyTorch's documented weight-normalisation
-serialization rename for the positional convolution: legacy `weight_g` and
-`weight_v` become `parametrizations.weight.original0` and `original1`. Any
-other missing or unexpected checkpoint key still stops the canary before
-feature extraction.
-The pinned checkpoint also stores its exact 18 BatchNorm
-`num_batches_tracked` counters as scalar float32 values of 95,489, whereas
-current PyTorch represents those non-learned bookkeeping counters as int64.
-The loader admits only those 18 exact names, scalar shapes, dtypes and values
-and records their float32-to-int64 conversion. Learned weights and running
-statistics remain exact-dtype loads.
-The CUDA canary sets `CUBLAS_WORKSPACE_CONFIG=:4096:8` before importing PyTorch,
-then enables deterministic algorithms, disables cuDNN benchmarking and requires
-the two frozen-feature passes to be byte-identical.
-`scripts/verify-remix-musicfm-synthetic-canary.py` verifies the path-free result
-and retained artifact bytes without reopening the model or any audio.
-
-That separate gate has now passed on the authorised Windows RTX machine. The
-isolated runtime contains the exact 26-package closure and pinned MusicFM-FMA
-checkpoint; the restricted weights-only loader admitted the exact checkpoint
-compatibility boundary, and the independent verifier confirmed deterministic,
-finite, byte-identical synthetic features. No private audio, network access,
-downloads, optimisation, model-weight changes or product ranking occurred in
-the canary. Real audio remains a future explicit operation.
+The checkpoint loader and CUDA synthetic-feature execution are intentionally a
+separate follow-up gate. This foundation does not expose a model-loading or GPU
+execution interface and does not claim that a retained Windows result is a
+portable product capability. The follow-up must add hermetic loader/runtime
+characterization, satisfy the changed-function CRAP ratchet and pass the same
+architecture and authority checks before it can re-enter `main`. Until then,
+the retained setup receipt is technical evidence only; no private audio,
+training execution, checkpoint promotion or product ranking is authorized.
 
 ### Private anchor confirmation
 
