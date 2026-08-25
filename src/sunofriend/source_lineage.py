@@ -13,7 +13,6 @@ Explicit writes use content-addressed objects plus a small compare-and-swap
 
 from __future__ import annotations
 
-import fcntl
 import json
 import os
 import re
@@ -23,6 +22,16 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
+
+try:
+    import fcntl as _fcntl
+except ImportError:  # Windows
+    _fcntl = None
+
+try:
+    import msvcrt as _msvcrt
+except ImportError:  # POSIX
+    _msvcrt = None
 
 from .audio_formats import file_sha256
 from .derived_source_receipt import (
@@ -1828,30 +1837,55 @@ def _exclusive_graph_lock(graph_root: Path) -> Iterable[None]:
     flags = os.O_RDWR | os.O_CREAT
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
     try:
         descriptor = os.open(lock_path, flags, 0o600)
     except OSError as exc:
         raise SourceGraphError(
             "source-graph writer lock is unavailable"
         ) from exc
+    locked = False
     try:
-        status = os.fstat(descriptor)
-        if not stat.S_ISREG(status.st_mode):
-            raise SourceGraphError(
-                "source-graph writer lock must be a regular file"
-            )
-        os.fchmod(descriptor, 0o600)
-        fcntl.flock(descriptor, fcntl.LOCK_EX)
-        yield
-    except OSError as exc:
-        raise SourceGraphError(
-            "source-graph writer lock is unavailable"
-        ) from exc
-    finally:
         try:
-            fcntl.flock(descriptor, fcntl.LOCK_UN)
-        except OSError:
-            pass
+            status = os.fstat(descriptor)
+            if not stat.S_ISREG(status.st_mode):
+                raise SourceGraphError(
+                    "source-graph writer lock must be a regular file"
+                )
+            if hasattr(os, "fchmod"):
+                os.fchmod(descriptor, 0o600)
+            if _fcntl is not None:
+                _fcntl.flock(descriptor, _fcntl.LOCK_EX)
+            elif _msvcrt is not None:
+                # ``msvcrt.locking`` locks a byte range rather than the whole
+                # file. Ensure the shared lock byte exists, then acquire it
+                # from offset 0.
+                if status.st_size < 1:
+                    os.write(descriptor, b"\0")
+                    os.fsync(descriptor)
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                _msvcrt.locking(descriptor, _msvcrt.LK_LOCK, 1)
+            else:  # pragma: no cover - supported platforms have one backend
+                raise SourceGraphError(
+                    "source-graph writer lock is unsupported on this platform"
+                )
+            locked = True
+        except OSError as exc:
+            raise SourceGraphError(
+                "source-graph writer lock is unavailable"
+            ) from exc
+        yield
+    finally:
+        if locked:
+            try:
+                if _fcntl is not None:
+                    _fcntl.flock(descriptor, _fcntl.LOCK_UN)
+                elif _msvcrt is not None:
+                    os.lseek(descriptor, 0, os.SEEK_SET)
+                    _msvcrt.locking(descriptor, _msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
         os.close(descriptor)
 
 
@@ -1879,7 +1913,8 @@ def _write_graph_object(
     )
     temporary = Path(temporary_name)
     try:
-        os.fchmod(descriptor, 0o600)
+        if hasattr(os, "fchmod"):
+            os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "wb", closefd=True) as handle:
             descriptor = -1
             handle.write(encoded)
@@ -1933,7 +1968,8 @@ def _write_current_pointer(
     )
     temporary = Path(temporary_name)
     try:
-        os.fchmod(descriptor, 0o600)
+        if hasattr(os, "fchmod"):
+            os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "wb", closefd=True) as handle:
             descriptor = -1
             handle.write(encoded)
@@ -2090,6 +2126,10 @@ def _validate_json_value(
 
 
 def _fsync_directory(path: Path) -> None:
+    if os.name == "nt":
+        # Windows does not permit opening directories through ``os.open``.
+        # File handles are already flushed before each atomic replacement.
+        return
     flags = os.O_RDONLY
     if hasattr(os, "O_DIRECTORY"):
         flags |= os.O_DIRECTORY

@@ -676,6 +676,13 @@ class ConversionModeTests(unittest.TestCase):
             sorted([melody, accompaniment], key=lambda note: (note.start, note.pitch, note.end)),
         )
         self.assertEqual(variants["uncertain"], [uncertain])
+        self.assertIn("lowest_line", variants)
+        self.assertIn("melody_down_12", variants)
+        self.assertEqual(variant_provenance["melody_down_12"][0].origin, "inferred")
+        self.assertIn(
+            "register-translation-for-human-review",
+            variant_provenance["melody_down_12"][0].sources,
+        )
         self.assertTrue(all(record.tier == "main" for record in provenance))
         self.assertEqual(variant_provenance["uncertain"][0].tier, "uncertain")
 

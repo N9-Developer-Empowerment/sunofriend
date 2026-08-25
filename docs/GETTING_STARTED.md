@@ -33,9 +33,73 @@ question at a time, inspects the Mac without changing it, uses separate
 source-preparation and exact-commit installation approvals, and can run a
 copyright-safe demo even when you have no stems.
 
+## Native Windows trial status
+
+Native Windows is not a supported application route yet. A Windows 11 x64
+trial updated through 18 August 2026 installed Sunofriend 0.4.0 with a
+uv-managed CPython 3.11 environment. `doctor --require convert`,
+`doctor --require preview` (including a FluidSynth render smoke test) and
+`source-doctor` with local FFmpeg/FFprobe all passed.
+
+On Python 3.11 Windows, Basic Pitch 0.4 installs TensorFlow 2.14 even though
+Sunofriend prefers its portable ONNX model. TensorFlow 2.14 cannot import with
+the pinned NumPy 2 runtime. After installing `.[all]`, remove only the
+`tensorflow`, `tensorflow-intel`, `tensorflow-estimator` and
+`tensorflow-io-gcs-filesystem` packages from the isolated environment. Keep
+`onnxruntime`; a full-song Basic Pitch plus pYIN consensus transcription then
+completed without fallback.
+
+The first normal demo/create attempt stopped with `No module named 'fcntl'`.
+Do not install an unrelated package merely named `fcntl` as a workaround. On
+19 August the feature branch replaced that unconditional POSIX import with
+`fcntl.flock` on POSIX and an `msvcrt.locking` lock byte on Windows, guarded
+POSIX-only file-permission calls and avoided unsupported Windows directory
+`fsync`. Thirty applicable source-lineage/project-input tests passed natively;
+two symlink-hardening tests could not run because this account lacks the
+Windows symlink privilege. The original failing `listen` operation then
+published its MIDI, variants, provenance and evaluation. The complete demo,
+create, Studio and TUI journeys have not yet been requalified, so this fix is
+not a general Windows support claim. Windows Subsystem for Linux was not
+tested.
+
+The separate `sunofriend-separate profiles` and `doctor` commands now load on
+Windows: POSIX-only private checkpoint inspection is lazy and fails closed
+instead of crashing the public diagnostic at import time. This is diagnostic
+portability, not Windows separation support. Every released separator profile
+still requires its documented Apple-silicon macOS runtime.
+
+One isolated Windows research experiment used upstream Demucs outside
+Sunofriend's separator command. On the tested RTX 4080 Laptop GPU, a dedicated
+Python 3.11 environment with PyTorch/torchaudio 2.7.1 CUDA 12.8, Demucs 4.0.1
+and SoundFile 0.13.1 completed `htdemucs_ft` two-stem vocal suppression. Keep
+this environment separate from both Sunofriend and ACE-Step. A OneDrive
+checkout required `uv pip --link-mode copy`; the default hardlink attempt
+failed with Windows cloud-file error 396. Demucs 4.0.1 also requires an integer
+`--segment`, so the tested Hybrid Transformer value was `7`, not `7.8`.
+This is a private compatibility observation, not a new supported Sunofriend
+backend or a claim that its estimates are clean stems. The fixture owner
+confirmed that the tested `no_vocals.wav` retained recognisable instrumental
+music while sufficiently removing the scratch singing. In its later four-stem
+view, grouped other carried the strongest musical identity, bass carried some,
+and drums supplied a cheerful groove that conflicted with the target lyrics.
+The first grouped-other keys, accompaniment and upper-melody MIDI auditions
+were all rejected as unrecognisable, while the bass MIDI was usefully
+recognisable. Sunofriend therefore now publishes competing lowest-line,
+octave-shifted and low-plus-upper register hypotheses for keys-like material;
+the shifted notes are labelled inferred and every choice still requires human
+listening.
+Treat those role judgements as fixture-specific listening evidence, not Demucs
+quality guarantees.
+
+The maintained [Windows setup notes](https://sunofriend.com/windows/) record
+the successful uv, audio-tool and SoundFont steps, the exact PowerShell
+environment variables and how to interpret the doctor output. Use them for
+portability work, not as a claim that every native Windows demo, create, Studio
+or TUI journey can complete.
+
 ## Before you begin
 
-You need:
+For the supported manual route, you need:
 
 - a Mac;
 - [Homebrew](https://brew.sh/) for this manual route;

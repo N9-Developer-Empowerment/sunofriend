@@ -1,9 +1,9 @@
 ---
 name: sunofriend
-description: Guide local Sunofriend setup and use. Optionally separate one authorised finished mix into experimental broad vocals and instrumental, or an available opt-in vocals/drums/bass/grouped-other preview, on a supported Apple-silicon Mac; alternatively prepare 2–64 existing stems, then create editable MIDI, a balanced MIDI-derived song-interpretation WAV and ZIP. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for multi-method comparison, feedback and GarageBand handoff. Also handle vocal melody, instruments, key/BPM/tuning/alignment transforms, mashups, Clip v1 reuse and bounded correction. Use for Sunofriend, local experimental separation, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Do not download music, upload private audio, use unpinned separator models, write lyrics, edit a DAW GUI, claim human-approved release mastering or install dependencies/models without explicit approval.
+description: Guide Sunofriend setup and use for reference-conditioned two-song generation through registered local or self-hosted providers, secret-free inspection of optional BYO-key cloud providers, authorised experimental separation, existing-stem preparation, editable MIDI, listening WAVs, GarageBand handoff, vocal comping, melody review, instruments, key/BPM/tuning/alignment transforms, mashups and Clip reuse. Offer a copyright-safe demo; use Simple for automatic unreviewed results and Studio for comparison and feedback. Use for Sunofriend, AI music generation providers, stems-to-MIDI, song interpolation, GarageBand, MIDI comparison, tempo/key changes and stem-derived instruments. Never silently upload audio, incur cloud charges, expose API keys, download music, use unpinned models, write lyrics, edit a DAW GUI, claim human-approved mastering or install dependencies/models without explicit approval.
 ---
 
-<!-- sunofriend-interface-contract: 2026-08-16.1 -->
+<!-- sunofriend-interface-contract: 2026-08-19.2 -->
 
 # Sunofriend
 
@@ -260,6 +260,81 @@ on.
   High-confidence automatic key/BPM may fill only missing metadata; explicit
   or filename/folder values win, alternatives remain visible and every result
   stays `not_reviewed` until the musician checks it.
+- `source-scaffold` builds a pre-generation MIDI recognition control from an
+  existing `vocal-melody` provenance file plus source-measured beat and harmony
+  evidence. Its primary MIDI contains melody and source-timed accents only;
+  automatic harmony is a separate diagnostic. Treat every part as unreviewed,
+  require the musician to recognise the source, and do not start generation
+  automatically. Never assume a rough or out-of-tune guide vocal carries the
+  intended melody. When the owner says the accompaniment carries the song,
+  reject vocal-F0 identity controls and validate vocal-suppressed accompaniment
+  before extracting instrumental motifs, harmony, bass, groove or form.
+- `song-generate` plans a new full-song request from one authorised reference,
+  a separate UTF-8 annotated lyric sheet and descriptive style text. Keep
+  reference strength and style-description strength independent, but treat the
+  original track as the primary musical input: lyrics supply words and style
+  modifies production without erasing source identity. At any non-zero
+  reference strength, reject a result with no owner-recognisable melodic,
+  rhythmic, harmonic, structural or performance relationship to the source.
+  Zero is the only prompt-only mode. A normal run requests two complete
+  candidates and lets the model determine duration. The
+  default is a read-only JSON plan; require both `--execute` and
+  `--confirm-rights` before contacting a configured backend. Default
+  `--generation-mode reference` maps to ACE-Step `text2music`, with optional
+  explicit BPM, key, time signature and duration overriding backend inference.
+  `--generation-mode remix` maps to the distinct native `cover` task, treats
+  the reference as editable source audio, transports replacement lyrics and
+  source-locks duration; reject independent BPM, key, meter or duration locks
+  in that mode. The adapter streams role-correct multipart audio to an existing
+  ACE-Step API service. Never install
+  or start that service implicitly, never claim the command supports an
+  unregistered backend, and never select or send a candidate to MIDI
+  automatically.
+- The first private native-remix pair was technically valid and in tune but the
+  owner rejected both for flat, monotonic talk-singing, unmusical backing and
+  lack of enjoyment or creativity. Do not present native remix as qualified or
+  automatically run a Base strength sweep. A private Base track-level
+  preservation experiment using `extract` and `complete` also failed: one
+  output retained the out-of-tune draft vocal and the other lost the input's
+  melody and likeness. Neither advances to stems or MIDI, and those tasks are
+  not a public CLI claim. A final intentional Turbo pair improved vocal tuning
+  and backing musicality but also failed: neither candidate retained an audible
+  connection to the source melody or rhythm. Turbo additionally cannot honour
+  independent style strength because it ignores guidance scale. ACE-Step is
+  executable but rejected as the full-song remix provider for this fixture.
+  Do not run more ACE candidates or advance any to stems/MIDI. The accepted
+  accompaniment-first evidence identifies grouped other as the primary musical
+  identity carrier, bass as secondary and drums as transformable groove
+  evidence; the first upper-register grouped-other MIDI controls failed while
+  bass MIDI passed. Read `docs/REMIX_RESEARCH_HANDOVER.md` before new remix
+  work. Follow `docs/SEMANTIC_MUSICAL_STATE_AND_TRAINING_PLAN.md`: define the
+  versioned Musical State and owner-anchored benchmark, probe frozen ACE and
+  independent temporal representations, then train the smallest justified
+  adapter. Do not make another full-song generation sweep the next gate.
+- Treat that command as the implemented whole-song vertical slice, not the
+  complete creative workflow. The agreed destination is an immutable
+  song-project version graph: retain both initial candidates, branch instead of
+  overwrite, support capability-gated whole-song/section/stem revisions, then
+  reconstruct selected instruments as editable MIDI and record/comp human
+  vocals after the AI-assisted arrangement has settled. The owner's private
+  projects have a standing personal-use authorisation assumption in the target
+  project manifest, but the current CLI still truthfully requires its existing
+  `--confirm-rights` execution flag until that manifest is implemented. Follow
+  `docs/REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md` when the owner
+  supplies the private empirical song fixture; the plan alone starts no model
+  and uploads nothing.
+- Use `song-providers` for a read-only, secret-free capability inventory before
+  suggesting a generation provider. ACE-Step is registered for the current
+  reference-conditioned operation. TREBLO v3 is an evaluated optional BYO-key
+  cloud provider but is not registered for that operation: it accepts prompt
+  and lyrics, while source audio is continuation-only and it cannot implement
+  the independent reference-strength control. Never silently fall back to it,
+  expose a key to browser JavaScript, imply that it is local/open-weight, or
+  incur charges/upload audio without explicit terms, privacy and cost consent.
+  MiniMax Music 3 is currently a description-and-lyrics candidate, while the
+  separately hosted MiniMax `music-cover` model is a reference-audio candidate
+  without a documented independent reference-strength control; do not merge
+  or silently register those routes.
 - `vocal-comp-create` and `vocal-comp-analyze` are expert, private pilot
   commands for 2–24 synchronized vocal-only takes. Require canonical lyrics,
   a reviewed monophonic target melody, a reviewed musical-phrase timeline,
@@ -267,6 +342,9 @@ on.
   publishes independent tracker evidence, phrase rankings, auditions and
   pickups. It must not be described as selecting, tuning, joining or rendering
   a finished vocal comp; an optional AI vocal is fallback evidence only.
+  In the iterative song-generation workflow, vocal comping is downstream of
+  AI remix, stem/MIDI reconstruction and arrangement; never make it a
+  prerequisite for generating the song sketches.
 - Automatic lyrics, phrase timing and target MIDI remain drafts until every
   phrase is explicitly heard and approved through `vocal-comp-draft-review`.
   Playback creates no decision. Only `vocal-comp-draft-resolve` may turn one

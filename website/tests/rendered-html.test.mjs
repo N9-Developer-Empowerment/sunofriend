@@ -30,11 +30,11 @@ async function loadCleanRouteHandler() {
     "utf8",
   );
   const block = template.match(
-    /FunctionCode:(?: !Sub)? \|\n(?<code>(?: {8}.+(?:\n|$))+)/,
+    /FunctionCode:(?: !Sub)? \|\r?\n(?<code>(?: {8}.+(?:\r?\n|$))+)/,
   );
   assert.ok(block?.groups?.code, "CloudFront function code was not found");
   const code = block.groups.code
-    .split("\n")
+    .split(/\r?\n/)
     .map((line) => line.replace(/^ {8}/, ""))
     .join("\n")
     .replaceAll("${DomainName}", "sunofriend.com");
@@ -46,7 +46,7 @@ async function loadCleanRouteHandler() {
 function cloudFrontErrorBlock(template, errorCode) {
   const match = template.match(
     new RegExp(
-      `^ {10}- ErrorCode: ${errorCode}\\n(?<settings>(?: {12}.+(?:\\n|$))+)`,
+      `^ {10}- ErrorCode: ${errorCode}\\r?\\n(?<settings>(?: {12}.+(?:\\r?\\n|$))+)`,
       "m",
     ),
   );
@@ -63,6 +63,8 @@ test("rewrites clean website routes to their static index files", async () => {
   assert.equal(rewrite("/demo/"), "/demo/index.html");
   assert.equal(rewrite("/for-agents"), "/for-agents/index.html");
   assert.equal(rewrite("/for-agents/"), "/for-agents/index.html");
+  assert.equal(rewrite("/windows"), "/windows/index.html");
+  assert.equal(rewrite("/windows/"), "/windows/index.html");
   assert.equal(
     rewrite("/research/separation/"),
     "/research/separation/index.html",
@@ -128,8 +130,10 @@ test("server-renders an approachable skill-first musician page", async () => {
     html,
     /Example skills-aware agents\s*include Codex, Claude Code and Antigravity/,
   );
-  assert.match(html, /Tested on a MacBook so far/);
-  assert.match(html, /Windows and Linux are not verified yet/);
+  assert.match(html, /macOS supported; Windows trial documented/);
+  assert.match(html, /one conversion\/publication path now works/);
+  assert.match(html, /Complete app journeys remain unqualified/);
+  assert.match(html, /Windows setup notes/);
   assert.match(html, /Feedback from every Sunofriend user is welcome/);
   assert.match(html, /make SKILL\.md and the setup path more portable/);
   assert.match(html, /Send compatibility feedback/);
@@ -227,9 +231,11 @@ test("publishes a canonical developer and agent integration page", async () => {
   assert.match(html, /One skill, not one agent/);
   assert.match(html, /plain-text operational guidance, not a Codex-only/);
   assert.match(html, /Codex, Claude Code, Antigravity/);
-  assert.match(html, /Only a MacBook has been tested so far/);
-  assert.match(html, /Windows\s*and Linux are unverified/);
-  assert.match(html, /SKILL\.md and setup\s*guidance can be made more compatible/);
+  assert.match(html, /macOS supported; native Windows partially verified/);
+  assert.match(html, /native source-lineage lock/);
+  assert.match(html, /complete demo\/create, Studio and TUI journeys remain unqualified/);
+  assert.match(html, /Windows Subsystem for Linux remain unverified/);
+  assert.match(html, /SKILL\.md and setup\s*guidance can improve/);
   assert.match(html, /Install and read the official skill/);
   assert.match(html, /Stop after confirming the skill is available/);
   assert.match(html, /\$skill-installer/);
@@ -276,10 +282,66 @@ test("publishes a canonical developer and agent integration page", async () => {
   );
   assert.match(html, /does not register either specialist/);
   assert.match(html, /there is no public six-role command/);
+  assert.match(html, /two-candidate reference-conditioned/);
+  assert.match(html, /song-providers/);
+  assert.match(html, /TREBLO v3/);
+  assert.match(html, /optional proprietary BYO-key cloud provider/);
+  assert.match(html, /prompt-only generation or source-audio continuation/);
+  assert.match(html, /installing or starting a model service without approval/);
   assert.doesNotMatch(html, /remains\s*blocked and non-executable/);
   assert.match(html, /\/research\/separation\//);
   assert.match(html, /\/research\/vocal-comping\/ — private pilot status and whole-song concept/);
   assert.match(html, /\/research\/remixing\/ — private plan for bounded identity-preserving remix/);
+});
+
+test("publishes reproducible and bounded native Windows setup notes", async () => {
+  const response = await render("/windows/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /NATIVE WINDOWS TRIAL NOTES/);
+  assert.match(html, /PARTIALLY VERIFIED · 19 AUGUST 2026/);
+  assert.match(html, /Windows 11 x64/);
+  assert.match(html, /Sunofriend 0\.4\.0 source/);
+  assert.match(html, /current Windows feature branch/);
+  assert.match(html, /95ca8cf/);
+  assert.match(html, /uv python install 3\.11/);
+  assert.match(html, /\.venv-windows/);
+  assert.match(html, /Basic Pitch 0\.4/);
+  assert.match(html, /TensorFlow 2\.14/);
+  assert.match(html, /OPTIONAL ISOLATED DEMUCS RESEARCH/);
+  assert.match(html, /Demucs 4\.0\.1/);
+  assert.match(html, /--link-mode copy/);
+  assert.match(html, /--segment 7/);
+  assert.match(html, /literal F0 became fragmented random notes/);
+  assert.match(html, /SUNOFRIEND_FLUIDSYNTH/);
+  assert.match(html, /SUNOFRIEND_SF2/);
+  assert.match(html, /SUNOFRIEND_FFMPEG/);
+  assert.match(html, /SUNOFRIEND_FFPROBE/);
+  assert.match(html, /9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe/);
+  assert.match(html, /doctor --require convert/);
+  assert.match(html, /doctor --require preview/);
+  assert.match(html, /source-doctor/);
+  assert.match(html, /Run local ACE-Step song generation/);
+  assert.match(html, /RTX 4080 Laptop GPU/);
+  assert.match(html, /acestep-v15-base/);
+  assert.match(html, /acestep-5Hz-lm-0\.6B/);
+  assert.match(html, /PYTHONUTF8/);
+  assert.match(html, /multipart file/);
+  assert.match(html, /--bpm/);
+  assert.match(html, /--time-signature/);
+  assert.match(html, /omit BPM, key, time signature or duration/);
+  assert.match(html, /requirement_ready/);
+  assert.match(html, /ready: false/);
+  assert.match(html, /No module named/);
+  assert.match(html, /fcntl/);
+  assert.match(html, /POSIX-only/);
+  assert.match(html, /msvcrt/);
+  assert.match(html, /Thirty applicable lineage\/input tests passed/);
+  assert.match(html, /previously failing.*listen.*published MIDI/s);
+  assert.match(html, /resource/);
+  assert.match(html, /Windows Subsystem\s*for Linux has not been tested/);
+  assert.match(html, /supported release route/);
 });
 
 test("publishes four honest public and private separation lanes", async () => {
@@ -484,8 +546,12 @@ test("publishes concise llms.txt discovery guidance", async () => {
   assert.match(text, /^# Sunofriend/m);
   assert.match(text, /skill is not tied to Codex/);
   assert.match(text, /Codex, Claude Code and Antigravity/);
-  assert.match(text, /only been tested on a MacBook so far/);
-  assert.match(text, /Windows and Linux are unverified/);
+  assert.match(text, /macOS remains supported/);
+  assert.match(text, /native Windows 11 x64 trial verified/);
+  assert.match(text, /native source-lineage locking/);
+  assert.match(text, /complete demo\/create, Studio and TUI journeys remain unqualified/);
+  assert.match(text, /Windows Subsystem for Linux are unverified/);
+  assert.match(text, /sunofriend\.com\/windows/);
   assert.match(text, /feedback from every user is welcome/i);
   assert.match(text, /Install the official skill/);
   assert.match(text, /standard ChatGPT conversation/i);
@@ -577,7 +643,14 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(data.product.local_first, true);
   assert.equal(data.product.hosted_conversion_available, false);
   assert.deepEqual(data.platform_testing.verified, ["MacBook running macOS"]);
-  assert.deepEqual(data.platform_testing.unverified, ["Windows", "Linux"]);
+  assert.equal(data.platform_testing.partially_verified[0].platform, "Windows 11 x64");
+  assert.equal(data.platform_testing.partially_verified[0].supported, false);
+  assert.match(data.platform_testing.partially_verified[0].blocked, /fcntl/);
+  assert.deepEqual(data.platform_testing.unverified, [
+    "Linux",
+    "Windows Subsystem for Linux",
+  ]);
+  assert.match(data.platform_testing.support_boundary, /complete application journeys are not requalified/);
   assert.match(data.platform_testing.feedback_requested_from, /Every Sunofriend user/);
   assert.deepEqual(data.agent_entry.example_agents, [
     "Codex",
@@ -1085,7 +1158,7 @@ test("publishes a versioned machine-readable capability contract", async () => {
     data.experiments.finished_mix_separation.review_schema,
     "sunofriend.experimental-separation-review.v3",
   );
-  assert.equal(data.interface_contract_version, "2026-08-16.1");
+  assert.equal(data.interface_contract_version, "2026-08-19.2");
   assert.equal(
     data.experiments.vocal_comping.programme,
     "semantic_musical_state_audio_native",
@@ -1102,6 +1175,96 @@ test("publishes a versioned machine-readable capability contract", async () => {
   assert.equal(remixing.current_effects.automatic_remix_generation, false);
   assert.equal(remixing.current_effects.learned_conditioning, false);
   assert.equal(remixing.human_authority.includes("human listening decides"), true);
+  assert.equal(data.song_generation.generation_modes.remix.backend_task, "cover");
+  assert.equal(data.song_generation.generation_modes.remix.quality_verified, false);
+  assert.equal(data.song_generation.generation_modes.remix.advances, false);
+  assert.equal(
+    data.song_generation.input_precedence,
+    "reference_primary_lyrics_and_style_secondary",
+  );
+  assert.equal(
+    data.song_generation
+      .matched_no_reference_counterfactual_required_for_provider_qualification,
+    true,
+  );
+  assert.equal(
+    data.song_generation.status,
+    "ace_step_and_vocal_scaffold_rejected_bass_midi_accepted_grouped_other_register_bank_awaiting_owner_review",
+  );
+  assert.equal(
+    data.song_generation.source_scaffold_status,
+    "implemented_but_first_private_vocal_derived_control_rejected",
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.status,
+    "vocal_suppression_owner_approved_upper_grouped_other_midi_rejected_bass_midi_accepted_register_bank_awaiting_owner_review",
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.role_midi_controls
+      .human_reviewed,
+    "partial",
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.role_midi_controls
+      .register_bank.lowest_line_observed_notes,
+    64,
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.role_midi_controls
+      .register_bank.human_reviewed,
+    false,
+  );
+  assert.equal(
+    data.song_generation.accompaniment_first_experiment.source_sum_correlation,
+    0.993192,
+  );
+  assert.deepEqual(data.song_generation.source_scaffold_primary_roles, [
+    "lead_melody",
+    "source_timed_beat_accents",
+  ]);
+  assert.equal(
+    data.song_generation.evaluated_providers[0]
+      .base_track_level_completion_quality_verified,
+    false,
+  );
+  assert.equal(
+    data.song_generation.evaluated_providers[0]
+      .turbo_native_remix_human_evaluation,
+    "rejected_in_tune_and_more_musical_but_no_source_melody_or_rhythm_connection",
+  );
+  assert.equal(
+    data.song_generation.evaluated_providers[0].turbo_style_strength_effective,
+    false,
+  );
+  assert.equal(data.song_generation.reference_transport, "multipart_audio_upload");
+  assert.equal(data.song_generation.public_command_available, true);
+  assert.equal(
+    data.song_generation.provider_inventory_command,
+    "sunofriend song-providers",
+  );
+  assert.equal(data.song_generation.provider_inventory_uses_network, false);
+  assert.equal(data.song_generation.default_is_read_only_plan, true);
+  assert.equal(data.song_generation.candidate_count, 2);
+  assert.deepEqual(data.song_generation.independent_strength_controls, [
+    "reference_strength",
+    "style_description_strength",
+  ]);
+  assert.deepEqual(data.song_generation.backends, ["ace-step-api"]);
+  assert.equal(data.song_generation.backend_service_started_implicitly, false);
+  assert.equal(data.song_generation.backend_service_installed_implicitly, false);
+  assert.equal(data.song_generation.candidate_selected_automatically, false);
+  assert.equal(data.song_generation.creates_stems, false);
+  assert.equal(data.song_generation.creates_midi, false);
+  const treblo = data.song_generation.evaluated_providers.find(
+    (provider) => provider.id === "treblo-v3-api",
+  );
+  assert.equal(treblo.reference_conditioned_full_song_registered, false);
+  assert.equal(treblo.prompt_and_lyrics_generation, true);
+  assert.equal(treblo.annotated_lyrics_semantics_verified, false);
+  assert.equal(treblo.reference_audio_conditioning, false);
+  assert.equal(treblo.source_audio_extension_only, true);
+  assert.equal(treblo.remote_result_retention_hours, 168);
+  assert.equal(treblo.explicit_cloud_consent_required, true);
   const separation = data.experiments.finished_mix_separation;
   assert.equal(separation.public_six_role_available, false);
   assert.equal(data.boundaries.public_six_role_separation, false);
@@ -1471,6 +1634,7 @@ test("keeps public discovery and the AWS boundary explicit", async () => {
   assert.match(robots, /Allow: \//);
   assert.match(robots, /sunofriend\.com\/sitemap\.xml/);
   assert.match(sitemap, /sunofriend\.com\/for-agents/);
+  assert.match(sitemap, /sunofriend\.com\/windows/);
   assert.match(sitemap, /sunofriend\.com\/research\/separation/);
   assert.match(sitemap, /sunofriend\.com\/research\/vocal-comping/);
   assert.match(sitemap, /sunofriend\.com\/research\/remixing/);

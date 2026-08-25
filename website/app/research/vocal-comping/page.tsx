@@ -253,7 +253,7 @@ export default function VocalCompingResearch() {
           <span className="card-number">NEXT RESEARCH INCREMENT</span>
           <h2>Go audio-native, then earn assembly.</h2>
           <p>
-            The next useful step is the programme's Cycle 1: a minimum no-MIDI
+            The next useful step is the programme&apos;s Cycle 1: a minimum no-MIDI
             phrase decision with an exact source map, one or more fresh browser
             pickups and a playable replacement phrase against the backing—then
             the musical and workflow feedback, before adding analysis. In

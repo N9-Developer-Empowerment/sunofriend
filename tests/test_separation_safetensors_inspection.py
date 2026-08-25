@@ -16,6 +16,12 @@ from sunofriend._separation_safetensors_inspection import (
 )
 
 
+pytestmark = pytest.mark.skipif(
+    os.name == "nt",
+    reason="descriptor-pinned Safetensors inspection requires POSIX fcntl and pread",
+)
+
+
 def _container(header: dict[str, object], data: bytes) -> bytes:
     encoded = json.dumps(header, separators=(",", ":")).encode()
     return struct.pack("<Q", len(encoded)) + encoded + data
