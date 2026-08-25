@@ -197,6 +197,16 @@ def validate_synthetic_remix_training_snapshot(
     rows = document.get("examples")
     if not isinstance(rows, list) or not rows:
         raise ValueError("synthetic remix snapshot needs examples")
+    for row in rows:
+        _validate_synthetic_snapshot_row(row)
+    _validate_disjoint_examples(rows)
+    _validate_synthetic_snapshot_boundaries(document)
+    return document
+
+
+def _validate_synthetic_snapshot_row(row: Any) -> None:
+    """Validate one synthetic pair and both immutable variant projections."""
+
     expected_keys = {
         "pair_id",
         "composition_id",
@@ -209,38 +219,39 @@ def validate_synthetic_remix_training_snapshot(
         "outcome",
         "label_authority",
     }
-    for row in rows:
-        if not isinstance(row, Mapping) or set(row) != expected_keys:
-            raise ValueError("synthetic remix example fields changed")
-        for key in ("pair_id", "composition_id", "group_id", "variant_family_id"):
-            _safe_id(row.get(key), key)
-        _sha(row.get("musical_state_sha256"), "musical state")
-        if row.get("split") not in _SPLITS or row.get("outcome") not in {
-            "left",
-            "right",
-        }:
-            raise ValueError("synthetic remix split or outcome changed")
-        if row.get("label_authority") != "synthetic_fixture_only":
-            raise ValueError("synthetic fixture cannot claim owner label authority")
-        for side_name in ("left", "right"):
-            side = row.get(side_name)
-            if not isinstance(side, Mapping) or set(side) != {
-                "variant_id",
-                "variant_evidence_sha256",
-                "operation_features",
-            }:
-                raise ValueError("synthetic remix side fields changed")
-            _safe_id(side.get("variant_id"), "variant_id")
-            _sha(side.get("variant_evidence_sha256"), "variant evidence")
-            _finite_vector(
-                side.get("operation_features"), len(_OPERATION_FEATURE_NAMES)
-            )
-        if (
-            row["left"]["variant_evidence_sha256"]
-            == row["right"]["variant_evidence_sha256"]
-        ):
-            raise ValueError("synthetic pair requires two variants")
-    _validate_disjoint_examples(rows)
+    if not isinstance(row, Mapping) or set(row) != expected_keys:
+        raise ValueError("synthetic remix example fields changed")
+    for key in ("pair_id", "composition_id", "group_id", "variant_family_id"):
+        _safe_id(row.get(key), key)
+    _sha(row.get("musical_state_sha256"), "musical state")
+    if row.get("split") not in _SPLITS or row.get("outcome") not in {"left", "right"}:
+        raise ValueError("synthetic remix split or outcome changed")
+    if row.get("label_authority") != "synthetic_fixture_only":
+        raise ValueError("synthetic fixture cannot claim owner label authority")
+    left = _validate_synthetic_snapshot_side(row.get("left"))
+    right = _validate_synthetic_snapshot_side(row.get("right"))
+    if left["variant_evidence_sha256"] == right["variant_evidence_sha256"]:
+        raise ValueError("synthetic pair requires two variants")
+
+
+def _validate_synthetic_snapshot_side(value: Any) -> Mapping[str, Any]:
+    """Validate one path-free synthetic variant projection."""
+
+    if not isinstance(value, Mapping) or set(value) != {
+        "variant_id",
+        "variant_evidence_sha256",
+        "operation_features",
+    }:
+        raise ValueError("synthetic remix side fields changed")
+    _safe_id(value.get("variant_id"), "variant_id")
+    _sha(value.get("variant_evidence_sha256"), "variant evidence")
+    _finite_vector(value.get("operation_features"), len(_OPERATION_FEATURE_NAMES))
+    return value
+
+
+def _validate_synthetic_snapshot_boundaries(document: Mapping[str, Any]) -> None:
+    """Keep synthetic privacy and all product/training authority absent."""
+
     if (
         document.get("split_policy")
         != {
@@ -264,7 +275,6 @@ def validate_synthetic_remix_training_snapshot(
         }
     ):
         raise ValueError("synthetic snapshot boundary changed")
-    return document
 
 
 def write_frozen_feature_vector(
@@ -801,15 +811,45 @@ def validate_remix_ranker_training_result(
         "document_sha256",
     }:
         raise ValueError("remix ranker result fields changed")
+    _validate_ranker_result_binding(
+        document,
+        checked=checked,
+        snapshot=checked_snapshot,
+        manifest=manifest,
+        kind=kind,
+    )
+    resume_difference = _validate_ranker_result_checkpoints(document, checked=checked)
+    metrics = _validate_ranker_result_predictions(document)
+    _validate_ranker_result_controls(
+        document, metrics=metrics, resume_difference=resume_difference
+    )
+    _validate_ranker_result_receipt(document, checked=checked)
+    _validate_ranker_result_boundaries(document)
+    return document
+
+
+def _validate_ranker_result_binding(
+    document: Mapping[str, Any],
+    *,
+    checked: Mapping[str, Any],
+    snapshot: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    kind: str,
+) -> None:
     if (
         kind != "synthetic"
         or document.get("status") != "complete_synthetic_training_pipeline_unpromoted"
         or document.get("request_sha256") != checked["document_sha256"]
-        or document.get("snapshot_sha256") != checked_snapshot["document_sha256"]
+        or document.get("snapshot_sha256") != snapshot["document_sha256"]
         or document.get("feature_manifest_sha256") != manifest["document_sha256"]
         or document.get("repository_commit") != checked["repository_commit"]
     ):
         raise ValueError("remix ranker result binding or status changed")
+
+
+def _validate_ranker_result_checkpoints(
+    document: Mapping[str, Any], *, checked: Mapping[str, Any]
+) -> float:
     checkpoints = document.get("checkpoints")
     if not isinstance(checkpoints, Mapping) or set(checkpoints) != {
         "resume_checkpoint",
@@ -835,6 +875,12 @@ def validate_remix_ranker_training_result(
             checkpoints["combined_resumed_weights"],
         )
     )
+    return resume_difference
+
+
+def _validate_ranker_result_predictions(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
     predictions = document.get("predictions")
     expected_names = {
         "constant_majority",
@@ -854,6 +900,15 @@ def validate_remix_ranker_training_result(
         _validate_prediction_rows(predictions[name])
         if metrics[name] != _prediction_metrics(predictions[name]):
             raise ValueError("remix ranker metrics changed from predictions")
+    return metrics
+
+
+def _validate_ranker_result_controls(
+    document: Mapping[str, Any],
+    *,
+    metrics: Mapping[str, Any],
+    resume_difference: float,
+) -> None:
     controls = document.get("controls")
     if (
         not isinstance(controls, Mapping)
@@ -873,6 +928,11 @@ def validate_remix_ranker_training_result(
         or controls["maximum_left_right_swap_probability_error"] > 1e-12
     ):
         raise ValueError("remix ranker control evidence changed")
+
+
+def _validate_ranker_result_receipt(
+    document: Mapping[str, Any], *, checked: Mapping[str, Any]
+) -> None:
     receipt = document.get("resource_receipt")
     if (
         not isinstance(receipt, Mapping)
@@ -899,6 +959,9 @@ def validate_remix_ranker_training_result(
         > checked["limits"]["maximum_feature_bytes"]
     ):
         raise ValueError("remix ranker resource or offline receipt changed")
+
+
+def _validate_ranker_result_boundaries(document: Mapping[str, Any]) -> None:
     if document.get("privacy") != {
         "synthetic_only": True,
         "owner_labels_used": False,
@@ -912,7 +975,6 @@ def validate_remix_ranker_training_result(
         "remix_rendered": False,
     }:
         raise ValueError("remix ranker privacy or product authority changed")
-    return document
 
 
 def _validate_snapshot(value: Mapping[str, Any]) -> tuple[dict[str, Any], str]:
@@ -1044,56 +1106,73 @@ def _validate_feature_rows(
     rows = []
     seen = set()
     for raw in values:
-        if not isinstance(raw, Mapping) or set(raw) != {
-            "variant_evidence_sha256",
-            "artifact",
-            "shape",
-            "dtype",
-            "finite",
-        }:
-            raise ValueError("frozen feature row fields changed")
-        variant_hash = _sha(raw.get("variant_evidence_sha256"), "variant evidence")
+        row = _feature_row(raw)
+        variant_hash = _sha(row.get("variant_evidence_sha256"), "variant evidence")
         if variant_hash in seen:
             raise ValueError("frozen feature manifest repeats a variant")
         seen.add(variant_hash)
-        artifact = raw.get("artifact")
-        if (
-            not isinstance(artifact, Mapping)
-            or set(artifact) != {"filename", "bytes", "sha256"}
-            or not _SAFE_FILENAME.fullmatch(str(artifact.get("filename", "")))
-            or isinstance(artifact.get("bytes"), bool)
-            or not isinstance(artifact.get("bytes"), int)
-            or artifact["bytes"] <= 0
-        ):
-            raise ValueError("frozen feature artifact record changed")
-        _sha(artifact.get("sha256"), "feature artifact")
-        path = root / artifact["filename"]
-        if path.is_symlink() or not path.is_file() or path.parent.resolve() != root:
-            raise ValueError("frozen feature artifact escaped exact root")
-        data = path.read_bytes()
-        if (
-            len(data) != artifact["bytes"]
-            or hashlib.sha256(data).hexdigest() != artifact["sha256"]
-        ):
-            raise ValueError("frozen feature artifact hash or size changed")
+        data = _feature_artifact_bytes(row["artifact"], root)
         vector = _load_feature_document(data, variant_hash, dimension)
         if (
-            raw.get("shape") != [dimension]
-            or raw.get("dtype") != "float64-json-number"
-            or raw.get("finite") is not True
+            row.get("shape") != [dimension]
+            or row.get("dtype") != "float64-json-number"
+            or row.get("finite") is not True
             or len(vector) != dimension
         ):
             raise ValueError("frozen feature row shape, dtype or finite gate changed")
         rows.append(
             {
                 "variant_evidence_sha256": variant_hash,
-                "artifact": dict(artifact),
+                "artifact": dict(row["artifact"]),
                 "shape": [dimension],
                 "dtype": "float64-json-number",
                 "finite": True,
             }
         )
     return rows
+
+
+def _feature_row(value: Any) -> Mapping[str, Any]:
+    """Validate one feature-manifest row shape."""
+
+    if not isinstance(value, Mapping) or set(value) != {
+        "variant_evidence_sha256",
+        "artifact",
+        "shape",
+        "dtype",
+        "finite",
+    }:
+        raise ValueError("frozen feature row fields changed")
+    return value
+
+
+def _feature_artifact_bytes(artifact: Any, root: Path) -> bytes:
+    """Open one safe, exact, hash-bound frozen feature artifact."""
+
+    if (
+        not isinstance(artifact, Mapping)
+        or set(artifact) != {"filename", "bytes", "sha256"}
+        or not _SAFE_FILENAME.fullmatch(str(artifact.get("filename", "")))
+        or isinstance(artifact.get("bytes"), bool)
+        or not isinstance(artifact.get("bytes"), int)
+        or artifact["bytes"] <= 0
+    ):
+        raise ValueError("frozen feature artifact record changed")
+    _sha(artifact.get("sha256"), "feature artifact")
+    file_path = root / artifact["filename"]
+    if (
+        file_path.is_symlink()
+        or not file_path.is_file()
+        or file_path.parent.resolve() != root
+    ):
+        raise ValueError("frozen feature artifact escaped exact root")
+    data = file_path.read_bytes()
+    if (
+        len(data) != artifact["bytes"]
+        or hashlib.sha256(data).hexdigest() != artifact["sha256"]
+    ):
+        raise ValueError("frozen feature artifact hash or size changed")
+    return data
 
 
 def _load_feature_document(

@@ -302,30 +302,36 @@ def _parse_and_validate_report(raw: bytes) -> Mapping[str, Any]:
     if not isinstance(installs, list) or len(installs) != len(_CANDIDATE_WHEELS):
         raise ValueError("resolver report package roster changed")
     for observed, expected in zip(installs, _CANDIDATE_WHEELS):
-        if not isinstance(observed, Mapping):
-            raise ValueError("resolver report package row changed")
-        metadata = observed.get("metadata")
-        download = observed.get("download_info")
-        if not isinstance(metadata, Mapping) or not isinstance(download, Mapping):
-            raise ValueError("resolver report package metadata changed")
-        name, version, filename, _bytes, sha256, requested = expected
-        observed_name = str(metadata.get("name") or "").lower().replace("_", "-")
-        observed_filename = unquote(
-            urlsplit(str(download.get("url") or "")).path.rsplit("/", 1)[-1]
-        )
-        archive = download.get("archive_info")
-        hashes = archive.get("hashes") if isinstance(archive, Mapping) else None
-        observed_sha = hashes.get("sha256") if isinstance(hashes, Mapping) else None
-        if (
-            observed_name != name
-            or metadata.get("version") != version
-            or observed_filename != filename
-            or observed_sha != sha256
-            or observed.get("requested") is not requested
-            or observed.get("is_yanked") is not False
-        ):
-            raise ValueError("resolver report package identity changed")
+        _validate_report_package(observed, expected)
     return report
+
+
+def _validate_report_package(observed: Any, expected: tuple[Any, ...]) -> None:
+    """Validate one candidate wheel's exact index identity and selection flags."""
+
+    if not isinstance(observed, Mapping):
+        raise ValueError("resolver report package row changed")
+    metadata = observed.get("metadata")
+    download = observed.get("download_info")
+    if not isinstance(metadata, Mapping) or not isinstance(download, Mapping):
+        raise ValueError("resolver report package metadata changed")
+    name, version, filename, _bytes, sha256, requested = expected
+    observed_name = str(metadata.get("name") or "").lower().replace("_", "-")
+    observed_filename = unquote(
+        urlsplit(str(download.get("url") or "")).path.rsplit("/", 1)[-1]
+    )
+    archive = download.get("archive_info")
+    hashes = archive.get("hashes") if isinstance(archive, Mapping) else None
+    observed_sha = hashes.get("sha256") if isinstance(hashes, Mapping) else None
+    if (
+        observed_name != name
+        or metadata.get("version") != version
+        or observed_filename != filename
+        or observed_sha != sha256
+        or observed.get("requested") is not requested
+        or observed.get("is_yanked") is not False
+    ):
+        raise ValueError("resolver report package identity changed")
 
 
 def _resolution_values(

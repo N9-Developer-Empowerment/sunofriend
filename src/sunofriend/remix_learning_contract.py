@@ -245,6 +245,17 @@ def validate_remix_controlled_variant_set(
     owner_registry = _validate_registry_structure(registry)
     identity = _validate_identity_structure(identity_state)
     document = _verified_document(variant_set, REMIX_VARIANT_SET_SCHEMA, "variant set")
+    _validate_variant_set_document(document)
+    _validate_variant_set_binding(document, owner_registry, identity)
+    _validate_variant_set_family(document, identity)
+    _validate_variant_set_authority(document)
+    _reject_private_fields_and_paths(document)
+    return document
+
+
+def _validate_variant_set_document(document: Mapping[str, Any]) -> None:
+    """Own the exact controlled-variant top-level schema and status."""
+
     expected_keys = {
         "schema",
         "status",
@@ -269,6 +280,15 @@ def validate_remix_controlled_variant_set(
     ):
         raise ValueError("controlled variant-set fields or status changed")
     _safe_id(document.get("variant_set_id"), "variant_set_id")
+
+
+def _validate_variant_set_binding(
+    document: Mapping[str, Any],
+    owner_registry: Mapping[str, Any],
+    identity: Mapping[str, Any],
+) -> None:
+    """Bind the set to owner registry, state identity and source control."""
+
     if document.get("registry_sha256") != owner_registry["document_sha256"]:
         raise ValueError("variant set registry evidence changed")
     if (
@@ -287,6 +307,13 @@ def validate_remix_controlled_variant_set(
         != identity["binding"]["musical_state_sha256"]
     ):
         raise ValueError("variant set musical-state evidence changed")
+
+
+def _validate_variant_set_family(
+    document: Mapping[str, Any], identity: Mapping[str, Any]
+) -> None:
+    """Validate the one-variable family and its request/result evidence rows."""
+
     family = _mapping(document.get("variant_family"), "variant family")
     if set(family) != {"variant_family_id", "variable", "all_other_factors_fixed"}:
         raise ValueError("variant family fields changed")
@@ -299,6 +326,11 @@ def validate_remix_controlled_variant_set(
     rows = _variant_rows(document.get("variants", []), identity)
     if rows != document.get("variants"):
         raise ValueError("variant request/result evidence changed")
+
+
+def _validate_variant_set_authority(document: Mapping[str, Any]) -> None:
+    """Keep selection, training and product authority absent."""
+
     if document.get("method_natures") != ["D"] or document.get("authority") != {
         "automatic_preference": False,
         "training_label_created": False,
@@ -313,8 +345,6 @@ def validate_remix_controlled_variant_set(
         "model_weights_changed": False,
     }:
         raise ValueError("variant set effects changed")
-    _reject_private_fields_and_paths(document)
-    return document
 
 
 def create_remix_pairwise_label(
@@ -1014,6 +1044,13 @@ def _pairwise_values(
         raise ValueError("unsupported remix pairwise outcome")
     if left_identity not in _IDENTITY or right_identity not in _IDENTITY:
         raise ValueError("unsupported identity relationship")
+    _pairwise_reason_values(reasons)
+    _pairwise_reason_relationship(outcome, reasons)
+
+
+def _pairwise_reason_values(reasons: Sequence[str]) -> None:
+    """Validate the bounded, distinct remix reason vocabulary."""
+
     if (
         not isinstance(reasons, Sequence)
         or isinstance(reasons, (str, bytes))
@@ -1022,6 +1059,11 @@ def _pairwise_values(
         or any(reason not in _REASONS for reason in reasons)
     ):
         raise ValueError("remix pairwise reason codes changed")
+
+
+def _pairwise_reason_relationship(outcome: str, reasons: Sequence[str]) -> None:
+    """Require special outcomes to retain their explanatory reason."""
+
     if outcome == "cannot_tell" and "unable_to_compare" not in reasons:
         raise ValueError("cannot_tell requires unable_to_compare")
     if outcome == "neither" and "both_unusable" not in reasons:

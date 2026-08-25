@@ -267,66 +267,7 @@ def _validate_snapshot_rows(rows: Sequence[Mapping[str, Any]]) -> None:
     hashes: set[str] = set()
     pairs: set[tuple[str, str, str, frozenset[str]]] = set()
     for row in rows:
-        if not isinstance(row, Mapping) or set(row) != expected:
-            raise ValueError("training snapshot label row fields changed")
-        if row["label_schema"] != VOCAL_PAIRWISE_LABEL_SCHEMA:
-            raise ValueError("training snapshot contains a non-pairwise label")
-        label = validate_vocal_pairwise_label(row["explicit_label"])
-        label_hash = _sha256(row["label_document_sha256"], "snapshot label")
-        if label_hash != label["document_sha256"]:
-            raise ValueError(
-                "snapshot label projection does not bind its explicit label"
-            )
-        expected_projection = {
-            "label_schema": VOCAL_PAIRWISE_LABEL_SCHEMA,
-            "label_document_sha256": label["document_sha256"],
-            "musical_state_sha256": label["binding"]["musical_state_sha256"],
-            "phrase_id": label["phrase"]["phrase_id"],
-            "phrase_sha256": label["phrase"]["phrase_sha256"],
-            "left_audio_sha256": label["left"]["audio_sha256"],
-            "right_audio_sha256": label["right"]["audio_sha256"],
-            "outcome": label["outcome"],
-            "reason_codes": label["reason_codes"],
-        }
-        if any(row[key] != value for key, value in expected_projection.items()):
-            raise ValueError("snapshot row projection changed from its explicit label")
-        for key in (
-            "musical_state_sha256",
-            "phrase_sha256",
-            "left_audio_sha256",
-            "right_audio_sha256",
-        ):
-            _sha256(row[key], key)
-        for key in ("phrase_id", "composition_id", "group_id"):
-            if not _SAFE_ID.fullmatch(str(row[key])):
-                raise ValueError(f"snapshot {key} must be path-free")
-        if row["split"] not in SPLITS:
-            raise ValueError("training split changed")
-        if row["outcome"] not in {
-            "left",
-            "right",
-            "equivalent",
-            "neither",
-            "cannot_tell",
-        }:
-            raise ValueError("training snapshot outcome changed")
-        reasons = row["reason_codes"]
-        if (
-            not isinstance(reasons, list)
-            or not 1 <= len(reasons) <= 4
-            or len(reasons) != len(set(reasons))
-            or any(reason not in PAIRWISE_REASON_CODES for reason in reasons)
-        ):
-            raise ValueError("training snapshot reason codes changed")
-        if row["outcome"] == "cannot_tell" and "unable_to_compare" not in reasons:
-            raise ValueError("cannot_tell snapshot row requires unable_to_compare")
-        if row["outcome"] == "neither" and "no_usable_attempt" not in reasons:
-            raise ValueError("neither snapshot row requires no_usable_attempt")
-        if row["outcome"] not in {"cannot_tell", "neither"} and {
-            "unable_to_compare",
-            "no_usable_attempt",
-        }.intersection(reasons):
-            raise ValueError("snapshot reason code does not match outcome")
+        label_hash = _validate_snapshot_row(row, expected=expected)
         if label_hash in hashes:
             raise ValueError("training snapshot duplicates a label")
         hashes.add(label_hash)
@@ -344,6 +285,94 @@ def _validate_snapshot_rows(rows: Sequence[Mapping[str, Any]]) -> None:
         groups[row["group_id"]].add(split)
         states[row["musical_state_sha256"]].add(split)
         group_compositions[row["group_id"]].add(row["composition_id"])
+    _validate_snapshot_split_dimensions(
+        compositions=compositions,
+        groups=groups,
+        states=states,
+        group_compositions=group_compositions,
+    )
+
+
+def _validate_snapshot_row(row: Mapping[str, Any], *, expected: set[str]) -> str:
+    if not isinstance(row, Mapping) or set(row) != expected:
+        raise ValueError("training snapshot label row fields changed")
+    if row["label_schema"] != VOCAL_PAIRWISE_LABEL_SCHEMA:
+        raise ValueError("training snapshot contains a non-pairwise label")
+    label = validate_vocal_pairwise_label(row["explicit_label"])
+    label_hash = _sha256(row["label_document_sha256"], "snapshot label")
+    if label_hash != label["document_sha256"]:
+        raise ValueError("snapshot label projection does not bind its explicit label")
+    projection = {
+        "label_schema": VOCAL_PAIRWISE_LABEL_SCHEMA,
+        "label_document_sha256": label["document_sha256"],
+        "musical_state_sha256": label["binding"]["musical_state_sha256"],
+        "phrase_id": label["phrase"]["phrase_id"],
+        "phrase_sha256": label["phrase"]["phrase_sha256"],
+        "left_audio_sha256": label["left"]["audio_sha256"],
+        "right_audio_sha256": label["right"]["audio_sha256"],
+        "outcome": label["outcome"],
+        "reason_codes": label["reason_codes"],
+    }
+    if any(row[key] != value for key, value in projection.items()):
+        raise ValueError("snapshot row projection changed from its explicit label")
+    for key in (
+        "musical_state_sha256",
+        "phrase_sha256",
+        "left_audio_sha256",
+        "right_audio_sha256",
+    ):
+        _sha256(row[key], key)
+    for key in ("phrase_id", "composition_id", "group_id"):
+        if not _SAFE_ID.fullmatch(str(row[key])):
+            raise ValueError(f"snapshot {key} must be path-free")
+    _validate_snapshot_outcome(row)
+    return label_hash
+
+
+def _validate_snapshot_outcome(row: Mapping[str, Any]) -> None:
+    if row["split"] not in SPLITS:
+        raise ValueError("training split changed")
+    if row["outcome"] not in {"left", "right", "equivalent", "neither", "cannot_tell"}:
+        raise ValueError("training snapshot outcome changed")
+    reasons = _snapshot_reason_codes(row["reason_codes"])
+    _validate_snapshot_reason_relationship(row["outcome"], reasons)
+
+
+def _snapshot_reason_codes(value: Any) -> list[str]:
+    """Validate the bounded explicit reason vocabulary retained for training."""
+
+    reasons = value
+    if (
+        not isinstance(reasons, list)
+        or not 1 <= len(reasons) <= 4
+        or len(reasons) != len(set(reasons))
+        or any(reason not in PAIRWISE_REASON_CODES for reason in reasons)
+    ):
+        raise ValueError("training snapshot reason codes changed")
+    return reasons
+
+
+def _validate_snapshot_reason_relationship(outcome: str, reasons: list[str]) -> None:
+    """Keep special reason codes consistent with their explicit outcome."""
+
+    if outcome == "cannot_tell" and "unable_to_compare" not in reasons:
+        raise ValueError("cannot_tell snapshot row requires unable_to_compare")
+    if outcome == "neither" and "no_usable_attempt" not in reasons:
+        raise ValueError("neither snapshot row requires no_usable_attempt")
+    if outcome not in {"cannot_tell", "neither"} and {
+        "unable_to_compare",
+        "no_usable_attempt",
+    }.intersection(reasons):
+        raise ValueError("snapshot reason code does not match outcome")
+
+
+def _validate_snapshot_split_dimensions(
+    *,
+    compositions: Mapping[str, set[str]],
+    groups: Mapping[str, set[str]],
+    states: Mapping[str, set[str]],
+    group_compositions: Mapping[str, set[str]],
+) -> None:
     for name, values in (
         ("composition", compositions),
         ("group", groups),

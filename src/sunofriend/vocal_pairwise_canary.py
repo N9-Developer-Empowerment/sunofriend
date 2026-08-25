@@ -260,12 +260,36 @@ def validate_pairwise_ranker_canary_result(
         "document_sha256",
     }:
         raise ValueError("pairwise canary result fields changed")
+    _validate_pairwise_result_binding(document, request=request)
+    metrics = _validate_pairwise_result_metrics(document)
+    _validate_pairwise_result_acceptance(document, metrics=metrics)
+    _validate_pairwise_result_arms(document, metrics=metrics)
+    _validate_pairwise_result_checkpoint(document)
+    _validate_pairwise_result_boundaries(document)
+    expected_fixed_evidence = _recompute_fixed_local_evidence(request)
+    if any(
+        document[key] != expected for key, expected in expected_fixed_evidence.items()
+    ):
+        raise ValueError(
+            "pairwise canary evidence differs from the independently fixed fixture result"
+        )
+    return document
+
+
+def _validate_pairwise_result_binding(
+    document: Mapping[str, Any], *, request: Mapping[str, Any]
+) -> None:
     if document.get("request_document_sha256") != request["document_sha256"]:
         raise ValueError("pairwise canary result does not bind the request")
     if document.get("dataset_sha256") != request["dataset"]["sha256"]:
         raise ValueError("pairwise canary result does not bind the fixture")
     if document.get("method_natures") != ["D", "T"]:
         raise ValueError("pairwise canary result method nature changed")
+
+
+def _validate_pairwise_result_metrics(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
     metrics = document.get("metrics")
     if not isinstance(metrics, Mapping) or any(
         not isinstance(value, (int, float)) or not math.isfinite(float(value))
@@ -281,6 +305,12 @@ def validate_pairwise_ranker_canary_result(
         metrics["clean_heldout_accuracy"]
     ) - float(metrics["shuffled_heldout_accuracy"]):
         raise ValueError("pairwise canary accuracy advantage changed")
+    return metrics
+
+
+def _validate_pairwise_result_acceptance(
+    document: Mapping[str, Any], *, metrics: Mapping[str, Any]
+) -> Mapping[str, Any]:
     acceptance = document.get("acceptance")
     if (
         not isinstance(acceptance, Mapping)
@@ -309,6 +339,12 @@ def validate_pairwise_ranker_canary_result(
     }
     if dict(acceptance) != calculated:
         raise ValueError("pairwise canary acceptance does not match metrics")
+    return acceptance
+
+
+def _validate_pairwise_result_arms(
+    document: Mapping[str, Any], *, metrics: Mapping[str, Any]
+) -> None:
     arms = document.get("arms")
     if not isinstance(arms, list) or [row.get("arm_id") for row in arms] != [
         "clean_uninterrupted",
@@ -324,6 +360,9 @@ def validate_pairwise_ranker_canary_result(
         or arms[2].get("heldout_accuracy") != metrics["shuffled_heldout_accuracy"]
     ):
         raise ValueError("pairwise canary arm metrics changed")
+
+
+def _validate_pairwise_result_checkpoint(document: Mapping[str, Any]) -> None:
     checkpoint = document.get("checkpoint")
     if (
         not isinstance(checkpoint, Mapping)
@@ -344,6 +383,9 @@ def validate_pairwise_ranker_canary_result(
         )
     ):
         raise ValueError("pairwise canary checkpoint/resume identity changed")
+
+
+def _validate_pairwise_result_boundaries(document: Mapping[str, Any]) -> None:
     if document.get("privacy") != {
         "audio_used": False,
         "real_labels_used": False,
@@ -360,15 +402,6 @@ def validate_pairwise_ranker_canary_result(
         "vocal_source_selected": False,
     }:
         raise ValueError("pairwise canary authority changed")
-    expected_fixed_evidence = _recompute_fixed_local_evidence(request)
-    if any(
-        document[key] != expected
-        for key, expected in expected_fixed_evidence.items()
-    ):
-        raise ValueError(
-            "pairwise canary evidence differs from the independently fixed fixture result"
-        )
-    return document
 
 
 def _recompute_fixed_local_evidence(request: Mapping[str, Any]) -> dict[str, Any]:

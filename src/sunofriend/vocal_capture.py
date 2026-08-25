@@ -167,6 +167,21 @@ def validate_vocal_capture(
         )
     if document.get("method_natures") != ["D", "H"]:
         raise ValueError("vocal capture must declare deterministic and human work")
+    _validate_capture_binding_and_identity(document, state=state)
+    phrase = _validate_capture_phrase_and_cue(document, state=state)
+    sample_rate, frame_count = _validate_capture_audio(document)
+    _validate_capture_placement(
+        document, phrase=phrase, sample_rate=sample_rate, frame_count=frame_count
+    )
+    _validate_capture_browser_processing(document, sample_rate=sample_rate)
+    _validate_capture_authority(document)
+    _reject_private_or_path_fields(document)
+    return document
+
+
+def _validate_capture_binding_and_identity(
+    document: Mapping[str, Any], *, state: Mapping[str, Any]
+) -> None:
     if document.get("binding") != {
         "musical_state_schema": MUSICAL_STATE_SCHEMA,
         "musical_state_sha256": state["document_sha256"],
@@ -184,6 +199,10 @@ def validate_vocal_capture(
     }:
         raise ValueError("vocal capture identity or bounded scope changed")
 
+
+def _validate_capture_phrase_and_cue(
+    document: Mapping[str, Any], *, state: Mapping[str, Any]
+) -> Mapping[str, Any]:
     if state.get("structure", {}).get("review_status") != "reviewed":
         raise ValueError("vocal capture requires a reviewed phrase timeline")
     phrase_row = _mapping(document.get("phrase"), "phrase")
@@ -202,7 +221,10 @@ def validate_vocal_capture(
     _sha256(cue.get("audio_sha256"), "cue asset")
     if cue.get("authority") != "explicit_hash_bound_recording_cue_only":
         raise ValueError("vocal capture cue authority is invalid")
+    return phrase
 
+
+def _validate_capture_audio(document: Mapping[str, Any]) -> tuple[int, int]:
     audio = _mapping(document.get("audio"), "audio")
     if set(audio) != {
         "sha256",
@@ -226,7 +248,16 @@ def validate_vocal_capture(
         raise ValueError("vocal capture audio must be mono WAV PCM_24")
     if audio_bytes != 44 + frame_count * 3:
         raise ValueError("vocal capture bytes must match deterministic PCM24 geometry")
+    return sample_rate, frame_count
 
+
+def _validate_capture_placement(
+    document: Mapping[str, Any],
+    *,
+    phrase: Mapping[str, Any],
+    sample_rate: int,
+    frame_count: int,
+) -> None:
     placement = _mapping(document.get("placement"), "placement")
     if set(placement) != {
         "source_phrase_start_frame",
@@ -305,6 +336,10 @@ def validate_vocal_capture(
     ) or destination_end_frame != round(destination_end * sample_rate):
         raise ValueError("vocal capture destination frame geometry is inconsistent")
 
+
+def _validate_capture_browser_processing(
+    document: Mapping[str, Any], *, sample_rate: int
+) -> None:
     browser = _mapping(document.get("browser_processing"), "browser processing")
     requested = _mapping(browser.get("requested"), "requested processing")
     expected_requested = {
@@ -328,6 +363,8 @@ def validate_vocal_capture(
     }:
         raise ValueError("browser capture encoding declaration changed")
 
+
+def _validate_capture_authority(document: Mapping[str, Any]) -> None:
     if document.get("authority") != {
         "review_status": "unreviewed",
         "selection_authority": "none",
@@ -339,8 +376,6 @@ def validate_vocal_capture(
         raise ValueError("vocal capture cannot select, render, correct or train")
     if document.get("network_used") is not False:
         raise ValueError("vocal capture must record network_used=false")
-    _reject_private_or_path_fields(document)
-    return document
 
 
 def _phrase(state: Mapping[str, Any], phrase_id: str) -> Mapping[str, Any]:

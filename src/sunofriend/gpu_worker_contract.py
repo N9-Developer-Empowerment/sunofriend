@@ -156,17 +156,24 @@ def validate_gpu_worker_result(
     _verify_document_hash(document)
     _validate_result_fields(document)
     request_document = validate_gpu_worker_request(request)
-    if document.get("request_document_sha256") != request_document.get(
-        "document_sha256"
-    ):
+    returned_outputs = _validate_result_request_binding(document, request_document)
+    _validate_result_resource_ceiling(document, request_document, returned_outputs)
+    _validate_result_training_protocol(document, request_document, returned_outputs)
+    return document
+
+
+def _validate_result_request_binding(
+    document: Mapping[str, Any], request: Mapping[str, Any]
+) -> dict[str, Mapping[str, Any]]:
+    if document.get("request_document_sha256") != request.get("document_sha256"):
         raise ValueError("GPU result does not bind the supplied request")
-    if document.get("repository_commit") != request_document.get("repository_commit"):
+    if document.get("repository_commit") != request.get("repository_commit"):
         raise ValueError("GPU result repository commit does not match request")
     for key in ("experiment_id", "task_kind"):
-        if document.get(key) != request_document.get(key):
+        if document.get(key) != request.get(key):
             raise ValueError(f"GPU result {key} does not match request")
     requested_outputs = {
-        str(row["output_id"]): row for row in request_document["expected_outputs"]
+        str(row["output_id"]): row for row in request["expected_outputs"]
     }
     returned_outputs = {str(row["output_id"]): row for row in document["outputs"]}
     if not returned_outputs.keys() <= requested_outputs.keys():
@@ -187,7 +194,15 @@ def validate_gpu_worker_result(
             "shape"
         ):
             raise ValueError(f"GPU result output shape changed: {output_id}")
-    ceiling = request_document["resource_ceiling"]
+    return returned_outputs
+
+
+def _validate_result_resource_ceiling(
+    document: Mapping[str, Any],
+    request: Mapping[str, Any],
+    returned_outputs: Mapping[str, Mapping[str, Any]],
+) -> None:
+    ceiling = request["resource_ceiling"]
     if _finite_number(document["timings"].get("wall_seconds"), "wall_seconds") > int(
         ceiling["maximum_wall_seconds"]
     ):
@@ -205,7 +220,7 @@ def validate_gpu_worker_result(
     ):
         raise ValueError("GPU result exceeded maximum output bytes")
     reported_output_bytes = document["resources"].get("output_bytes")
-    if request_document.get("experiment_id") == _C0_EXPERIMENT_ID:
+    if request.get("experiment_id") == _C0_EXPERIMENT_ID:
         if isinstance(reported_output_bytes, bool) or int(
             reported_output_bytes if reported_output_bytes is not None else -1
         ) != sum(int(row["bytes"]) for row in returned_outputs.values()):
@@ -214,27 +229,33 @@ def validate_gpu_worker_result(
         ceiling["maximum_output_bytes"]
     ):
         raise ValueError("GPU result exceeded maximum output bytes")
-    training = request_document.get("training")
+
+
+def _validate_result_training_protocol(
+    document: Mapping[str, Any],
+    request: Mapping[str, Any],
+    returned_outputs: Mapping[str, Mapping[str, Any]],
+) -> None:
+    training = request.get("training")
     if training is not None and int(
         document["timings"].get("optimisation_steps", -1)
     ) > int(training["maximum_steps_per_arm"]):
         raise ValueError("GPU result exceeded maximum optimisation steps")
     training_evidence = document.get("training_evidence")
-    if request_document.get("experiment_id") == _C0_EXPERIMENT_ID:
+    if request.get("experiment_id") == _C0_EXPERIMENT_ID:
         if training_evidence is None:
             raise ValueError("C0 result must include training evidence")
         _validate_training_evidence(
             training_evidence,
-            request=request_document,
+            request=request,
             result=document,
         )
-    if request_document.get("task_kind") == "pairwise_vocal_ranker":
+    if request.get("task_kind") == "pairwise_vocal_ranker":
         _validate_offline_pairwise_result_envelope(
             document,
-            request=request_document,
+            request=request,
             returned_outputs=returned_outputs,
         )
-    return document
 
 
 def _validate_offline_pairwise_result_envelope(
@@ -274,6 +295,21 @@ def _validate_offline_pairwise_result_envelope(
 
 
 def _validate_request_fields(document: Mapping[str, Any]) -> None:
+    natures = _validate_request_identity(document)
+    hashes, dataset = _validate_request_assets(document)
+    _validate_request_model(document)
+    _validate_request_windows(document, hashes=hashes, dataset=dataset)
+    _validate_request_outputs(document)
+    _validate_request_training(document, natures=natures)
+    _validate_request_resource_ceiling(document)
+    _validate_request_execution_policy(document, natures=natures)
+    _validate_request_stop_rules(document)
+    if document.get("experiment_id") == _C0_EXPERIMENT_ID:
+        _validate_c0_request(document)
+    _reject_private_or_path_fields(document)
+
+
+def _validate_request_identity(document: Mapping[str, Any]) -> list[str]:
     if document.get("status") != "planned_no_execution":
         raise ValueError("GPU worker request status must be planned_no_execution")
     if not _COMMIT.fullmatch(str(document.get("repository_commit", ""))):
@@ -296,6 +332,12 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
         raise ValueError(
             f"{document.get('task_kind')} must declare {required_nature} work"
         )
+    return natures
+
+
+def _validate_request_assets(
+    document: Mapping[str, Any],
+) -> tuple[list[str], Mapping[str, Any]]:
     hashes = document.get("authorised_asset_hashes")
     if (
         not isinstance(hashes, list)
@@ -317,6 +359,10 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
         raise ValueError("dataset.synthetic must be boolean")
     if int(dataset.get("group_count", 0)) <= 1:
         raise ValueError("dataset.group_count must be greater than one")
+    return hashes, dataset
+
+
+def _validate_request_model(document: Mapping[str, Any]) -> None:
     model = document.get("model")
     if model is not None:
         _require_safe_mapping(model, "model")
@@ -325,6 +371,14 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
         checkpoint = model.get("checkpoint_sha256")
         if checkpoint is not None and not _SHA256.fullmatch(str(checkpoint)):
             raise ValueError("model.checkpoint_sha256 must be a lowercase SHA-256")
+
+
+def _validate_request_windows(
+    document: Mapping[str, Any],
+    *,
+    hashes: Sequence[str],
+    dataset: Mapping[str, Any],
+) -> None:
     windows = document.get("windows")
     if not isinstance(windows, list):
         raise ValueError("GPU request windows must be a list")
@@ -350,6 +404,9 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
     window_ids = [str(row["window_id"]) for row in windows]
     if len(set(window_ids)) != len(window_ids):
         raise ValueError("window IDs must be unique")
+
+
+def _validate_request_outputs(document: Mapping[str, Any]) -> None:
     outputs = document.get("expected_outputs")
     if not isinstance(outputs, list) or not outputs:
         raise ValueError("GPU request requires expected outputs")
@@ -365,6 +422,11 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
             raise ValueError("expected output kind must be safe")
         if not str(row.get("media_type", "")).strip():
             raise ValueError("expected output media_type is required")
+
+
+def _validate_request_training(
+    document: Mapping[str, Any], *, natures: Sequence[str]
+) -> None:
     training = document.get("training")
     if "T" in natures:
         training = _require_safe_mapping(training, "training")
@@ -384,6 +446,9 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
             raise ValueError("training must require a shuffled-label control")
     elif training is not None:
         raise ValueError("non-training request cannot contain training config")
+
+
+def _validate_request_resource_ceiling(document: Mapping[str, Any]) -> None:
     ceiling = _require_safe_mapping(
         document.get("resource_ceiling"), "resource ceiling"
     )
@@ -396,6 +461,11 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
         value = ceiling.get(key, 0)
         if isinstance(value, bool) or int(value) <= 0:
             raise ValueError(f"resource_ceiling.{key} must be positive")
+
+
+def _validate_request_execution_policy(
+    document: Mapping[str, Any], *, natures: Sequence[str]
+) -> None:
     policy = _require_safe_mapping(document.get("execution_policy"), "execution policy")
     if policy.get("network_allowed") is not False:
         raise ValueError("GPU worker network must be disabled")
@@ -410,6 +480,9 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
         raise ValueError(
             "GPU training must declare a deterministic CuBLAS workspace config"
         )
+
+
+def _validate_request_stop_rules(document: Mapping[str, Any]) -> None:
     stop_rules = document.get("stop_rules")
     if (
         not isinstance(stop_rules, list)
@@ -417,9 +490,6 @@ def _validate_request_fields(document: Mapping[str, Any]) -> None:
         or any(not str(item).strip() for item in stop_rules)
     ):
         raise ValueError("stop_rules must contain non-empty rules")
-    if document.get("experiment_id") == _C0_EXPERIMENT_ID:
-        _validate_c0_request(document)
-    _reject_private_or_path_fields(document)
 
 
 def _validate_c0_request(document: Mapping[str, Any]) -> None:
@@ -531,6 +601,17 @@ def _validate_c0_request(document: Mapping[str, Any]) -> None:
 
 
 def _validate_result_fields(document: Mapping[str, Any]) -> None:
+    _validate_result_identity(document)
+    _validate_result_outputs(document)
+    _validate_result_timings_and_resources(document)
+    _validate_result_warnings_and_authority(document)
+    training_evidence = document.get("training_evidence")
+    if training_evidence is not None:
+        _require_safe_mapping(training_evidence, "training_evidence")
+    _reject_private_or_path_fields(document)
+
+
+def _validate_result_identity(document: Mapping[str, Any]) -> None:
     if document.get("status") not in _STATUSES:
         raise ValueError("unsupported GPU worker result status")
     if not _SHA256.fullmatch(str(document.get("request_document_sha256", ""))):
@@ -542,6 +623,9 @@ def _validate_result_fields(document: Mapping[str, Any]) -> None:
     if document.get("task_kind") not in _TASK_KINDS:
         raise ValueError("unsupported GPU worker task_kind")
     _require_safe_mapping(document.get("environment"), "environment")
+
+
+def _validate_result_outputs(document: Mapping[str, Any]) -> None:
     outputs = document.get("outputs")
     if not isinstance(outputs, list):
         raise ValueError("outputs must be a list")
@@ -560,7 +644,9 @@ def _validate_result_fields(document: Mapping[str, Any]) -> None:
     output_ids = [str(row["output_id"]) for row in outputs]
     if len(set(output_ids)) != len(output_ids):
         raise ValueError("GPU result output IDs must be unique")
-    _require_safe_mapping(document.get("timings"), "timings")
+
+
+def _validate_result_timings_and_resources(document: Mapping[str, Any]) -> None:
     timings = _require_safe_mapping(document.get("timings"), "timings")
     _finite_number(timings.get("wall_seconds"), "wall_seconds")
     if (
@@ -577,6 +663,9 @@ def _validate_result_fields(document: Mapping[str, Any]) -> None:
         or int(resources["output_bytes"]) < 0
     ):
         raise ValueError("resources.output_bytes must be non-negative")
+
+
+def _validate_result_warnings_and_authority(document: Mapping[str, Any]) -> None:
     warnings = document.get("warnings")
     if not isinstance(warnings, list) or any(
         not isinstance(item, str) for item in warnings
@@ -595,10 +684,6 @@ def _validate_result_fields(document: Mapping[str, Any]) -> None:
         )
     ):
         raise ValueError("GPU result cannot grant musical or product authority")
-    training_evidence = document.get("training_evidence")
-    if training_evidence is not None:
-        _require_safe_mapping(training_evidence, "training_evidence")
-    _reject_private_or_path_fields(document)
 
 
 def _validate_training_evidence(
@@ -608,6 +693,25 @@ def _validate_training_evidence(
     result: Mapping[str, Any],
 ) -> None:
     training = _require_safe_mapping(request.get("training"), "request training")
+    _validate_training_dataset(value, request=request)
+    _validate_training_model(value, request=request)
+    _validate_training_execution(value, training=training)
+    arms = _validate_training_arms(value, request=request, training=training)
+    resume, calculated_resume_pass = _validate_resume_equivalence(
+        value, result=result
+    )
+    _validate_training_acceptance(
+        value,
+        result=result,
+        arms=arms,
+        resume=resume,
+        calculated_resume_pass=calculated_resume_pass,
+    )
+
+
+def _validate_training_dataset(
+    value: Mapping[str, Any], *, request: Mapping[str, Any]
+) -> None:
     dataset = _require_safe_mapping(value.get("dataset"), "training dataset evidence")
     if dataset.get("sha256") != request["dataset"].get("sha256"):
         raise ValueError("training evidence dataset does not bind the request")
@@ -640,6 +744,10 @@ def _validate_training_evidence(
     ]:
         raise ValueError("training evidence fixture shapes changed")
 
+
+def _validate_training_model(
+    value: Mapping[str, Any], *, request: Mapping[str, Any]
+) -> None:
     model = _require_safe_mapping(value.get("model"), "training model evidence")
     request_model = _require_safe_mapping(request.get("model"), "request model")
     for key in (
@@ -652,6 +760,10 @@ def _validate_training_evidence(
         if model.get(key) != request_model.get(key):
             raise ValueError(f"training evidence model {key} changed")
 
+
+def _validate_training_execution(
+    value: Mapping[str, Any], *, training: Mapping[str, Any]
+) -> None:
     execution = _require_safe_mapping(
         value.get("execution"), "training execution evidence"
     )
@@ -672,6 +784,13 @@ def _validate_training_evidence(
     if execution.get("retries") != 0:
         raise ValueError("training evidence must report zero retries")
 
+
+def _validate_training_arms(
+    value: Mapping[str, Any],
+    *,
+    request: Mapping[str, Any],
+    training: Mapping[str, Any],
+) -> list[Mapping[str, Any]]:
     arms = value.get("arms")
     if not isinstance(arms, list) or [row.get("arm_id") for row in arms] != [
         "clean_uninterrupted",
@@ -696,7 +815,12 @@ def _validate_training_evidence(
             _finite_number(row.get(key), f"training arm {key}")
         if row.get("finite_losses") is not True:
             raise ValueError("training arm losses must all be finite")
+    return arms
 
+
+def _validate_resume_equivalence(
+    value: Mapping[str, Any], *, result: Mapping[str, Any]
+) -> tuple[Mapping[str, Any], bool]:
     resume = _require_safe_mapping(
         value.get("resume_equivalence"), "resume equivalence"
     )
@@ -715,7 +839,17 @@ def _validate_training_evidence(
         raise ValueError("resume equivalence flag does not match its evidence")
     if result.get("status") == "complete" and not calculated_resume_pass:
         raise ValueError("complete training evidence requires resume equivalence")
+    return resume, calculated_resume_pass
 
+
+def _validate_training_acceptance(
+    value: Mapping[str, Any],
+    *,
+    result: Mapping[str, Any],
+    arms: Sequence[Mapping[str, Any]],
+    resume: Mapping[str, Any],
+    calculated_resume_pass: bool,
+) -> None:
     acceptance = _require_safe_mapping(
         value.get("acceptance"), "training acceptance evidence"
     )

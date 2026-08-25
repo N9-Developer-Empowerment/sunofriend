@@ -136,6 +136,17 @@ def validate_phrase_decision(
     _require_reviewed_structure(state)
     if document.get("method_natures") != ["H"]:
         raise ValueError("vocal phrase decision must declare human work")
+    phrase = _validate_phrase_decision_binding(document, state=state)
+    _validate_phrase_decision_source(document, state=state, phrase=phrase)
+    _validate_phrase_decision_review(document)
+    _validate_phrase_decision_limits(document)
+    _reject_private_or_path_fields(document)
+    return document
+
+
+def _validate_phrase_decision_binding(
+    document: Mapping[str, Any], *, state: Mapping[str, Any]
+) -> Mapping[str, Any]:
     binding = _mapping(document.get("binding"), "binding")
     if binding != {
         "musical_state_schema": MUSICAL_STATE_SCHEMA,
@@ -153,6 +164,15 @@ def validate_phrase_decision(
     }
     if phrase_row != expected_phrase:
         raise ValueError("phrase decision geometry or lyrics changed")
+    return phrase
+
+
+def _validate_phrase_decision_source(
+    document: Mapping[str, Any],
+    *,
+    state: Mapping[str, Any],
+    phrase: Mapping[str, Any],
+) -> None:
     outcome = document.get("outcome")
     if outcome not in PHRASE_OUTCOMES:
         raise ValueError("unsupported vocal phrase outcome")
@@ -182,6 +202,9 @@ def validate_phrase_decision(
         raise ValueError(
             "phrase decision source SHA-256 or identity does not match state"
         )
+
+
+def _validate_phrase_decision_review(document: Mapping[str, Any]) -> None:
     review = _mapping(document.get("review"), "review")
     if set(review) != {"authority", "reviewed_at", "evidence_sha256", "notes"}:
         raise ValueError("vocal phrase decision review fields changed")
@@ -195,6 +218,9 @@ def validate_phrase_decision(
     evidence_sha = review.get("evidence_sha256")
     if evidence_sha is not None and not _SHA256.fullmatch(str(evidence_sha)):
         raise ValueError("review evidence must be a lowercase SHA-256")
+
+
+def _validate_phrase_decision_limits(document: Mapping[str, Any]) -> None:
     if document.get("authority_limits") != {
         "comp_render_authorized": False,
         "pitch_correction_authorized": False,
@@ -213,8 +239,6 @@ def validate_phrase_decision(
         raise ValueError("phrase decision cannot render, correct, join or train")
     if document.get("network_used") is not False:
         raise ValueError("phrase decision must record network_used=false")
-    _reject_private_or_path_fields(document)
-    return document
 
 
 def create_vocal_render_source_map(
@@ -398,6 +422,31 @@ def validate_vocal_source_map(
         raise ValueError("vocal source map does not bind this exact musical state")
     phrases = {row["phrase_id"]: row for row in state["structure"]["phrases"]}
     sources = _sources(state)
+    seen = _validate_source_segments(document, state=state, phrases=phrases, sources=sources)
+    unresolved_ids = _validate_unresolved_phrases(
+        document, phrases=phrases, seen=seen
+    )
+    undecided = _validate_source_map_accounting(
+        document, phrases=phrases, seen=seen, unresolved_ids=unresolved_ids
+    )
+    _validate_source_map_summary(
+        document,
+        phrases=phrases,
+        seen=seen,
+        unresolved_ids=unresolved_ids,
+        undecided=undecided,
+    )
+    _reject_private_or_path_fields(document)
+    return document
+
+
+def _validate_source_segments(
+    document: Mapping[str, Any],
+    *,
+    state: Mapping[str, Any],
+    phrases: Mapping[str, Mapping[str, Any]],
+    sources: Mapping[str, Mapping[str, Any]],
+) -> set[str]:
     segments = document.get("segments")
     if not isinstance(segments, list):
         raise ValueError("vocal source map segments must be a list")
@@ -433,6 +482,15 @@ def validate_vocal_source_map(
         if row != expected:
             raise ValueError("source segment geometry or source identity changed")
         seen.add(phrase_id)
+    return seen
+
+
+def _validate_unresolved_phrases(
+    document: Mapping[str, Any],
+    *,
+    phrases: Mapping[str, Mapping[str, Any]],
+    seen: set[str],
+) -> set[str]:
     unresolved = document.get("unresolved_phrases")
     if not isinstance(unresolved, list):
         raise ValueError("unresolved_phrases must be a list")
@@ -453,6 +511,16 @@ def validate_vocal_source_map(
         if not _SHA256.fullmatch(str(item.get("decision_document_sha256", ""))):
             raise ValueError("unresolved phrase decision hash is invalid")
         unresolved_ids.add(phrase_id)
+    return unresolved_ids
+
+
+def _validate_source_map_accounting(
+    document: Mapping[str, Any],
+    *,
+    phrases: Mapping[str, Mapping[str, Any]],
+    seen: set[str],
+    unresolved_ids: set[str],
+) -> list[str]:
     undecided = document.get("undecided_phrase_ids")
     if not isinstance(undecided, list) or any(
         item not in phrases for item in undecided
@@ -464,6 +532,17 @@ def validate_vocal_source_map(
         raise ValueError("a phrase cannot be both decided and undecided")
     if seen | unresolved_ids | set(undecided) != set(phrases):
         raise ValueError("vocal source map does not account for every phrase")
+    return undecided
+
+
+def _validate_source_map_summary(
+    document: Mapping[str, Any],
+    *,
+    phrases: Mapping[str, Mapping[str, Any]],
+    seen: set[str],
+    unresolved_ids: set[str],
+    undecided: Sequence[str],
+) -> None:
     coverage = _mapping(document.get("coverage"), "coverage")
     expected_coverage = {
         "phrase_count": len(phrases),
@@ -497,8 +576,6 @@ def validate_vocal_source_map(
         raise ValueError("vocal source map effect declaration is unsupported")
     if document.get("network_used") is not False:
         raise ValueError("vocal source map must record network_used=false")
-    _reject_private_or_path_fields(document)
-    return document
 
 
 def _selected_source(

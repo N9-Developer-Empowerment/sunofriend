@@ -58,85 +58,30 @@ def plan_vocal_musical_state(
     """Validate an audio-native state import without writing anything."""
 
     source_dir = _directory(take_dir, "take directory")
-    take_paths = sorted(
-        (
-            path
-            for path in source_dir.iterdir()
-            if path.is_file() and path.suffix.casefold() in _AUDIO_SUFFIXES
-        ),
-        key=lambda path: path.name.casefold(),
-    )
-    if not 2 <= len(take_paths) <= _MAX_TAKES:
-        raise ValueError("musical state requires 2-24 top-level WAV takes")
-    if any(path.is_symlink() for path in take_paths):
-        raise ValueError("vocal takes may not be symbolic links")
-    inodes = {(path.stat().st_dev, path.stat().st_ino) for path in take_paths}
-    if len(inodes) != len(take_paths):
-        raise ValueError("duplicate or hard-linked vocal takes are not allowed")
-
-    lyrics_path = _file(lyrics, "lyrics")
-    timeline_path = _file(phrase_timeline, "phrase timeline")
-    reference_path = (
-        _file(reference_vocal, "reference vocal") if reference_vocal else None
-    )
-    if not confirm_common_recorded_zero:
-        raise ValueError("confirm_common_recorded_zero is required")
-    if not confirm_timeline_reviewed:
-        raise ValueError("confirm_timeline_reviewed is required")
-    if rights_category not in RIGHTS_CATEGORIES:
-        raise ValueError(
-            "rights_category must be one of: " + ", ".join(sorted(RIGHTS_CATEGORIES))
+    take_paths = _vocal_take_paths(source_dir)
+    lyrics_path, timeline_path, reference_path, normalized_chain = (
+        _validate_vocal_plan_inputs(
+            lyrics=lyrics,
+            phrase_timeline=phrase_timeline,
+            reference_vocal=reference_vocal,
+            rights_category=rights_category,
+            processing_chain=processing_chain,
+            bpm=bpm,
+            tuning_hz=tuning_hz,
+            confirm_common_recorded_zero=confirm_common_recorded_zero,
+            confirm_timeline_reviewed=confirm_timeline_reviewed,
         )
-    normalized_chain = str(processing_chain).strip().casefold().replace("-", "_")
-    if normalized_chain not in {"dry", "same_gentle_chain"}:
-        raise ValueError("processing_chain must be dry or same-gentle-chain")
-    if bpm is not None and (not math.isfinite(float(bpm)) or float(bpm) <= 0):
-        raise ValueError("bpm must be finite and positive when supplied")
-    if not math.isfinite(float(tuning_hz)) or float(tuning_hz) <= 0:
-        raise ValueError("tuning_hz must be finite and positive")
-
-    lyrics_bytes = lyrics_path.read_bytes()
-    if not lyrics_bytes or len(lyrics_bytes) > _MAX_LYRICS_BYTES:
-        raise ValueError("lyrics must be non-empty and no larger than 256 KiB")
-    try:
-        canonical_lyrics = lyrics_bytes.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ValueError("lyrics must be UTF-8 text") from exc
-    if not canonical_lyrics.strip():
-        raise ValueError("lyrics must contain non-whitespace text")
-
-    timeline = _load_reviewed_timeline(timeline_path, canonical_lyrics)
-    eligible_phrases = _take_phrase_bindings(
-        take_phrase_bindings,
-        take_names=[path.name for path in take_paths],
-        phrase_ids=[row["phrase_id"] for row in timeline["phrases"]],
     )
-    take_records = [
-        {
-            "source_name": path.name,
-            "source": _absolute_file_record(path),
-            "audio": _audio_record(path),
-            **(
-                {"eligible_phrase_ids": eligible_phrases[path.name]}
-                if path.name in eligible_phrases
-                else {}
-            ),
-        }
-        for path in take_paths
-    ]
-    final_phrase_end = float(timeline["phrases"][-1]["end_seconds"])
-    if (
-        final_phrase_end
-        > min(float(row["audio"]["duration_seconds"]) for row in take_records) + 1e-6
-    ):
-        raise ValueError("phrase timeline extends beyond a supplied vocal take")
-    reference_audio = _audio_record(reference_path) if reference_path else None
-    if (
-        reference_audio
-        and reference_audio["duration_seconds"] + 1e-6 < final_phrase_end
-    ):
-        raise ValueError("reference vocal ends before the reviewed phrase timeline")
-
+    canonical_lyrics = _canonical_lyrics(lyrics_path)
+    timeline = _load_reviewed_timeline(timeline_path, canonical_lyrics)
+    take_records = _planned_take_records(
+        take_paths, timeline=timeline, take_phrase_bindings=take_phrase_bindings
+    )
+    reference_audio = _validate_plan_audio_horizon(
+        timeline=timeline,
+        take_records=take_records,
+        reference_path=reference_path,
+    )
     return {
         "schema": MUSICAL_STATE_SCHEMA,
         "operation": "plan",
@@ -167,6 +112,120 @@ def plan_vocal_musical_state(
         "network_used": False,
         "effects": _zero_effects(),
     }
+
+
+def _vocal_take_paths(source_dir: Path) -> list[Path]:
+    take_paths = sorted(
+        (
+            path
+            for path in source_dir.iterdir()
+            if path.is_file() and path.suffix.casefold() in _AUDIO_SUFFIXES
+        ),
+        key=lambda path: path.name.casefold(),
+    )
+    if not 2 <= len(take_paths) <= _MAX_TAKES:
+        raise ValueError("musical state requires 2-24 top-level WAV takes")
+    if any(path.is_symlink() for path in take_paths):
+        raise ValueError("vocal takes may not be symbolic links")
+    inodes = {(path.stat().st_dev, path.stat().st_ino) for path in take_paths}
+    if len(inodes) != len(take_paths):
+        raise ValueError("duplicate or hard-linked vocal takes are not allowed")
+    return take_paths
+
+
+def _validate_vocal_plan_inputs(
+    *,
+    lyrics: str | Path,
+    phrase_timeline: str | Path,
+    reference_vocal: str | Path | None,
+    rights_category: str,
+    processing_chain: str,
+    bpm: float | None,
+    tuning_hz: float,
+    confirm_common_recorded_zero: bool,
+    confirm_timeline_reviewed: bool,
+) -> tuple[Path, Path, Path | None, str]:
+    lyrics_path = _file(lyrics, "lyrics")
+    timeline_path = _file(phrase_timeline, "phrase timeline")
+    reference_path = (
+        _file(reference_vocal, "reference vocal") if reference_vocal else None
+    )
+    if not confirm_common_recorded_zero:
+        raise ValueError("confirm_common_recorded_zero is required")
+    if not confirm_timeline_reviewed:
+        raise ValueError("confirm_timeline_reviewed is required")
+    if rights_category not in RIGHTS_CATEGORIES:
+        raise ValueError(
+            "rights_category must be one of: " + ", ".join(sorted(RIGHTS_CATEGORIES))
+        )
+    normalized_chain = str(processing_chain).strip().casefold().replace("-", "_")
+    if normalized_chain not in {"dry", "same_gentle_chain"}:
+        raise ValueError("processing_chain must be dry or same-gentle-chain")
+    if bpm is not None and (not math.isfinite(float(bpm)) or float(bpm) <= 0):
+        raise ValueError("bpm must be finite and positive when supplied")
+    if not math.isfinite(float(tuning_hz)) or float(tuning_hz) <= 0:
+        raise ValueError("tuning_hz must be finite and positive")
+    return lyrics_path, timeline_path, reference_path, normalized_chain
+
+
+def _canonical_lyrics(lyrics_path: Path) -> str:
+    lyrics_bytes = lyrics_path.read_bytes()
+    if not lyrics_bytes or len(lyrics_bytes) > _MAX_LYRICS_BYTES:
+        raise ValueError("lyrics must be non-empty and no larger than 256 KiB")
+    try:
+        canonical_lyrics = lyrics_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("lyrics must be UTF-8 text") from exc
+    if not canonical_lyrics.strip():
+        raise ValueError("lyrics must contain non-whitespace text")
+    return canonical_lyrics
+
+
+def _planned_take_records(
+    take_paths: Sequence[Path],
+    *,
+    timeline: Mapping[str, Any],
+    take_phrase_bindings: Mapping[str, Sequence[str]] | None,
+) -> list[dict[str, Any]]:
+    eligible_phrases = _take_phrase_bindings(
+        take_phrase_bindings,
+        take_names=[path.name for path in take_paths],
+        phrase_ids=[row["phrase_id"] for row in timeline["phrases"]],
+    )
+    return [
+        {
+            "source_name": path.name,
+            "source": _absolute_file_record(path),
+            "audio": _audio_record(path),
+            **(
+                {"eligible_phrase_ids": eligible_phrases[path.name]}
+                if path.name in eligible_phrases
+                else {}
+            ),
+        }
+        for path in take_paths
+    ]
+
+
+def _validate_plan_audio_horizon(
+    *,
+    timeline: Mapping[str, Any],
+    take_records: Sequence[Mapping[str, Any]],
+    reference_path: Path | None,
+) -> dict[str, Any] | None:
+    final_phrase_end = float(timeline["phrases"][-1]["end_seconds"])
+    if (
+        final_phrase_end
+        > min(float(row["audio"]["duration_seconds"]) for row in take_records) + 1e-6
+    ):
+        raise ValueError("phrase timeline extends beyond a supplied vocal take")
+    reference_audio = _audio_record(reference_path) if reference_path else None
+    if (
+        reference_audio
+        and reference_audio["duration_seconds"] + 1e-6 < final_phrase_end
+    ):
+        raise ValueError("reference vocal ends before the reviewed phrase timeline")
+    return reference_audio
 
 
 def create_vocal_musical_state(
@@ -514,6 +573,26 @@ def validate_musical_state(
     else:
         manifest_path = Path(manifest).expanduser().absolute()
         document = _read_json(manifest_path)
+    vocal, vocal_schema = _validate_musical_state_document(document)
+    _validate_musical_state_authority(document, vocal=vocal)
+    _reject_absolute_paths(document)
+    base = (
+        Path(root).expanduser().absolute().resolve()
+        if root is not None
+        else manifest_path.parent.resolve()
+        if manifest_path
+        else None
+    )
+    if base is not None:
+        _validate_musical_state_artifacts(document, base=base)
+        if vocal_schema == VOCAL_PERFORMANCE_STATE_SCHEMA_V3:
+            _validate_phrase_capture_lineage(document, base)
+    return document
+
+
+def _validate_musical_state_document(
+    document: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], str]:
     if document.get("schema") != MUSICAL_STATE_SCHEMA:
         raise ValueError("unsupported musical-state schema")
     if document.get("status") != "complete_unreviewed_no_selection":
@@ -540,6 +619,12 @@ def validate_musical_state(
     else:
         _validate_phrase_capture_state(document, vocal)
     _validate_take_phrase_bindings(document, vocal)
+    return vocal, str(vocal_schema)
+
+
+def _validate_musical_state_authority(
+    document: Mapping[str, Any], *, vocal: Mapping[str, Any]
+) -> None:
     if vocal.get("selection_authority") != "human_only":
         raise ValueError("vocal selection authority must remain human_only")
     for key in (
@@ -568,33 +653,23 @@ def validate_musical_state(
     if training.get("training_eligible") is not False:
         raise ValueError("an unreviewed v0 state cannot be training eligible")
 
-    _reject_absolute_paths(document)
-    base = (
-        Path(root).expanduser().absolute().resolve()
-        if root is not None
-        else manifest_path.parent.resolve()
-        if manifest_path
-        else None
-    )
-    if base is not None:
-        for record in _file_records(document):
-            relative = _safe_relative_path(record.get("path"))
-            path = (base / Path(*relative.parts)).resolve()
-            try:
-                path.relative_to(base)
-            except ValueError as exc:
-                raise ValueError("musical-state artifact escapes project root") from exc
-            if not path.is_file() or path.is_symlink():
-                raise ValueError(
-                    f"musical-state artifact is missing or unsafe: {relative}"
-                )
-            if path.stat().st_size != record.get("bytes"):
-                raise ValueError(f"musical-state artifact size changed: {relative}")
-            if file_sha256(path) != record.get("sha256"):
-                raise ValueError(f"musical-state artifact hash changed: {relative}")
-        if vocal_schema == VOCAL_PERFORMANCE_STATE_SCHEMA_V3:
-            _validate_phrase_capture_lineage(document, base)
-    return document
+
+def _validate_musical_state_artifacts(
+    document: Mapping[str, Any], *, base: Path
+) -> None:
+    for record in _file_records(document):
+        relative = _safe_relative_path(record.get("path"))
+        path = (base / Path(*relative.parts)).resolve()
+        try:
+            path.relative_to(base)
+        except ValueError as exc:
+            raise ValueError("musical-state artifact escapes project root") from exc
+        if not path.is_file() or path.is_symlink():
+            raise ValueError(f"musical-state artifact is missing or unsafe: {relative}")
+        if path.stat().st_size != record.get("bytes"):
+            raise ValueError(f"musical-state artifact size changed: {relative}")
+        if file_sha256(path) != record.get("sha256"):
+            raise ValueError(f"musical-state artifact hash changed: {relative}")
 
 
 def _take_phrase_bindings(
@@ -675,144 +750,171 @@ def _validate_phrase_capture_state(
     counts: dict[str, int] = {}
     for capture in captures:
         row = _mapping(capture, "phrase capture")
-        if set(row) != {
-            "source_id",
-            "source_class",
-            "label",
-            "audio",
-            "audio_properties",
-            "capture_receipt",
-            "phrase",
-            "placement",
-            "review_status",
-            "authority",
-        }:
-            raise ValueError("phrase capture fields changed")
-        source_id = str(row.get("source_id", ""))
-        if not _PHRASE_ID.fullmatch(source_id) or source_id in source_ids:
-            raise ValueError(
-                "phrase capture source IDs must be unique safe identifiers"
-            )
+        source_id, sample_rate, frames = _validate_capture_identity_and_audio(
+            row, source_ids=source_ids
+        )
         source_ids.add(source_id)
-        if row.get("source_class") != "human_vocal_phrase_capture":
-            raise ValueError("phrase capture source class changed")
-        _capture_label(row.get("label"), source_id)
-        audio = _mapping(row.get("audio"), "phrase capture audio")
-        if set(audio) != {"path", "bytes", "sha256"}:
-            raise ValueError("phrase capture audio file record changed")
-        _safe_relative_path(audio.get("path"))
-        properties = _mapping(row.get("audio_properties"), "phrase capture audio")
-        if set(properties) != {
-            "format",
-            "subtype",
-            "sample_rate",
-            "channels",
-            "frames",
-            "duration_seconds",
-        }:
-            raise ValueError("phrase capture audio properties changed")
-        if (
-            properties.get("format") != "WAV"
-            or properties.get("subtype") != "PCM_24"
-            or properties.get("channels") != 1
-        ):
-            raise ValueError("phrase capture audio must remain mono WAV PCM_24")
-        sample_rate = _positive_int(properties.get("sample_rate"), "sample rate")
-        frames = _positive_int(properties.get("frames"), "frame count")
-        duration = _finite_number(properties.get("duration_seconds"), "duration")
-        if abs(duration - frames / sample_rate) > 1e-9:
-            raise ValueError("phrase capture duration does not match its frame clock")
-        if audio.get("bytes") != 44 + frames * 3:
-            raise ValueError("phrase capture byte count does not match PCM24 geometry")
-        _sha256_text(audio.get("sha256"), "phrase capture audio")
-
-        receipt = _mapping(row.get("capture_receipt"), "capture receipt")
-        if set(receipt) != {"schema", "document_sha256", "artifact"}:
-            raise ValueError("phrase capture receipt fields changed")
-        if receipt.get("schema") != "sunofriend.browser-vocal-capture.v1":
-            raise ValueError("phrase capture receipt schema changed")
-        _sha256_text(receipt.get("document_sha256"), "capture receipt")
-        receipt_artifact = _mapping(receipt.get("artifact"), "capture receipt artifact")
-        if set(receipt_artifact) != {"path", "bytes", "sha256"}:
-            raise ValueError("capture receipt artifact record changed")
-        _safe_relative_path(receipt_artifact.get("path"))
-
-        phrase_row = _mapping(row.get("phrase"), "capture phrase")
-        phrase_id = str(phrase_row.get("phrase_id", ""))
-        phrase = phrases.get(phrase_id)
-        if phrase is None or phrase_row != {
-            "phrase_id": phrase_id,
-            "lyrics": phrase["lyrics"],
-            "review_status": "reviewed",
-        }:
-            raise ValueError("phrase capture does not bind a reviewed phrase")
+        _validate_capture_receipt(row)
+        phrase_id, phrase = _validate_capture_phrase_binding(row, phrases=phrases)
         counts[phrase_id] = counts.get(phrase_id, 0) + 1
         if counts[phrase_id] > _MAX_CAPTURES_PER_PHRASE:
             raise ValueError("too many phrase captures for one phrase")
+        _validate_capture_placement(
+            row, phrase=phrase, sample_rate=sample_rate, frames=frames
+        )
+        _validate_capture_authority(row)
 
-        placement = _mapping(row.get("placement"), "capture placement")
-        expected_placement_keys = {
-            "source_phrase_start_frame",
-            "source_phrase_end_frame",
-            "pre_guard_frames",
-            "post_guard_frames",
-            "destination_start_seconds",
-            "destination_end_seconds",
-            "destination_start_frame",
-            "destination_end_frame",
-            "capture_song_start_seconds",
-        }
-        if set(placement) != expected_placement_keys:
-            raise ValueError("phrase capture placement fields changed")
-        start = _non_negative_int(
-            placement.get("source_phrase_start_frame"), "source phrase start"
-        )
-        end = _positive_int(
-            placement.get("source_phrase_end_frame"), "source phrase end"
-        )
-        before = _non_negative_int(
-            placement.get("pre_guard_frames"), "pre guard frames"
-        )
-        after = _non_negative_int(
-            placement.get("post_guard_frames"), "post guard frames"
-        )
-        if not 0 <= start < end <= frames or before != start or after != frames - end:
-            raise ValueError("phrase capture source window or guards changed")
-        if before + after <= 0 or before > sample_rate * 5 or after > sample_rate * 5:
-            raise ValueError("phrase capture guards must remain short and bounded")
-        destination_start = _finite_number(
-            placement.get("destination_start_seconds"), "destination start"
-        )
-        destination_end = _finite_number(
-            placement.get("destination_end_seconds"), "destination end"
-        )
-        tolerance = 0.5 / sample_rate + 1e-12
-        if (
-            abs(destination_start - float(phrase["start_seconds"])) > tolerance
-            or abs(destination_end - float(phrase["end_seconds"])) > tolerance
-            or abs((end - start) / sample_rate - (destination_end - destination_start))
-            > tolerance
-        ):
-            raise ValueError("phrase capture destination no longer matches phrase")
-        if placement.get("destination_start_frame") != round(
-            destination_start * sample_rate
-        ) or placement.get("destination_end_frame") != round(
-            destination_end * sample_rate
-        ):
-            raise ValueError("phrase capture destination frame clock changed")
-        capture_start = _finite_number(
-            placement.get("capture_song_start_seconds"), "capture song start"
-        )
-        if abs(capture_start - (destination_start - start / sample_rate)) > tolerance:
-            raise ValueError("phrase capture song placement changed")
-        if row.get("review_status") != "stored_unreviewed" or row.get("authority") != {
-            "review_status": "unreviewed",
-            "selection_authority": "none",
-            "phrase_decision_created": False,
-            "source_map_admission": False,
-        }:
-            raise ValueError("phrase capture cannot claim selection authority")
+    _validate_capture_lineage_shape(document)
 
+
+def _validate_capture_identity_and_audio(
+    row: Mapping[str, Any], *, source_ids: set[Any]
+) -> tuple[str, int, int]:
+    if set(row) != {
+        "source_id",
+        "source_class",
+        "label",
+        "audio",
+        "audio_properties",
+        "capture_receipt",
+        "phrase",
+        "placement",
+        "review_status",
+        "authority",
+    }:
+        raise ValueError("phrase capture fields changed")
+    source_id = str(row.get("source_id", ""))
+    if not _PHRASE_ID.fullmatch(source_id) or source_id in source_ids:
+        raise ValueError("phrase capture source IDs must be unique safe identifiers")
+    if row.get("source_class") != "human_vocal_phrase_capture":
+        raise ValueError("phrase capture source class changed")
+    _capture_label(row.get("label"), source_id)
+    audio = _mapping(row.get("audio"), "phrase capture audio")
+    if set(audio) != {"path", "bytes", "sha256"}:
+        raise ValueError("phrase capture audio file record changed")
+    _safe_relative_path(audio.get("path"))
+    properties = _mapping(row.get("audio_properties"), "phrase capture audio")
+    if set(properties) != {
+        "format",
+        "subtype",
+        "sample_rate",
+        "channels",
+        "frames",
+        "duration_seconds",
+    }:
+        raise ValueError("phrase capture audio properties changed")
+    if (
+        properties.get("format") != "WAV"
+        or properties.get("subtype") != "PCM_24"
+        or properties.get("channels") != 1
+    ):
+        raise ValueError("phrase capture audio must remain mono WAV PCM_24")
+    sample_rate = _positive_int(properties.get("sample_rate"), "sample rate")
+    frames = _positive_int(properties.get("frames"), "frame count")
+    duration = _finite_number(properties.get("duration_seconds"), "duration")
+    if abs(duration - frames / sample_rate) > 1e-9:
+        raise ValueError("phrase capture duration does not match its frame clock")
+    if audio.get("bytes") != 44 + frames * 3:
+        raise ValueError("phrase capture byte count does not match PCM24 geometry")
+    _sha256_text(audio.get("sha256"), "phrase capture audio")
+    return source_id, sample_rate, frames
+
+
+def _validate_capture_receipt(row: Mapping[str, Any]) -> None:
+    receipt = _mapping(row.get("capture_receipt"), "capture receipt")
+    if set(receipt) != {"schema", "document_sha256", "artifact"}:
+        raise ValueError("phrase capture receipt fields changed")
+    if receipt.get("schema") != "sunofriend.browser-vocal-capture.v1":
+        raise ValueError("phrase capture receipt schema changed")
+    _sha256_text(receipt.get("document_sha256"), "capture receipt")
+    receipt_artifact = _mapping(receipt.get("artifact"), "capture receipt artifact")
+    if set(receipt_artifact) != {"path", "bytes", "sha256"}:
+        raise ValueError("capture receipt artifact record changed")
+    _safe_relative_path(receipt_artifact.get("path"))
+
+
+def _validate_capture_phrase_binding(
+    row: Mapping[str, Any], *, phrases: Mapping[str, Mapping[str, Any]]
+) -> tuple[str, Mapping[str, Any]]:
+    phrase_row = _mapping(row.get("phrase"), "capture phrase")
+    phrase_id = str(phrase_row.get("phrase_id", ""))
+    phrase = phrases.get(phrase_id)
+    if phrase is None or phrase_row != {
+        "phrase_id": phrase_id,
+        "lyrics": phrase["lyrics"],
+        "review_status": "reviewed",
+    }:
+        raise ValueError("phrase capture does not bind a reviewed phrase")
+    return phrase_id, phrase
+
+
+def _validate_capture_placement(
+    row: Mapping[str, Any],
+    *,
+    phrase: Mapping[str, Any],
+    sample_rate: int,
+    frames: int,
+) -> None:
+    placement = _mapping(row.get("placement"), "capture placement")
+    expected_keys = {
+        "source_phrase_start_frame",
+        "source_phrase_end_frame",
+        "pre_guard_frames",
+        "post_guard_frames",
+        "destination_start_seconds",
+        "destination_end_seconds",
+        "destination_start_frame",
+        "destination_end_frame",
+        "capture_song_start_seconds",
+    }
+    if set(placement) != expected_keys:
+        raise ValueError("phrase capture placement fields changed")
+    start = _non_negative_int(
+        placement.get("source_phrase_start_frame"), "source phrase start"
+    )
+    end = _positive_int(placement.get("source_phrase_end_frame"), "source phrase end")
+    before = _non_negative_int(placement.get("pre_guard_frames"), "pre guard frames")
+    after = _non_negative_int(placement.get("post_guard_frames"), "post guard frames")
+    if not 0 <= start < end <= frames or before != start or after != frames - end:
+        raise ValueError("phrase capture source window or guards changed")
+    if before + after <= 0 or before > sample_rate * 5 or after > sample_rate * 5:
+        raise ValueError("phrase capture guards must remain short and bounded")
+    destination_start = _finite_number(
+        placement.get("destination_start_seconds"), "destination start"
+    )
+    destination_end = _finite_number(
+        placement.get("destination_end_seconds"), "destination end"
+    )
+    tolerance = 0.5 / sample_rate + 1e-12
+    if (
+        abs(destination_start - float(phrase["start_seconds"])) > tolerance
+        or abs(destination_end - float(phrase["end_seconds"])) > tolerance
+        or abs((end - start) / sample_rate - (destination_end - destination_start))
+        > tolerance
+    ):
+        raise ValueError("phrase capture destination no longer matches phrase")
+    if placement.get("destination_start_frame") != round(
+        destination_start * sample_rate
+    ) or placement.get("destination_end_frame") != round(destination_end * sample_rate):
+        raise ValueError("phrase capture destination frame clock changed")
+    capture_start = _finite_number(
+        placement.get("capture_song_start_seconds"), "capture song start"
+    )
+    if abs(capture_start - (destination_start - start / sample_rate)) > tolerance:
+        raise ValueError("phrase capture song placement changed")
+
+
+def _validate_capture_authority(row: Mapping[str, Any]) -> None:
+    if row.get("review_status") != "stored_unreviewed" or row.get("authority") != {
+        "review_status": "unreviewed",
+        "selection_authority": "none",
+        "phrase_decision_created": False,
+        "source_map_admission": False,
+    }:
+        raise ValueError("phrase capture cannot claim selection authority")
+
+
+def _validate_capture_lineage_shape(document: Mapping[str, Any]) -> None:
     lineage = _mapping(document.get("lineage"), "phrase capture lineage")
     if set(lineage) != {"operation", "parent", "admitted_capture"}:
         raise ValueError("phrase capture lineage fields changed")
@@ -916,23 +1018,11 @@ def _load_reviewed_timeline(path: Path, canonical_lyrics: str) -> dict[str, Any]
     canonical_words = _words(canonical_lyrics)
     lyric_position = 0
     for index, row in enumerate(raw):
-        if not isinstance(row, Mapping):
-            raise ValueError("each phrase row must be an object")
-        phrase_id = str(row.get("phrase_id", ""))
-        if not _PHRASE_ID.fullmatch(phrase_id) or phrase_id in ids:
-            raise ValueError("phrase IDs must be unique safe identifiers")
-        start = float(row.get("start_seconds", -1.0))
-        end = float(row.get("end_seconds", -1.0))
-        if not math.isfinite(start) or not math.isfinite(end) or start < 0:
-            raise ValueError(f"phrase {phrase_id} has invalid bounds")
-        if not _MIN_PHRASE_SECONDS <= end - start <= _MAX_PHRASE_SECONDS:
-            raise ValueError(f"phrase {phrase_id} duration must be 0.1-30 seconds")
-        if index and start < previous_end - 1e-9:
-            raise ValueError("phrase rows must be chronological and non-overlapping")
-        lyric_text = str(row.get("lyrics", "")).strip()
-        phrase_words = _words(lyric_text)
+        phrase_id, start, end, phrase_words = _timeline_phrase_row(
+            row, index=index, previous_end=previous_end, used_ids=ids
+        )
         found = _find_words(canonical_words, phrase_words, lyric_position)
-        if not phrase_words or found is None:
+        if found is None:
             raise ValueError(
                 f"phrase {phrase_id} lyrics are not in canonical lyric order"
             )
@@ -940,6 +1030,30 @@ def _load_reviewed_timeline(path: Path, canonical_lyrics: str) -> dict[str, Any]
         ids.add(phrase_id)
         previous_end = end
     return timeline
+
+
+def _timeline_phrase_row(
+    row: Any, *, index: int, previous_end: float, used_ids: set[str]
+) -> tuple[str, float, float, list[str]]:
+    """Validate one phrase's safe identity, clock and non-empty lyric words."""
+
+    if not isinstance(row, Mapping):
+        raise ValueError("each phrase row must be an object")
+    phrase_id = str(row.get("phrase_id", ""))
+    if not _PHRASE_ID.fullmatch(phrase_id) or phrase_id in used_ids:
+        raise ValueError("phrase IDs must be unique safe identifiers")
+    start = float(row.get("start_seconds", -1.0))
+    end = float(row.get("end_seconds", -1.0))
+    if not math.isfinite(start) or not math.isfinite(end) or start < 0:
+        raise ValueError(f"phrase {phrase_id} has invalid bounds")
+    if not _MIN_PHRASE_SECONDS <= end - start <= _MAX_PHRASE_SECONDS:
+        raise ValueError(f"phrase {phrase_id} duration must be 0.1-30 seconds")
+    if index and start < previous_end - 1e-9:
+        raise ValueError("phrase rows must be chronological and non-overlapping")
+    phrase_words = _words(str(row.get("lyrics", "")).strip())
+    if not phrase_words:
+        raise ValueError(f"phrase {phrase_id} lyrics are not in canonical lyric order")
+    return phrase_id, start, end, phrase_words
 
 
 def _audio_record(path: Path) -> dict[str, Any]:

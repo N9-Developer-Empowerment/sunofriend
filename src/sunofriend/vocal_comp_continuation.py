@@ -53,10 +53,58 @@ def create_vocal_continuation_plan(
     )
     state_path, state_root, state = _load_state(musical_state_manifest)
     decision = validate_phrase_decision(phrase_decision, state)
+    _validate_continuation_decision(decision)
+    phrases, base_phrase_ids, appended = _continuation_sequence(base, state, decision)
+    (
+        base_properties,
+        sample_rate,
+        source_start,
+        source_end,
+        expected_phrase_frames,
+    ) = _continuation_capture_clock(
+        base, base_audio, state_root, state, decision, appended
+    )
+
+    artifacts = base["artifacts"]
+    document = _continuation_plan_document(
+        base=base,
+        base_review=base_review,
+        base_receipt=base_receipt,
+        state=state,
+        decision=decision,
+        phrases=phrases,
+        base_phrase_ids=base_phrase_ids,
+        appended=appended,
+        artifacts=artifacts,
+        base_properties=base_properties,
+        sample_rate=sample_rate,
+        source_start=source_start,
+        source_end=source_end,
+        expected_phrase_frames=expected_phrase_frames,
+    )
+    document["document_sha256"] = document_sha256(document)
+    _reject_paths(document)
+    # Keep the loaded paths live until all identity checks above complete.
+    if base_path.parent == state_path.parent and base_path == state_path:
+        raise ValueError("base binding and musical state must be distinct artifacts")
+    return document
+
+
+def _validate_continuation_decision(decision: Mapping[str, Any]) -> None:
+    """Require one explicit browser-capture human decision."""
+
     if decision["outcome"] != "human_take":
         raise ValueError("continuation requires one explicit human_take decision")
     if decision["selected_source_class"] != "human_vocal_phrase_capture":
         raise ValueError("continuation requires one browser phrase capture")
+
+
+def _continuation_sequence(
+    base: Mapping[str, Any],
+    state: Mapping[str, Any],
+    decision: Mapping[str, Any],
+) -> tuple[list[Mapping[str, Any]], list[str], Mapping[str, Any]]:
+    """Validate leading-base coverage and resolve the one appended phrase."""
 
     phrases = state["structure"]["phrases"]
     base_phrase_ids = list(base["scope"]["phrase_ids"])
@@ -74,6 +122,18 @@ def create_vocal_continuation_plan(
         phrases[0]["start_seconds"]
     ) or float(base["scope"]["song_end_seconds"]) != float(appended["start_seconds"]):
         raise ValueError("usable base clock does not end at the next phrase boundary")
+    return phrases, base_phrase_ids, appended
+
+
+def _continuation_capture_clock(
+    base: Mapping[str, Any],
+    base_audio: Path,
+    state_root: Path,
+    state: Mapping[str, Any],
+    decision: Mapping[str, Any],
+    appended: Mapping[str, Any],
+) -> tuple[dict[str, int], int, int, int, int]:
+    """Validate compatible PCM clocks and the exact selected capture slice."""
 
     capture = _capture_for_decision(state, decision)
     capture_audio = _artifact_path(state_root, capture["audio"], "capture audio")
@@ -105,9 +165,35 @@ def create_vocal_continuation_plan(
         raise ValueError("selected capture does not match the reviewed phrase duration")
     if not 0 <= source_start < source_end <= capture_properties["frames"]:
         raise ValueError("selected capture phrase slice escapes its source")
+    return (
+        base_properties,
+        sample_rate,
+        source_start,
+        source_end,
+        expected_phrase_frames,
+    )
 
-    artifacts = base["artifacts"]
-    document: dict[str, Any] = {
+
+def _continuation_plan_document(
+    *,
+    base: Mapping[str, Any],
+    base_review: Mapping[str, Any],
+    base_receipt: Mapping[str, Any],
+    state: Mapping[str, Any],
+    decision: Mapping[str, Any],
+    phrases: list[Mapping[str, Any]],
+    base_phrase_ids: list[str],
+    appended: Mapping[str, Any],
+    artifacts: Mapping[str, Any],
+    base_properties: Mapping[str, int],
+    sample_rate: int,
+    source_start: int,
+    source_end: int,
+    expected_phrase_frames: int,
+) -> dict[str, Any]:
+    """Project validated evidence into the stable, path-free plan document."""
+
+    return {
         "schema": VOCAL_CONTINUATION_PLAN_SCHEMA,
         "status": "ready_dry_uncorrected_three_phrase_preview",
         "method_natures": ["D", "H"],
@@ -181,12 +267,6 @@ def create_vocal_continuation_plan(
         "effects": _no_effects(),
         "network_used": False,
     }
-    document["document_sha256"] = document_sha256(document)
-    _reject_paths(document)
-    # Keep the loaded paths live until all identity checks above complete.
-    if base_path.parent == state_path.parent and base_path == state_path:
-        raise ValueError("base binding and musical state must be distinct artifacts")
-    return document
 
 
 def validate_vocal_continuation_plan(
@@ -654,6 +734,23 @@ def _load_base(
 ) -> tuple[Path, dict[str, Any], Path, dict[str, Any], dict[str, Any]]:
     path = Path(base_binding_path).expanduser().resolve(strict=True)
     base = _read_hashed_json(path, _BASE_BINDING_SCHEMA, "usable-base binding")
+    _validate_base_authority(base)
+    audio, review_path, receipt_path = _base_artifact_paths(path, base=base)
+    review = _read_hashed_json(review_path, _BASE_REVIEW_SCHEMA, "usable-base review")
+    receipt = _read_hashed_json(
+        receipt_path, _BASE_RECEIPT_SCHEMA, "usable-base render receipt"
+    )
+    _validate_base_review_and_receipt(
+        base,
+        review=review,
+        receipt=receipt,
+        review_path=review_path,
+        receipt_path=receipt_path,
+    )
+    return path, base, audio, review, receipt
+
+
+def _validate_base_authority(base: Mapping[str, Any]) -> None:
     if base.get("status") != "complete_immutable_usable_base_reference":
         raise ValueError("usable-base binding is not complete")
     authority = base.get("authority")
@@ -676,6 +773,11 @@ def _load_base(
         raise ValueError("usable-base binding claims excessive authority")
     if any(base.get("effects", {}).values()) or base.get("network_used") is not False:
         raise ValueError("usable-base binding must be no-effect local evidence")
+
+
+def _base_artifact_paths(
+    path: Path, *, base: Mapping[str, Any]
+) -> tuple[Path, Path, Path]:
     artifacts = base.get("artifacts")
     if not isinstance(artifacts, Mapping):
         raise ValueError("usable-base artifact binding is missing")
@@ -684,10 +786,34 @@ def _load_base(
         raise ValueError("usable-base audio hash changed")
     review_path = _named_artifact(path.parent, artifacts["usable_base_review"])
     receipt_path = _named_artifact(path.parent, artifacts["render_receipt"])
-    review = _read_hashed_json(review_path, _BASE_REVIEW_SCHEMA, "usable-base review")
-    receipt = _read_hashed_json(
-        receipt_path, _BASE_RECEIPT_SCHEMA, "usable-base render receipt"
+    return audio, review_path, receipt_path
+
+
+def _validate_base_review_and_receipt(
+    base: Mapping[str, Any],
+    *,
+    review: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+    review_path: Path,
+    receipt_path: Path,
+) -> None:
+    artifacts = base["artifacts"]
+    _validate_base_evidence_identity(
+        artifacts, review, receipt, review_path, receipt_path
     )
+    _validate_base_review_authority(artifacts, review)
+    _validate_base_receipt(artifacts, receipt)
+
+
+def _validate_base_evidence_identity(
+    artifacts: Mapping[str, Any],
+    review: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+    review_path: Path,
+    receipt_path: Path,
+) -> None:
+    """Bind the retained owner review and render receipt to exact bytes."""
+
     if (
         file_sha256(review_path) != artifacts["usable_base_review"]["file_sha256"]
         or review["document_sha256"]
@@ -696,6 +822,13 @@ def _load_base(
         or receipt["document_sha256"] != artifacts["render_receipt"]["document_sha256"]
     ):
         raise ValueError("usable-base review or render receipt identity changed")
+
+
+def _validate_base_review_authority(
+    artifacts: Mapping[str, Any], review: Mapping[str, Any]
+) -> None:
+    """Require explicit owner acceptance without any claimed processing effect."""
+
     if (
         review.get("status") != "complete_explicit_owner_usable_base"
         or review.get("decision", {}).get("outcome") != "usable_base"
@@ -708,6 +841,13 @@ def _load_base(
         or review.get("network_used") is not False
     ):
         raise ValueError("usable-base review claims an unsupported effect")
+
+
+def _validate_base_receipt(
+    artifacts: Mapping[str, Any], receipt: Mapping[str, Any]
+) -> None:
+    """Require the exact dry, unprocessed audio receipt."""
+
     if (
         receipt.get("artifacts", {}).get("audio", {}).get("sha256")
         != artifacts["audio"]["sha256"]
@@ -715,7 +855,6 @@ def _load_base(
         or receipt.get("network_used") is not False
     ):
         raise ValueError("usable-base receipt is not the exact dry audio")
-    return path, base, audio, review, receipt
 
 
 def _load_state(path_value: str | Path) -> tuple[Path, Path, dict[str, Any]]:

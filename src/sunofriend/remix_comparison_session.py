@@ -22,7 +22,7 @@ import re
 import secrets
 import stat
 import tempfile
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 from urllib.parse import parse_qs, unquote, urlparse
 import webbrowser
 
@@ -884,13 +884,43 @@ def _validate_answers_request(
     if any(not isinstance(value, bool) for value in heard.values()):
         raise ValueError("listening confirmations must be explicit")
     outcome = str(request["outcome"])
+    identity, usefulness = _answer_pair_fields(request)
+    reasons = _answer_reason_codes(request["reason_codes"])
+    _validate_answer_completion(
+        allow_incomplete=allow_incomplete,
+        heard=heard,
+        outcome=outcome,
+        identity=identity,
+        usefulness=usefulness,
+        reasons=reasons,
+    )
+    return {
+        "explicitly_heard": dict(heard),
+        "outcome": outcome,
+        "identity_retention": dict(identity),
+        "goal_usefulness": dict(usefulness),
+        "reason_codes": list(reasons),
+    }
+
+
+def _answer_pair_fields(
+    request: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], Mapping[str, Any]]:
+    """Validate the paired identity and usefulness answer shapes."""
+
     identity = request["identity_retention"]
     usefulness = request["goal_usefulness"]
     if not isinstance(identity, Mapping) or set(identity) != {"a", "b"}:
         raise ValueError("identity answer fields changed")
     if not isinstance(usefulness, Mapping) or set(usefulness) != {"a", "b"}:
         raise ValueError("usefulness answer fields changed")
-    reasons = request["reason_codes"]
+    return identity, usefulness
+
+
+def _answer_reason_codes(value: Any) -> list[str]:
+    """Validate the bounded, distinct review-reason vocabulary."""
+
+    reasons = value
     if (
         not isinstance(reasons, list)
         or len(reasons) != len(set(reasons))
@@ -899,31 +929,63 @@ def _validate_answers_request(
         raise ValueError("choose no more than four different reasons")
     if any(reason not in _REASONS for reason in reasons):
         raise ValueError("reason is unsupported")
+    return reasons
+
+
+def _validate_answer_completion(
+    *,
+    allow_incomplete: bool,
+    heard: Mapping[str, Any],
+    outcome: str,
+    identity: Mapping[str, Any],
+    usefulness: Mapping[str, Any],
+    reasons: list[str],
+) -> None:
+    """Route draft and completed answers through their distinct policies."""
+
     if allow_incomplete:
-        if outcome and outcome not in _OUTCOMES:
-            raise ValueError("comparison outcome is unsupported")
-        if any(value and value not in _IDENTITY for value in identity.values()):
-            raise ValueError("identity answer is unsupported")
-        if any(value and value not in _USEFULNESS for value in usefulness.values()):
-            raise ValueError("usefulness answer is unsupported")
+        _validate_incomplete_answers(
+            outcome=outcome, identity=identity, usefulness=usefulness
+        )
     else:
-        if heard != {"original": True, "a": True, "b": True}:
-            raise ValueError("explicitly confirm hearing original context, A and B")
-        if outcome not in _OUTCOMES:
-            raise ValueError("choose one comparison result")
-        if any(value not in _IDENTITY for value in identity.values()):
-            raise ValueError("answer both identity questions")
-        if any(value not in _USEFULNESS for value in usefulness.values()):
-            raise ValueError("answer both usefulness questions")
-        if not reasons:
-            raise ValueError("choose one to four reasons")
-    return {
-        "explicitly_heard": dict(heard),
-        "outcome": outcome,
-        "identity_retention": dict(identity),
-        "goal_usefulness": dict(usefulness),
-        "reason_codes": list(reasons),
-    }
+        _validate_complete_answers(
+            heard=heard,
+            outcome=outcome,
+            identity=identity,
+            usefulness=usefulness,
+            reasons=reasons,
+        )
+
+
+def _validate_incomplete_answers(
+    *, outcome: str, identity: Mapping[str, Any], usefulness: Mapping[str, Any]
+) -> None:
+    if outcome and outcome not in _OUTCOMES:
+        raise ValueError("comparison outcome is unsupported")
+    if any(value and value not in _IDENTITY for value in identity.values()):
+        raise ValueError("identity answer is unsupported")
+    if any(value and value not in _USEFULNESS for value in usefulness.values()):
+        raise ValueError("usefulness answer is unsupported")
+
+
+def _validate_complete_answers(
+    *,
+    heard: Mapping[str, Any],
+    outcome: str,
+    identity: Mapping[str, Any],
+    usefulness: Mapping[str, Any],
+    reasons: Sequence[str],
+) -> None:
+    if heard != {"original": True, "a": True, "b": True}:
+        raise ValueError("explicitly confirm hearing original context, A and B")
+    if outcome not in _OUTCOMES:
+        raise ValueError("choose one comparison result")
+    if any(value not in _IDENTITY for value in identity.values()):
+        raise ValueError("answer both identity questions")
+    if any(value not in _USEFULNESS for value in usefulness.values()):
+        raise ValueError("answer both usefulness questions")
+    if not reasons:
+        raise ValueError("choose one to four reasons")
 
 
 def _review_summary(value: Mapping[str, Any]) -> dict[str, Any]:

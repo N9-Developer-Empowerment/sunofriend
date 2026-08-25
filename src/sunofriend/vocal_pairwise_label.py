@@ -115,6 +115,19 @@ def validate_vocal_pairwise_label(
     """Validate a label structurally and, when supplied, against exact state."""
 
     document = dict(value)
+    _validate_label_document(document)
+    binding = _validate_label_binding(document)
+    phrase = _validate_label_phrase_and_sources(document)
+    _validate_label_human_authority(document)
+    _reject_private_fields_and_paths(document)
+    if musical_state is not None:
+        _validate_label_against_state(document, binding, phrase, musical_state)
+    return document
+
+
+def _validate_label_document(document: Mapping[str, Any]) -> None:
+    """Own the completed label's top-level schema and stable field roster."""
+
     if document.get("schema") != VOCAL_PAIRWISE_LABEL_SCHEMA:
         raise ValueError("unsupported vocal pairwise label schema")
     if document.get("status") != "complete_explicit_human_pairwise_label":
@@ -141,12 +154,24 @@ def validate_vocal_pairwise_label(
         raise ValueError("vocal pairwise label fields changed")
     if document.get("method_natures") != ["H"]:
         raise ValueError("pairwise label must declare human work only")
+
+
+def _validate_label_binding(document: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Validate the exact musical-state identity bound by the label."""
+
     binding = _mapping(document.get("binding"), "binding")
     if set(binding) != {"musical_state_schema", "musical_state_sha256"}:
         raise ValueError("pairwise label binding fields changed")
     if binding.get("musical_state_schema") != MUSICAL_STATE_SCHEMA:
         raise ValueError("pairwise label musical-state schema changed")
     _sha256(binding.get("musical_state_sha256"), "musical-state binding")
+    return binding
+
+
+def _validate_label_phrase_and_sources(
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Own phrase geometry and the two distinct immutable source identities."""
 
     phrase = _mapping(document.get("phrase"), "phrase")
     if set(phrase) != {
@@ -169,8 +194,13 @@ def validate_vocal_pairwise_label(
             raise ValueError("pairwise label requires two different sources")
     if document["left"]["audio_sha256"] == document["right"]["audio_sha256"]:
         raise ValueError("pairwise label requires two different audio artifacts")
-
     _reason_codes(str(document.get("outcome", "")), document.get("reason_codes", []))
+    return phrase
+
+
+def _validate_label_human_authority(document: Mapping[str, Any]) -> None:
+    """Keep one explicit A/B action from silently granting wider authority."""
+
     review = _mapping(document.get("review"), "review")
     if (
         set(review) != {"authority", "reviewed_at"}
@@ -202,28 +232,34 @@ def validate_vocal_pairwise_label(
         raise ValueError("pairwise label authority is missing or excessive")
     if document.get("network_used") is not False:
         raise ValueError("pairwise label must record network_used=false")
-    _reject_private_fields_and_paths(document)
 
-    if musical_state is not None:
-        state = validate_musical_state(musical_state)
-        if binding.get("musical_state_sha256") != state["document_sha256"]:
-            raise ValueError("pairwise label does not bind this exact musical state")
-        state_phrase = _phrase(state, str(phrase.get("phrase_id", "")))
-        expected_phrase = {
-            "phrase_id": state_phrase["phrase_id"],
-            "start_seconds": state_phrase["start_seconds"],
-            "end_seconds": state_phrase["end_seconds"],
-        }
-        expected_phrase["phrase_sha256"] = document_sha256(expected_phrase)
-        if dict(phrase) != expected_phrase:
-            raise ValueError("pairwise label phrase geometry changed")
-        for side in ("left", "right"):
-            expected = _source(
-                state, state_phrase["phrase_id"], document[side]["source_id"]
-            )
-            if document[side] != expected:
-                raise ValueError(f"pairwise {side} source identity changed")
-    return document
+
+def _validate_label_against_state(
+    document: Mapping[str, Any],
+    binding: Mapping[str, Any],
+    phrase: Mapping[str, Any],
+    musical_state: Mapping[str, Any],
+) -> None:
+    """Rebind the label to exact phrase and source records in supplied state."""
+
+    state = validate_musical_state(musical_state)
+    if binding.get("musical_state_sha256") != state["document_sha256"]:
+        raise ValueError("pairwise label does not bind this exact musical state")
+    state_phrase = _phrase(state, str(phrase.get("phrase_id", "")))
+    expected_phrase = {
+        "phrase_id": state_phrase["phrase_id"],
+        "start_seconds": state_phrase["start_seconds"],
+        "end_seconds": state_phrase["end_seconds"],
+    }
+    expected_phrase["phrase_sha256"] = document_sha256(expected_phrase)
+    if dict(phrase) != expected_phrase:
+        raise ValueError("pairwise label phrase geometry changed")
+    for side in ("left", "right"):
+        expected = _source(
+            state, state_phrase["phrase_id"], document[side]["source_id"]
+        )
+        if document[side] != expected:
+            raise ValueError(f"pairwise {side} source identity changed")
 
 
 def _phrase(state: Mapping[str, Any], phrase_id: str) -> Mapping[str, Any]:

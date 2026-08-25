@@ -149,6 +149,20 @@ def validate_remix_source_delta_plan(
         anchor_confirmation,
     )
     document = _verified(plan, REMIX_SOURCE_DELTA_PLAN_SCHEMA, "delta plan")
+    _validate_delta_plan_document(document)
+    _validate_delta_plan_binding(
+        document, state, preflight, identity, registry, confirmation
+    )
+    target = _validate_delta_plan_anchor_and_target(document, state, identity)
+    _validate_delta_plan_variants(document, target)
+    _validate_delta_plan_policy(document)
+    _reject_paths(document)
+    return document
+
+
+def _validate_delta_plan_document(document: Mapping[str, Any]) -> None:
+    """Own the exact top-level plan schema and no-render status."""
+
     if set(document) != {
         "schema",
         "status",
@@ -170,6 +184,18 @@ def validate_remix_source_delta_plan(
         raise ValueError("remix source delta plan fields changed")
     if document["status"] != "ready_two_variant_rhythm_delta_no_render":
         raise ValueError("remix source delta plan status changed")
+
+
+def _validate_delta_plan_binding(
+    document: Mapping[str, Any],
+    state: Mapping[str, Any],
+    preflight: Mapping[str, Any],
+    identity: Mapping[str, Any],
+    registry: Mapping[str, Any],
+    confirmation: Mapping[str, Any],
+) -> None:
+    """Own the plan's complete source and owner-evidence identity binding."""
+
     expected_binding = {
         "source_state_schema": REMIX_SOURCE_STATE_SCHEMA,
         "source_state_sha256": state["document_sha256"],
@@ -186,6 +212,15 @@ def validate_remix_source_delta_plan(
         or document["source_control"] != state["source_control"]
     ):
         raise ValueError("remix source delta plan evidence binding changed")
+
+
+def _validate_delta_plan_anchor_and_target(
+    document: Mapping[str, Any],
+    state: Mapping[str, Any],
+    identity: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Keep the confirmed melodic anchor distinct from the rhythm target."""
+
     anchor = identity["owner_anchors"][0]
     if document["preserved_anchor"] != {
         "anchor_id": anchor["anchor_id"],
@@ -202,6 +237,14 @@ def validate_remix_source_delta_plan(
         row["audio_sha256"] for row in identity["separation_estimates"]
     }:
         raise ValueError("rhythm edit target must be distinct from anchor estimate")
+    return target
+
+
+def _validate_delta_plan_variants(
+    document: Mapping[str, Any], target: Mapping[str, Any]
+) -> None:
+    """Validate the single-variable rhythm family and both bounded variants."""
+
     family = document["variant_family"]
     if not isinstance(family, Mapping) or set(family) != {
         "operation",
@@ -221,6 +264,11 @@ def validate_remix_source_delta_plan(
     variants = _variant_records(family["variants"], target["geometry"]["frames"])
     if variants != family["variants"]:
         raise ValueError("remix source variant projection changed")
+
+
+def _validate_delta_plan_policy(document: Mapping[str, Any]) -> None:
+    """Keep render, review, training and product authority explicitly absent."""
+
     if document["render_policy"] != {
         "source_control_copy": "byte_exact",
         "candidate_encoding": "WAV_PCM_24",
@@ -253,8 +301,6 @@ def validate_remix_source_delta_plan(
         for key in ("model_used", "training_used", "network_used")
     ):
         raise ValueError("remix source delta plan method boundary changed")
-    _reject_paths(document)
-    return document
 
 
 def create_remix_source_delta_render_authorization(
@@ -465,6 +511,17 @@ def render_remix_source_delta(
 
 def verify_remix_source_delta_result(root_value: str | Path) -> dict[str, Any]:
     root = Path(root_value).expanduser().resolve(strict=True)
+    _validate_delta_result_roster(root)
+    result = _read_json(
+        root / "TECHNICAL/result.json", REMIX_SOURCE_DELTA_RESULT_SCHEMA, "result"
+    )
+    plan, _auth = _validate_delta_result_binding(root, result=result)
+    _validate_delta_result_artifacts(root, result=result, plan=plan)
+    _validate_delta_result_authority(result)
+    return result
+
+
+def _validate_delta_result_roster(root: Path) -> None:
     expected = {
         "AUDIO/original-context.wav",
         "AUDIO/candidate-1.wav",
@@ -478,9 +535,11 @@ def verify_remix_source_delta_result(root_value: str | Path) -> dict[str, Any]:
     }
     if actual != expected or any(path.is_symlink() for path in root.rglob("*")):
         raise ValueError("remix source delta result file roster changed")
-    result = _read_json(
-        root / "TECHNICAL/result.json", REMIX_SOURCE_DELTA_RESULT_SCHEMA, "result"
-    )
+
+
+def _validate_delta_result_binding(
+    root: Path, *, result: Mapping[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
     if set(result) != {
         "schema",
         "status",
@@ -512,6 +571,12 @@ def verify_remix_source_delta_result(root_value: str | Path) -> dict[str, Any]:
         "authorization_sha256": auth["document_sha256"],
     }:
         raise ValueError("remix source delta result binding changed")
+    return plan, auth
+
+
+def _validate_delta_result_artifacts(
+    root: Path, *, result: Mapping[str, Any], plan: Mapping[str, Any]
+) -> None:
     if set(result["artifacts"]) != {"original", "candidates", "plan", "authorization"}:
         raise ValueError("remix source delta artifact fields changed")
     if len(result["artifacts"]["candidates"]) != 2:
@@ -537,6 +602,10 @@ def verify_remix_source_delta_result(root_value: str | Path) -> dict[str, Any]:
         or result["processing"] != plan["render_policy"]
     ):
         raise ValueError("remix source delta geometry or processing changed")
+    _validate_delta_candidate_audio(root, result=result)
+
+
+def _validate_delta_candidate_audio(root: Path, *, result: Mapping[str, Any]) -> None:
     for row in result["artifacts"]["candidates"]:
         if set(row) != {"variant_id", "path", "bytes", "sha256"}:
             raise ValueError("remix source delta candidate artifact fields changed")
@@ -547,6 +616,9 @@ def verify_remix_source_delta_result(root_value: str | Path) -> dict[str, Any]:
             or observed["audio_bytes"] != row["bytes"]
         ):
             raise ValueError("remix source delta candidate audio changed")
+
+
+def _validate_delta_result_authority(result: Mapping[str, Any]) -> None:
     if (
         result["authority"]
         != {
@@ -572,7 +644,6 @@ def verify_remix_source_delta_result(root_value: str | Path) -> dict[str, Any]:
         or result["network_used"] is not False
     ):
         raise ValueError("remix source delta result authority expanded")
-    return result
 
 
 def _evidence(
@@ -628,6 +699,13 @@ def _target_record(
         raise ValueError("first source delta target must be a drums rhythm estimate")
     if value["geometry"] != control["geometry"]:
         raise ValueError("rhythm target estimate geometry differs from source")
+    _validate_target_identity(value)
+    return dict(value)
+
+
+def _validate_target_identity(value: Mapping[str, Any]) -> None:
+    """Validate path-free immutable target identity fields."""
+
     if (
         not isinstance(value["audio_sha256"], str)
         or len(value["audio_sha256"]) != 64
@@ -635,14 +713,13 @@ def _target_record(
         or value["audio_bytes"] <= 0
     ):
         raise ValueError("rhythm target estimate identity is invalid")
-    for key in ("source_estimate_id",):
-        if (
-            not isinstance(value[key], str)
-            or not value[key]
-            or any(char in value[key] for char in "/\\")
-        ):
-            raise ValueError("rhythm target estimate identifier is invalid")
-    return dict(value)
+    source_estimate_id = value["source_estimate_id"]
+    if (
+        not isinstance(source_estimate_id, str)
+        or not source_estimate_id
+        or any(char in source_estimate_id for char in "/\\")
+    ):
+        raise ValueError("rhythm target estimate identifier is invalid")
 
 
 def _variant_records(
@@ -657,54 +734,68 @@ def _variant_records(
     result: list[dict[str, Any]] = []
     ids: set[str] = set()
     for value in values:
-        if not isinstance(value, Mapping) or set(value) != {"variant_id", "points"}:
-            raise ValueError("rhythm delta variant fields changed")
-        variant_id = str(value["variant_id"])
-        if (
-            not variant_id
-            or variant_id in ids
-            or any(char in variant_id for char in "/\\")
-        ):
-            raise ValueError("rhythm delta variant identifier is invalid")
+        variant_id, checked_points = _validate_variant_record(
+            value, frames=frames, used_ids=ids
+        )
         ids.add(variant_id)
-        points = value["points"]
-        if not isinstance(points, list) or not 3 <= len(points) <= 8:
-            raise ValueError("rhythm delta variant needs 3 to 8 points")
-        checked_points: list[dict[str, Any]] = []
-        last = -1
-        for point in points:
-            if not isinstance(point, Mapping) or set(point) != {"frame", "delta_db"}:
-                raise ValueError("rhythm delta point fields changed")
-            frame = point["frame"]
-            delta = point["delta_db"]
-            if (
-                isinstance(frame, bool)
-                or not isinstance(frame, int)
-                or frame <= last
-                or not 0 <= frame <= frames
-            ):
-                raise ValueError("rhythm delta point frame is invalid")
-            if (
-                isinstance(delta, bool)
-                or not isinstance(delta, (int, float))
-                or not math.isfinite(float(delta))
-                or not -12.0 <= float(delta) <= 0.0
-            ):
-                raise ValueError("rhythm delta gain must stay between -12 and 0 dB")
-            checked_points.append({"frame": frame, "delta_db": float(delta)})
-            last = frame
-        if (
-            checked_points[0]["frame"] != 0
-            or checked_points[-1]["frame"] != frames
-            or not any(row["delta_db"] < 0 for row in checked_points)
-        ):
-            raise ValueError(
-                "rhythm delta must span the full clock and contain a change"
-            )
         result.append({"variant_id": variant_id, "points": checked_points})
     if result[0]["points"] == result[1]["points"]:
         raise ValueError("rhythm delta variants must differ")
     return result
+
+
+def _validate_variant_record(
+    value: Mapping[str, Any], *, frames: int, used_ids: set[str]
+) -> tuple[str, list[dict[str, Any]]]:
+    if not isinstance(value, Mapping) or set(value) != {"variant_id", "points"}:
+        raise ValueError("rhythm delta variant fields changed")
+    variant_id = str(value["variant_id"])
+    if (
+        not variant_id
+        or variant_id in used_ids
+        or any(char in variant_id for char in "/\\")
+    ):
+        raise ValueError("rhythm delta variant identifier is invalid")
+    points = value["points"]
+    if not isinstance(points, list) or not 3 <= len(points) <= 8:
+        raise ValueError("rhythm delta variant needs 3 to 8 points")
+    checked = _validate_variant_points(points, frames=frames)
+    if (
+        checked[0]["frame"] != 0
+        or checked[-1]["frame"] != frames
+        or not any(row["delta_db"] < 0 for row in checked)
+    ):
+        raise ValueError("rhythm delta must span the full clock and contain a change")
+    return variant_id, checked
+
+
+def _validate_variant_points(
+    points: Sequence[Mapping[str, Any]], *, frames: int
+) -> list[dict[str, Any]]:
+    checked: list[dict[str, Any]] = []
+    last = -1
+    for point in points:
+        if not isinstance(point, Mapping) or set(point) != {"frame", "delta_db"}:
+            raise ValueError("rhythm delta point fields changed")
+        frame = point["frame"]
+        delta = point["delta_db"]
+        if (
+            isinstance(frame, bool)
+            or not isinstance(frame, int)
+            or frame <= last
+            or not 0 <= frame <= frames
+        ):
+            raise ValueError("rhythm delta point frame is invalid")
+        if (
+            isinstance(delta, bool)
+            or not isinstance(delta, (int, float))
+            or not math.isfinite(float(delta))
+            or not -12.0 <= float(delta) <= 0.0
+        ):
+            raise ValueError("rhythm delta gain must stay between -12 and 0 dB")
+        checked.append({"frame": frame, "delta_db": float(delta)})
+        last = frame
+    return checked
 
 
 def _verified(value: Mapping[str, Any], schema: str, label: str) -> dict[str, Any]:

@@ -138,6 +138,17 @@ def validate_remix_comparison_plan(
     _verify_document(document, REMIX_COMPARISON_PLAN_SCHEMA, "comparison plan")
     if document.get("status") != "planned_exact_source_control_one_target_delta":
         raise ValueError("bounded remix comparison plan status is unsupported")
+    _validate_comparison_owner_anchor(identity_state)
+    _validate_comparison_plan_binding(document, request, identity_state)
+    _validate_comparison_plan_audio(document, request, identity_state)
+    _validate_comparison_plan_policy(document)
+    _reject_paths(document)
+    return document
+
+
+def _validate_comparison_owner_anchor(identity_state: Mapping[str, Any]) -> None:
+    """Require the single human anchor supported by the first comparison."""
+
     if (
         not isinstance(identity_state.get("owner_anchors"), list)
         or len(identity_state["owner_anchors"]) != 1
@@ -145,6 +156,15 @@ def validate_remix_comparison_plan(
         raise ValueError(
             "first bounded remix comparison requires exactly one owner anchor"
         )
+
+
+def _validate_comparison_plan_binding(
+    document: Mapping[str, Any],
+    request: Mapping[str, Any],
+    identity_state: Mapping[str, Any],
+) -> None:
+    """Own exact identity-state and request binding for a comparison plan."""
+
     if document.get("binding") != {
         "identity_state_schema": REMIX_IDENTITY_STATE_SCHEMA,
         "identity_state_sha256": identity_state["document_sha256"],
@@ -152,12 +172,26 @@ def validate_remix_comparison_plan(
         "remix_request_sha256": request["document_sha256"],
     }:
         raise ValueError("bounded remix comparison plan binding changed")
+
+
+def _validate_comparison_plan_audio(
+    document: Mapping[str, Any],
+    request: Mapping[str, Any],
+    identity_state: Mapping[str, Any],
+) -> None:
+    """Validate source and target identities plus synchronized geometry."""
+
     source = _validate_audio_record(document.get("source_control"), "source control")
     target = _target_record(identity_state, request)
     if document.get("target_estimate") != target:
         raise ValueError("bounded remix target estimate identity changed")
     if source["geometry"] != target["geometry"]:
         raise ValueError("source control and target estimate geometry changed")
+
+
+def _validate_comparison_plan_policy(document: Mapping[str, Any]) -> None:
+    """Keep rendering, review and side-effect authority at planned limits."""
+
     expected_render = {
         "name": "exact-source-plus-target-estimate-gain-delta-v0",
         "formula": "source + (envelope_linear_gain - 1) * target_estimate",
@@ -192,8 +226,6 @@ def validate_remix_comparison_plan(
         "training_label_created": False,
     }:
         raise ValueError("comparison plan cannot claim product effects")
-    _reject_paths(document)
-    return document
 
 
 def render_remix_comparison(
@@ -377,6 +409,35 @@ def validate_remix_comparison_result(
     request = validate_remix_request(remix_request, identity_state)
     document = dict(result)
     _verify_document(document, REMIX_COMPARISON_RESULT_SCHEMA, "comparison result")
+    binding = _validate_comparison_result_binding(
+        document,
+        checked_plan=checked_plan,
+        request=request,
+        identity_state=identity_state,
+    )
+    challenger = _validate_comparison_result_artifacts(
+        document, checked_plan=checked_plan
+    )
+    _validate_comparison_result_derivative_binding(
+        binding=binding,
+        challenger=challenger,
+        checked_plan=checked_plan,
+        request=request,
+        identity_state=identity_state,
+    )
+    _validate_comparison_result_signal(document)
+    _validate_comparison_result_authority(document)
+    _reject_paths(document)
+    return document
+
+
+def _validate_comparison_result_binding(
+    document: Mapping[str, Any],
+    *,
+    checked_plan: Mapping[str, Any],
+    request: Mapping[str, Any],
+    identity_state: Mapping[str, Any],
+) -> Mapping[str, Any]:
     binding = document.get("binding")
     if not isinstance(binding, Mapping) or set(binding) != {
         "comparison_plan_sha256",
@@ -394,6 +455,12 @@ def validate_remix_comparison_result(
         raise ValueError("comparison result request binding changed")
     if document.get("status") != "complete_unreviewed_deterministic_comparison":
         raise ValueError("comparison result must remain unreviewed")
+    return binding
+
+
+def _validate_comparison_result_artifacts(
+    document: Mapping[str, Any], *, checked_plan: Mapping[str, Any]
+) -> Mapping[str, Any]:
     artifacts = document.get("artifacts")
     if not isinstance(artifacts, Mapping):
         raise ValueError("comparison result artifacts are required")
@@ -422,6 +489,22 @@ def validate_remix_comparison_result(
         or challenger.get("encoding") != "WAV_PCM_24"
     ):
         raise ValueError("comparison challenger artifact contract changed")
+    for key, path in (
+        ("review_seed", "REVIEW/remix-review.seed.json"),
+        ("review_html", "REVIEW/remix-review.html"),
+    ):
+        _validate_relative_file_record(artifacts.get(key), path)
+    return challenger
+
+
+def _validate_comparison_result_derivative_binding(
+    *,
+    binding: Mapping[str, Any],
+    challenger: Mapping[str, Any],
+    checked_plan: Mapping[str, Any],
+    request: Mapping[str, Any],
+    identity_state: Mapping[str, Any],
+) -> None:
     expected_remix_result = create_remix_result(
         request,
         identity_state,
@@ -442,11 +525,9 @@ def validate_remix_comparison_result(
         or binding.get("package_binding_sha256") != expected_package_binding
     ):
         raise ValueError("comparison result derivative binding changed")
-    for key, path in (
-        ("review_seed", "REVIEW/remix-review.seed.json"),
-        ("review_html", "REVIEW/remix-review.html"),
-    ):
-        _validate_relative_file_record(artifacts.get(key), path)
+
+
+def _validate_comparison_result_signal(document: Mapping[str, Any]) -> None:
     signal = document.get("signal")
     if not isinstance(signal, Mapping) or set(signal) != {
         "challenger_sample_peak",
@@ -466,6 +547,9 @@ def validate_remix_comparison_result(
         or signal.get("clipped") is not False
     ):
         raise ValueError("comparison signal evidence is invalid")
+
+
+def _validate_comparison_result_authority(document: Mapping[str, Any]) -> None:
     if (
         document.get("review_status") != "not_reviewed"
         or document.get("owner_identity_preserved") is not None
@@ -486,8 +570,6 @@ def validate_remix_comparison_result(
         "model_weights_changed": False,
     }:
         raise ValueError("comparison result effects changed")
-    _reject_paths(document)
-    return document
 
 
 def resolve_remix_comparison_review(
@@ -504,6 +586,30 @@ def resolve_remix_comparison_review(
     )
     request = validate_remix_request(remix_request, identity_state)
     export = dict(reviewed_export)
+    _validate_review_export_fields(export)
+    anchor = _comparison_anchor(identity_state, request)
+    _validate_review_export_binding(export, result, anchor)
+    questions = _validate_review_export_questions(export)
+    _validate_review_export_authority(export)
+    remix_result = _reconstruct_reviewed_remix_result(result, request, identity_state)
+    return create_remix_review(
+        remix_result,
+        request,
+        identity_state,
+        owner_anchor_labels=[
+            {
+                "anchor_id": anchor["anchor_id"],
+                "heard": True,
+                "identity_relationship": questions["identity_relationship"],
+                "musical_usefulness": questions["musical_usefulness"],
+            }
+        ],
+    )
+
+
+def _validate_review_export_fields(export: Mapping[str, Any]) -> None:
+    """Own the exact browser-export field roster."""
+
     if set(export) != {
         "schema",
         "status",
@@ -520,12 +626,28 @@ def resolve_remix_comparison_review(
         "training_eligible",
     }:
         raise ValueError("review export fields are unsupported")
+
+
+def _comparison_anchor(
+    identity_state: Mapping[str, Any], request: Mapping[str, Any]
+) -> Mapping[str, Any]:
+    """Resolve the request's already-validated human anchor."""
+
     operation = request["operations"][0]
-    anchor = next(
+    return next(
         row
         for row in identity_state["owner_anchors"]
         if row["anchor_id"] == operation["anchor_id"]
     )
+
+
+def _validate_review_export_binding(
+    export: Mapping[str, Any],
+    result: Mapping[str, Any],
+    anchor: Mapping[str, Any],
+) -> None:
+    """Bind the explicit export to this package, derivative and anchor."""
+
     if (
         export.get("schema") != REMIX_COMPARISON_REVIEW_SEED_SCHEMA
         or export.get("status") != "complete_explicit_owner_review_no_selection"
@@ -536,6 +658,13 @@ def resolve_remix_comparison_review(
         != {"anchor_id": anchor["anchor_id"], "owner_label": anchor["owner_label"]}
     ):
         raise ValueError("review export does not bind this exact comparison")
+
+
+def _validate_review_export_questions(
+    export: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Require both auditions and bounded owner comparison labels."""
+
     questions = export.get("questions")
     if not isinstance(questions, Mapping) or set(questions) != {
         "heard_source_control",
@@ -561,6 +690,12 @@ def resolve_remix_comparison_review(
         "cannot_tell",
     }:
         raise ValueError("explicit owner comparison labels are incomplete")
+    return questions
+
+
+def _validate_review_export_authority(export: Mapping[str, Any]) -> None:
+    """Prevent playback or one review from implying product/training authority."""
+
     if (
         export.get("playback_creates_decision") is not False
         or export.get("automatic_preference") is not False
@@ -571,6 +706,15 @@ def resolve_remix_comparison_review(
         or export.get("training_eligible") is not False
     ):
         raise ValueError("review authority cannot be inferred or expanded")
+
+
+def _reconstruct_reviewed_remix_result(
+    result: Mapping[str, Any],
+    request: Mapping[str, Any],
+    identity_state: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Reconstruct and verify the exact remix result named by the export."""
+
     challenger = result["artifacts"]["challenger"]
     remix_result = create_remix_result(
         request,
@@ -581,19 +725,7 @@ def resolve_remix_comparison_review(
     )
     if remix_result["document_sha256"] != result["binding"]["remix_result_sha256"]:
         raise ValueError("comparison remix result cannot be reconstructed exactly")
-    return create_remix_review(
-        remix_result,
-        request,
-        identity_state,
-        owner_anchor_labels=[
-            {
-                "anchor_id": anchor["anchor_id"],
-                "heard": True,
-                "identity_relationship": questions["identity_relationship"],
-                "musical_usefulness": questions["musical_usefulness"],
-            }
-        ],
-    )
+    return remix_result
 
 
 def _target_record(

@@ -246,173 +246,35 @@ def create_dry_vocal_comp_plan(
     checked_authorization = validate_dry_vocal_render_authorization(
         render_authorization, state, checked_map
     )
-    if state["vocal_performance_state"].get("processing_chain") != "dry":
-        raise ValueError("first dry renderer requires sources declared as dry")
-    if render_scope not in _RENDER_SCOPES:
-        raise ValueError(
-            "render_scope must be phrase_only, reviewed_phrase_excerpt or "
-            "complete_state_timeline"
-        )
-    if (
-        checked_authorization["render_scope"] != render_scope
-        or checked_authorization["phrase_id"] != phrase_id
-    ):
-        raise ValueError("dry render authorization binds another scope")
-    if render_scope == "phrase_only":
-        if not isinstance(phrase_id, str) or not phrase_id:
-            raise ValueError("phrase_only rendering requires one explicit phrase_id")
-    elif phrase_id is not None:
-        raise ValueError("multi-phrase rendering must not select one phrase_id")
-    if render_scope == "reviewed_phrase_excerpt":
-        if len(state["structure"]["phrases"]) < 2:
-            raise ValueError("reviewed phrase excerpt requires at least two phrases")
-        if checked_map["status"] != "complete_unrendered":
-            raise ValueError("reviewed phrase excerpt requires every reviewed phrase")
-        if checked_map["unresolved_phrases"] or checked_map["undecided_phrase_ids"]:
-            raise ValueError(
-                "reviewed phrase excerpt cannot contain unresolved phrases"
-            )
-    if render_scope == "complete_state_timeline":
-        if checked_map["status"] != "complete_unrendered":
-            raise ValueError("complete dry vocal comp requires every phrase source")
-        if checked_map["unresolved_phrases"] or checked_map["undecided_phrase_ids"]:
-            raise ValueError(
-                "complete dry vocal comp cannot contain unresolved phrases"
-            )
-        if (
-            state.get("structure", {}).get("coverage_scope")
-            != "reviewed_complete_intended_vocal_roster"
-        ):
-            raise ValueError(
-                "whole-song rendering requires the reviewed roster itself to declare "
-                "complete intended vocal coverage"
-            )
-
+    _validate_dry_plan_scope(
+        state,
+        checked_map,
+        checked_authorization,
+        render_scope=render_scope,
+        phrase_id=phrase_id,
+    )
     inventory = _source_inventory(state, state_root)
     phrases = {row["phrase_id"]: row for row in state["structure"]["phrases"]}
-    selected_map_rows = list(checked_map["segments"])
-    if render_scope == "phrase_only":
-        if phrase_id not in phrases:
-            raise ValueError("phrase_only phrase is not in the reviewed roster")
-        selected_map_rows = [
-            row for row in selected_map_rows if row["phrase_id"] == phrase_id
-        ]
-        if len(selected_map_rows) != 1:
-            raise ValueError(
-                "phrase_only rendering requires one explicit source-bearing decision"
-            )
-        source = inventory[selected_map_rows[0]["source_id"]]
-        phrase = phrases[phrase_id]
-        sample_rate = source["audio_properties"]["sample_rate"]
-        song_start = round(float(phrase["start_seconds"]) * sample_rate)
-        song_end = round(float(phrase["end_seconds"]) * sample_rate)
-        horizon = {
-            "authority": "exact_reviewed_phrase_window_only",
-            "source_audio_sha256": source["audio"]["sha256"],
-            "sample_rate": sample_rate,
-            "channels": source["audio_properties"]["channels"],
-            "frames": song_end - song_start,
-            "song_zero_frame": 0,
-            "destination_origin_song_frame": song_start,
-            "destination_end_song_frame": song_end,
-        }
-    elif render_scope == "reviewed_phrase_excerpt":
-        first_source = inventory[selected_map_rows[0]["source_id"]]
-        properties = first_source["audio_properties"]
-        sample_rate = properties["sample_rate"]
-        song_start = round(
-            float(state["structure"]["phrases"][0]["start_seconds"]) * sample_rate
-        )
-        song_end = round(
-            float(state["structure"]["phrases"][-1]["end_seconds"]) * sample_rate
-        )
-        horizon = {
-            "authority": "exact_reviewed_phrase_excerpt_window",
-            "source_audio_sha256": first_source["audio"]["sha256"],
-            "sample_rate": sample_rate,
-            "channels": properties["channels"],
-            "frames": song_end - song_start,
-            "song_zero_frame": 0,
-            "destination_origin_song_frame": song_start,
-            "destination_end_song_frame": song_end,
-        }
-    else:
-        horizon = _render_horizon(state, inventory)
-        horizon["destination_origin_song_frame"] = 0
-        horizon["destination_end_song_frame"] = horizon["frames"]
+    selected_map_rows, horizon = _select_dry_plan_horizon(
+        state,
+        checked_map,
+        inventory=inventory,
+        phrases=phrases,
+        render_scope=render_scope,
+        phrase_id=phrase_id,
+    )
     sample_rate = horizon["sample_rate"]
     channels = horizon["channels"]
     horizon_frames = horizon["frames"]
-    destination_origin = horizon["destination_origin_song_frame"]
     if horizon_frames > _MAX_RENDER_FRAMES:
         raise ValueError("dry vocal render exceeds the 20-minute frame bound")
-
-    segments: list[dict[str, Any]] = []
-    for map_row in selected_map_rows:
-        phrase = phrases[map_row["phrase_id"]]
-        source = inventory[map_row["source_id"]]
-        properties = source["audio_properties"]
-        if (
-            properties["sample_rate"] != sample_rate
-            or properties["channels"] != channels
-        ):
-            raise ValueError(
-                "selected vocal sources must match the exact horizon clock and channels"
-            )
-        song_destination_start = round(float(phrase["start_seconds"]) * sample_rate)
-        song_destination_end = round(float(phrase["end_seconds"]) * sample_rate)
-        destination_start = song_destination_start - destination_origin
-        destination_end = song_destination_end - destination_origin
-        if not 0 <= destination_start < destination_end <= horizon_frames:
-            raise ValueError("phrase destination escapes the exact render horizon")
-        if source["source_class"] == "human_vocal_phrase_capture":
-            source_start = _integer(map_row.get("source_start_frame"), "source start")
-            source_end = _integer(map_row.get("source_end_frame"), "source end")
-        else:
-            source_start = song_destination_start
-            source_end = song_destination_end
-        if source_end - source_start != destination_end - destination_start:
-            raise ValueError(
-                "dry vocal comp forbids timing correction or source-length padding"
-            )
-        if not 0 <= source_start < source_end <= properties["frames"]:
-            raise ValueError("source phrase geometry escapes the selected vocal source")
-        if map_row["source_audio_sha256"] != source["audio"]["sha256"]:
-            raise ValueError("source map audio identity changed")
-        if map_row["outcome"] == "ai_fallback":
-            reference = state["vocal_performance_state"].get("reference")
-            if not isinstance(reference, Mapping) or source[
-                "source_id"
-            ] != reference.get("source_id"):
-                raise ValueError(
-                    "AI fallback must use the exact authorised reference vocal"
-                )
-        elif source["source_class"] not in {
-            "human_vocal_take",
-            "human_vocal_phrase_capture",
-        }:
-            raise ValueError("human phrase outcome must use an exact human source")
-
-        segment = {
-            "phrase_id": phrase["phrase_id"],
-            "decision_document_sha256": map_row["decision_document_sha256"],
-            "outcome": map_row["outcome"],
-            "source_id": source["source_id"],
-            "source_class": source["source_class"],
-            "source_audio_sha256": source["audio"]["sha256"],
-            "destination_start_frame": destination_start,
-            "destination_end_frame": destination_end,
-            "song_destination_start_frame": song_destination_start,
-            "song_destination_end_frame": song_destination_end,
-            "source_start_frame": source_start,
-            "source_end_frame": source_end,
-            "available_pre_guard_frames": source_start,
-            "available_post_guard_frames": properties["frames"] - source_end,
-            "used_pre_guard_frames": 0,
-            "used_post_guard_frames": 0,
-        }
-        segments.append(segment)
-
+    segments = _build_dry_plan_segments(
+        state,
+        selected_map_rows=selected_map_rows,
+        inventory=inventory,
+        phrases=phrases,
+        horizon=horizon,
+    )
     expected_phrase_order = (
         [phrase_id]
         if render_scope == "phrase_only"
@@ -489,10 +351,223 @@ def create_dry_vocal_comp_plan(
     }
     plan["document_sha256"] = document_sha256(plan)
     _validate_plan(plan, state, checked_map, checked_authorization)
-    # The validated manifest and every source were opened relative to this root.
-    # Keep these local paths out of the portable plan.
     del state_path
     return plan
+
+
+def _validate_dry_plan_scope(
+    state: Mapping[str, Any],
+    source_map: Mapping[str, Any],
+    authorization: Mapping[str, Any],
+    *,
+    render_scope: str,
+    phrase_id: str | None,
+) -> None:
+    if state["vocal_performance_state"].get("processing_chain") != "dry":
+        raise ValueError("first dry renderer requires sources declared as dry")
+    _validate_requested_render_scope(
+        authorization, render_scope=render_scope, phrase_id=phrase_id
+    )
+    if render_scope == "reviewed_phrase_excerpt":
+        _validate_reviewed_excerpt_scope(state, source_map)
+    if render_scope == "complete_state_timeline":
+        _validate_complete_timeline_scope(state, source_map)
+
+
+def _validate_requested_render_scope(
+    authorization: Mapping[str, Any], *, render_scope: str, phrase_id: str | None
+) -> None:
+    """Validate scope vocabulary and its exact owner authorization binding."""
+
+    if render_scope not in _RENDER_SCOPES:
+        raise ValueError(
+            "render_scope must be phrase_only, reviewed_phrase_excerpt or "
+            "complete_state_timeline"
+        )
+    if (
+        authorization["render_scope"] != render_scope
+        or authorization["phrase_id"] != phrase_id
+    ):
+        raise ValueError("dry render authorization binds another scope")
+    if render_scope == "phrase_only":
+        if not isinstance(phrase_id, str) or not phrase_id:
+            raise ValueError("phrase_only rendering requires one explicit phrase_id")
+    elif phrase_id is not None:
+        raise ValueError("multi-phrase rendering must not select one phrase_id")
+
+
+def _validate_reviewed_excerpt_scope(
+    state: Mapping[str, Any], source_map: Mapping[str, Any]
+) -> None:
+    """Require a complete, decided multi-phrase excerpt."""
+
+    if len(state["structure"]["phrases"]) < 2:
+        raise ValueError("reviewed phrase excerpt requires at least two phrases")
+    if source_map["status"] != "complete_unrendered":
+        raise ValueError("reviewed phrase excerpt requires every reviewed phrase")
+    if source_map["unresolved_phrases"] or source_map["undecided_phrase_ids"]:
+        raise ValueError("reviewed phrase excerpt cannot contain unresolved phrases")
+
+
+def _validate_complete_timeline_scope(
+    state: Mapping[str, Any], source_map: Mapping[str, Any]
+) -> None:
+    """Require explicit full-roster coverage before whole-song rendering."""
+
+    if source_map["status"] != "complete_unrendered":
+        raise ValueError("complete dry vocal comp requires every phrase source")
+    if source_map["unresolved_phrases"] or source_map["undecided_phrase_ids"]:
+        raise ValueError("complete dry vocal comp cannot contain unresolved phrases")
+    if (
+        state.get("structure", {}).get("coverage_scope")
+        != "reviewed_complete_intended_vocal_roster"
+    ):
+        raise ValueError(
+            "whole-song rendering requires the reviewed roster itself to declare "
+            "complete intended vocal coverage"
+        )
+
+
+def _select_dry_plan_horizon(
+    state: Mapping[str, Any],
+    source_map: Mapping[str, Any],
+    *,
+    inventory: Mapping[str, Mapping[str, Any]],
+    phrases: Mapping[str, Mapping[str, Any]],
+    render_scope: str,
+    phrase_id: str | None,
+) -> tuple[list[Mapping[str, Any]], dict[str, Any]]:
+    selected_map_rows = list(source_map["segments"])
+    if render_scope == "phrase_only":
+        if phrase_id not in phrases:
+            raise ValueError("phrase_only phrase is not in the reviewed roster")
+        selected_map_rows = [
+            row for row in selected_map_rows if row["phrase_id"] == phrase_id
+        ]
+        if len(selected_map_rows) != 1:
+            raise ValueError(
+                "phrase_only rendering requires one explicit source-bearing decision"
+            )
+        source = inventory[selected_map_rows[0]["source_id"]]
+        phrase = phrases[phrase_id]
+        sample_rate = source["audio_properties"]["sample_rate"]
+        song_start = round(float(phrase["start_seconds"]) * sample_rate)
+        song_end = round(float(phrase["end_seconds"]) * sample_rate)
+        horizon = {
+            "authority": "exact_reviewed_phrase_window_only",
+            "source_audio_sha256": source["audio"]["sha256"],
+            "sample_rate": sample_rate,
+            "channels": source["audio_properties"]["channels"],
+            "frames": song_end - song_start,
+            "song_zero_frame": 0,
+            "destination_origin_song_frame": song_start,
+            "destination_end_song_frame": song_end,
+        }
+    elif render_scope == "reviewed_phrase_excerpt":
+        first_source = inventory[selected_map_rows[0]["source_id"]]
+        properties = first_source["audio_properties"]
+        sample_rate = properties["sample_rate"]
+        song_start = round(
+            float(state["structure"]["phrases"][0]["start_seconds"]) * sample_rate
+        )
+        song_end = round(
+            float(state["structure"]["phrases"][-1]["end_seconds"]) * sample_rate
+        )
+        horizon = {
+            "authority": "exact_reviewed_phrase_excerpt_window",
+            "source_audio_sha256": first_source["audio"]["sha256"],
+            "sample_rate": sample_rate,
+            "channels": properties["channels"],
+            "frames": song_end - song_start,
+            "song_zero_frame": 0,
+            "destination_origin_song_frame": song_start,
+            "destination_end_song_frame": song_end,
+        }
+    else:
+        horizon = _render_horizon(state, inventory)
+        horizon["destination_origin_song_frame"] = 0
+        horizon["destination_end_song_frame"] = horizon["frames"]
+    return selected_map_rows, horizon
+
+
+def _build_dry_plan_segments(
+    state: Mapping[str, Any],
+    *,
+    selected_map_rows: Sequence[Mapping[str, Any]],
+    inventory: Mapping[str, Mapping[str, Any]],
+    phrases: Mapping[str, Mapping[str, Any]],
+    horizon: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    sample_rate = horizon["sample_rate"]
+    channels = horizon["channels"]
+    horizon_frames = horizon["frames"]
+    destination_origin = horizon["destination_origin_song_frame"]
+    segments: list[dict[str, Any]] = []
+    for map_row in selected_map_rows:
+        phrase = phrases[map_row["phrase_id"]]
+        source = inventory[map_row["source_id"]]
+        properties = source["audio_properties"]
+        if (
+            properties["sample_rate"] != sample_rate
+            or properties["channels"] != channels
+        ):
+            raise ValueError(
+                "selected vocal sources must match the exact horizon clock and channels"
+            )
+        song_destination_start = round(float(phrase["start_seconds"]) * sample_rate)
+        song_destination_end = round(float(phrase["end_seconds"]) * sample_rate)
+        destination_start = song_destination_start - destination_origin
+        destination_end = song_destination_end - destination_origin
+        if not 0 <= destination_start < destination_end <= horizon_frames:
+            raise ValueError("phrase destination escapes the exact render horizon")
+        if source["source_class"] == "human_vocal_phrase_capture":
+            source_start = _integer(map_row.get("source_start_frame"), "source start")
+            source_end = _integer(map_row.get("source_end_frame"), "source end")
+        else:
+            source_start = song_destination_start
+            source_end = song_destination_end
+        if source_end - source_start != destination_end - destination_start:
+            raise ValueError(
+                "dry vocal comp forbids timing correction or source-length padding"
+            )
+        if not 0 <= source_start < source_end <= properties["frames"]:
+            raise ValueError("source phrase geometry escapes the selected vocal source")
+        if map_row["source_audio_sha256"] != source["audio"]["sha256"]:
+            raise ValueError("source map audio identity changed")
+        if map_row["outcome"] == "ai_fallback":
+            reference = state["vocal_performance_state"].get("reference")
+            if not isinstance(reference, Mapping) or source[
+                "source_id"
+            ] != reference.get("source_id"):
+                raise ValueError(
+                    "AI fallback must use the exact authorised reference vocal"
+                )
+        elif source["source_class"] not in {
+            "human_vocal_take",
+            "human_vocal_phrase_capture",
+        }:
+            raise ValueError("human phrase outcome must use an exact human source")
+
+        segment = {
+            "phrase_id": phrase["phrase_id"],
+            "decision_document_sha256": map_row["decision_document_sha256"],
+            "outcome": map_row["outcome"],
+            "source_id": source["source_id"],
+            "source_class": source["source_class"],
+            "source_audio_sha256": source["audio"]["sha256"],
+            "destination_start_frame": destination_start,
+            "destination_end_frame": destination_end,
+            "song_destination_start_frame": song_destination_start,
+            "song_destination_end_frame": song_destination_end,
+            "source_start_frame": source_start,
+            "source_end_frame": source_end,
+            "available_pre_guard_frames": source_start,
+            "available_post_guard_frames": properties["frames"] - source_end,
+            "used_pre_guard_frames": 0,
+            "used_post_guard_frames": 0,
+        }
+        segments.append(segment)
+    return segments
 
 
 def render_dry_vocal_comp(
@@ -1114,6 +1189,27 @@ def _validate_plan(
         "document_sha256",
     }:
         raise ValueError("dry render plan fields changed")
+    render_scope = _validate_dry_plan_identity(
+        document,
+        state=state,
+        source_map=source_map,
+        render_authorization=render_authorization,
+    )
+    _validate_dry_plan_coverage(
+        document, state=state, source_map=source_map, render_scope=render_scope
+    )
+    _validate_dry_plan_policy(document)
+    _reject_paths(document)
+    return document
+
+
+def _validate_dry_plan_identity(
+    document: Mapping[str, Any],
+    *,
+    state: Mapping[str, Any],
+    source_map: Mapping[str, Any],
+    render_authorization: Mapping[str, Any],
+) -> str:
     render_scope = document.get("render_scope")
     phrase_id = document.get("phrase_id")
     expected_status = (
@@ -1137,6 +1233,16 @@ def _validate_plan(
         "render_authorization_sha256": render_authorization["document_sha256"],
     }:
         raise ValueError("dry render plan binding changed")
+    return str(render_scope)
+
+
+def _validate_dry_plan_coverage(
+    document: Mapping[str, Any],
+    *,
+    state: Mapping[str, Any],
+    source_map: Mapping[str, Any],
+    render_scope: str,
+) -> None:
     expected_rendered = (
         1 if render_scope == "phrase_only" else len(state["structure"]["phrases"])
     )
@@ -1164,6 +1270,9 @@ def _validate_plan(
         or source_map["undecided_phrase_ids"]
     ):
         raise ValueError("reviewed phrase excerpt lacks complete excerpt authority")
+
+
+def _validate_dry_plan_policy(document: Mapping[str, Any]) -> None:
     if document.get("authority") != {
         "source_choices_are_explicit_human_decisions": True,
         "render_confirmation_required": True,
@@ -1194,8 +1303,6 @@ def _validate_plan(
         or document.get("effects") != _plan_effects()
     ):
         raise ValueError("dry render plan claims unsupported effects")
-    _reject_paths(document)
-    return document
 
 
 def validate_dry_vocal_comp_result(
@@ -1224,6 +1331,19 @@ def validate_dry_vocal_comp_result(
         "document_sha256",
     }:
         raise ValueError("dry render result fields changed")
+    binding = _validate_dry_result_identity(document, plan=plan)
+    _validate_dry_result_signal_and_review(document, plan=plan)
+    audio = _validate_dry_result_artifacts(document, plan=plan)
+    _validate_dry_result_derived_artifacts(
+        document, plan=plan, binding=binding, audio=audio
+    )
+    _validate_dry_result_effects(document, plan=plan)
+    return document
+
+
+def _validate_dry_result_identity(
+    document: Mapping[str, Any], *, plan: Mapping[str, Any]
+) -> Mapping[str, Any]:
     expected_status = _result_status(plan["render_scope"])
     if (
         document.get("status") != expected_status
@@ -1250,6 +1370,12 @@ def validate_dry_vocal_comp_result(
         raise ValueError("dry render result exact binding changed")
     if document.get("method_natures") != ["D", "H"]:
         raise ValueError("dry render result method nature changed")
+    return binding
+
+
+def _validate_dry_result_signal_and_review(
+    document: Mapping[str, Any], *, plan: Mapping[str, Any]
+) -> None:
     expected_confirmation_scope = _confirmation_scope(plan["render_scope"])
     if document.get("render_confirmation") != {
         "explicit": True,
@@ -1285,6 +1411,11 @@ def validate_dry_vocal_comp_result(
         "limiting": False,
     }:
         raise ValueError("dry render result processing declaration changed")
+
+
+def _validate_dry_result_artifacts(
+    document: Mapping[str, Any], *, plan: Mapping[str, Any]
+) -> Mapping[str, Any]:
     artifacts = document.get("artifacts")
     if not isinstance(artifacts, Mapping) or set(artifacts) != {
         "dry_vocal_wav",
@@ -1328,6 +1459,17 @@ def validate_dry_vocal_comp_result(
             or not _is_sha256(record.get("sha256"))
         ):
             raise ValueError(f"dry render {key} artifact record changed")
+    return audio
+
+
+def _validate_dry_result_derived_artifacts(
+    document: Mapping[str, Any],
+    *,
+    plan: Mapping[str, Any],
+    binding: Mapping[str, Any],
+    audio: Mapping[str, Any],
+) -> None:
+    artifacts = document["artifacts"]
     expected_edit_map = _edit_map(
         plan,
         {
@@ -1353,6 +1495,11 @@ def validate_dry_vocal_comp_result(
         != hashlib.sha256(expected_review_bytes).hexdigest()
     ):
         raise ValueError("dry render review artifact changed")
+
+
+def _validate_dry_result_effects(
+    document: Mapping[str, Any], *, plan: Mapping[str, Any]
+) -> None:
     expected_effects = {
         "source_mutated": False,
         "source_choice_created": False,
@@ -1376,7 +1523,6 @@ def validate_dry_vocal_comp_result(
         raise ValueError(
             "dry render result cannot claim model, training or network use"
         )
-    return document
 
 
 def _verify_source_stability(

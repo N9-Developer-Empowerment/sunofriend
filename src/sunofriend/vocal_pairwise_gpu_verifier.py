@@ -419,27 +419,11 @@ def _require_finite_nested(value: Any) -> None:
 
 def _maximum_nested_difference(left: Any, right: Any) -> float:
     if isinstance(left, Mapping) and isinstance(right, Mapping):
-        if set(left) != set(right):
-            raise ValueError("resume checkpoint mapping fields differ")
-        return max(
-            (_maximum_nested_difference(left[key], right[key]) for key in left),
-            default=0.0,
-        )
+        return _maximum_mapping_difference(left, right)
     if isinstance(left, (list, tuple)) and isinstance(right, (list, tuple)):
-        if type(left) is not type(right) or len(left) != len(right):
-            raise ValueError("resume checkpoint sequence fields differ")
-        return max(
-            (_maximum_nested_difference(a, b) for a, b in zip(left, right)),
-            default=0.0,
-        )
+        return _maximum_sequence_difference(left, right)
     if _is_tensor_like(left) and _is_tensor_like(right):
-        if left.shape != right.shape or left.dtype != right.dtype:
-            raise ValueError("resume checkpoint tensor shape or dtype differs")
-        left_values = _tensor_values(left)
-        right_values = _tensor_values(right)
-        if len(left_values) != len(right_values):
-            raise ValueError("resume checkpoint tensor sizes differ")
-        return max((abs(a - b) for a, b in zip(left_values, right_values)), default=0.0)
+        return _maximum_tensor_difference(left, right)
     if isinstance(left, bool) or isinstance(right, bool):
         if left is not right:
             raise ValueError("resume checkpoint boolean fields differ")
@@ -452,6 +436,44 @@ def _maximum_nested_difference(left: Any, right: Any) -> float:
     if left != right:
         raise ValueError("resume checkpoint non-numeric fields differ")
     return 0.0
+
+
+def _maximum_mapping_difference(
+    left: Mapping[Any, Any], right: Mapping[Any, Any]
+) -> float:
+    """Compare exact mapping fields recursively."""
+
+    if set(left) != set(right):
+        raise ValueError("resume checkpoint mapping fields differ")
+    return max(
+        (_maximum_nested_difference(left[key], right[key]) for key in left),
+        default=0.0,
+    )
+
+
+def _maximum_sequence_difference(
+    left: list[Any] | tuple[Any, ...], right: list[Any] | tuple[Any, ...]
+) -> float:
+    """Compare exact sequence type, length and nested values."""
+
+    if type(left) is not type(right) or len(left) != len(right):
+        raise ValueError("resume checkpoint sequence fields differ")
+    return max(
+        (_maximum_nested_difference(a, b) for a, b in zip(left, right)),
+        default=0.0,
+    )
+
+
+def _maximum_tensor_difference(left: Any, right: Any) -> float:
+    """Compare tensor geometry and finite flattened numeric values."""
+
+    if left.shape != right.shape or left.dtype != right.dtype:
+        raise ValueError("resume checkpoint tensor shape or dtype differs")
+    left_values = _tensor_values(left)
+    right_values = _tensor_values(right)
+    if len(left_values) != len(right_values):
+        raise ValueError("resume checkpoint tensor sizes differ")
+    return max((abs(a - b) for a, b in zip(left_values, right_values)), default=0.0)
 
 
 def _load_checkpoint_weights_only(path: Path) -> Any:

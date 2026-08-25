@@ -153,6 +153,21 @@ def verify_vocal_iteration_base(root_value: str | Path) -> dict[str, Any]:
     """Reopen every retained byte and validate one iteration-base package."""
 
     root = Path(root_value).expanduser().resolve(strict=True)
+    _validate_base_roster(root)
+    document = _read_json(
+        root / "vocal-iteration-base.json", VOCAL_ITERATION_BASE_SCHEMA, "base"
+    )
+    _validate_base_document(document)
+    plan, result, review = _load_bound_evidence(root, document)
+    _validate_base_binding(document, plan, result, review)
+    _validate_base_audio_and_scope(document, result, review)
+    _validate_base_policy(document)
+    return document
+
+
+def _validate_base_roster(root: Path) -> None:
+    """Own the immutable package-root and exact-file-roster policy."""
+
     if root.is_symlink() or not root.is_dir():
         raise ValueError("vocal iteration base root is unsafe")
     expected_files = {
@@ -169,9 +184,11 @@ def verify_vocal_iteration_base(root_value: str | Path) -> dict[str, Any]:
         path.is_symlink() for path in root.rglob("*")
     ):
         raise ValueError("vocal iteration base file roster changed")
-    document = _read_json(
-        root / "vocal-iteration-base.json", VOCAL_ITERATION_BASE_SCHEMA, "base"
-    )
+
+
+def _validate_base_document(document: Mapping[str, Any]) -> None:
+    """Own the stable top-level schema and completed-status contract."""
+
     if set(document) != {
         "schema",
         "status",
@@ -189,6 +206,13 @@ def verify_vocal_iteration_base(root_value: str | Path) -> dict[str, Any]:
         raise ValueError("vocal iteration base fields changed")
     if document["status"] != "complete_immutable_reviewed_vocal_base":
         raise ValueError("vocal iteration base status changed")
+
+
+def _load_bound_evidence(
+    root: Path, document: Mapping[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Open every artifact through its hash-bound package record."""
+
     for record in document["artifacts"].values():
         _artifact(root, record, "base artifact")
     plan = _read_json(
@@ -206,6 +230,17 @@ def verify_vocal_iteration_base(root_value: str | Path) -> dict[str, Any]:
         VOCAL_CONTINUATION_REVIEW_SCHEMA,
         "review",
     )
+    return plan, result, review
+
+
+def _validate_base_binding(
+    document: Mapping[str, Any],
+    plan: Mapping[str, Any],
+    result: Mapping[str, Any],
+    review: Mapping[str, Any],
+) -> None:
+    """Own cross-document identity binding for the retained evidence."""
+
     if document["binding"] != {
         "plan_schema": VOCAL_CONTINUATION_PLAN_SCHEMA,
         "plan_sha256": plan["document_sha256"],
@@ -215,6 +250,15 @@ def verify_vocal_iteration_base(root_value: str | Path) -> dict[str, Any]:
         "review_sha256": review["document_sha256"],
     }:
         raise ValueError("vocal iteration base binding changed")
+
+
+def _validate_base_audio_and_scope(
+    document: Mapping[str, Any],
+    result: Mapping[str, Any],
+    review: Mapping[str, Any],
+) -> None:
+    """Require byte identity, explicit owner acceptance and matching scope."""
+
     audio = document["artifacts"]["audio"]
     if (
         audio["sha256"] != result["artifacts"]["continuation_audio"]["sha256"]
@@ -225,6 +269,11 @@ def verify_vocal_iteration_base(root_value: str | Path) -> dict[str, Any]:
         raise ValueError("vocal iteration base audio or owner authority changed")
     if document["scope"] != review["scope"]:
         raise ValueError("vocal iteration base scope changed")
+
+
+def _validate_base_policy(document: Mapping[str, Any]) -> None:
+    """Keep processing, authority and side effects at their reviewed limits."""
+
     if document["processing"] != {
         "resampling": False,
         "timing_correction": False,
@@ -260,7 +309,6 @@ def verify_vocal_iteration_base(root_value: str | Path) -> dict[str, Any]:
         or document["network_used"] is not False
     ):
         raise ValueError("vocal iteration base effects changed")
-    return document
 
 
 def _read_json(path: Path, schema: str, label: str) -> dict[str, Any]:

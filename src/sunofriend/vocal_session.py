@@ -150,6 +150,16 @@ class VocalSessionStore:
         payload = dict(previous["draft"])
         if _contains_decision_authority(payload):
             raise ValueError("draft cannot migrate decision authority")
+        self._archive_draft(previous_session, previous)
+        document = self._rebound_draft_document(next_session, payload=payload)
+        _atomic_private_json(self.draft_path, document)
+        return document
+
+    def _archive_draft(
+        self,
+        previous_session: Mapping[str, Any],
+        previous: Mapping[str, Any],
+    ) -> None:
         history = self.state_dir / "draft-history"
         history.mkdir(parents=False, exist_ok=True, mode=0o700)
         os.chmod(history, 0o700)
@@ -162,6 +172,12 @@ class VocalSessionStore:
                 raise ValueError("draft history conflicts with retained evidence")
         else:
             _atomic_private_json(archive, previous)
+
+
+    @staticmethod
+    def _rebound_draft_document(
+        next_session: Mapping[str, Any], *, payload: Mapping[str, Any]
+    ) -> dict[str, Any]:
         document: dict[str, Any] = {
             "schema": VOCAL_SESSION_DRAFT_SCHEMA,
             "revision": 1,
@@ -175,7 +191,6 @@ class VocalSessionStore:
             "network_used": False,
         }
         document["document_sha256"] = document_sha256(document)
-        _atomic_private_json(self.draft_path, document)
         return document
 
     def append(
@@ -767,6 +782,23 @@ def validate_vocal_session(
     if not isinstance(rows, list) or len(rows) != len(expected_phrases):
         raise ValueError("vocal session phrase roster changed")
     source_identities = _state_source_identities(state)
+    decision_count = _validate_session_phrase_rows(
+        rows, expected_phrases=expected_phrases, source_identities=source_identities
+    )
+    _validate_session_sources(document, state=state)
+    _validate_session_summary(
+        document, phrase_count=len(expected_phrases), decision_count=decision_count
+    )
+    _reject_paths(document)
+    return document
+
+
+def _validate_session_phrase_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    expected_phrases: Sequence[Mapping[str, Any]],
+    source_identities: Mapping[str, str],
+) -> int:
     decision_count = 0
     for row, phrase in zip(rows, expected_phrases):
         if (
@@ -792,6 +824,12 @@ def validate_vocal_session(
                 raise ValueError("vocal session decision source identity changed")
             if not _SHA256.fullmatch(str(decision.get("decision_document_sha256", ""))):
                 raise ValueError("vocal session decision document hash is invalid")
+    return decision_count
+
+
+def _validate_session_sources(
+    document: Mapping[str, Any], *, state: Mapping[str, Any]
+) -> None:
     expected_sources = []
     reference = state["vocal_performance_state"].get("reference")
     if isinstance(reference, Mapping):
@@ -808,16 +846,21 @@ def validate_vocal_session(
     )
     if document.get("sources") != expected_sources:
         raise ValueError("vocal session source roster changed")
+
+
+def _validate_session_summary(
+    document: Mapping[str, Any], *, phrase_count: int, decision_count: int
+) -> None:
     expected_coverage = {
-        "phrase_count": len(expected_phrases),
+        "phrase_count": phrase_count,
         "decision_count": decision_count,
-        "remaining_phrase_count": len(expected_phrases) - decision_count,
+        "remaining_phrase_count": phrase_count - decision_count,
     }
     if document.get("coverage") != expected_coverage:
         raise ValueError("vocal session coverage changed")
     expected_status = (
         "reviewed_unrendered"
-        if decision_count == len(expected_phrases)
+        if decision_count == phrase_count
         else "in_progress_unrendered"
     )
     if document.get("status") != expected_status:
@@ -834,8 +877,6 @@ def validate_vocal_session(
         or document.get("network_used") is not False
     ):
         raise ValueError("vocal session cannot render, correct, train or use a network")
-    _reject_paths(document)
-    return document
 
 
 def _decision_summary(decision: Mapping[str, Any] | None) -> dict[str, Any] | None:
