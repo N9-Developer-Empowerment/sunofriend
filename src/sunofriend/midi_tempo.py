@@ -12,10 +12,18 @@ from __future__ import annotations
 import math
 import os
 import re
-import struct
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+from .midi_codec import (
+    MidiDocument,
+    MidiEdit,
+    MidiEvent,
+    inspect_midi_header,
+    parse_midi,
+    rewrite_midi,
+)
 
 
 MICROSECONDS_PER_MINUTE = 60_000_000.0
@@ -61,6 +69,7 @@ class _TempoEvent:
     tick: int
     payload_offset: int
     microseconds_per_quarter: int
+    event: MidiEvent
 
     @property
     def bpm(self) -> float:
@@ -80,6 +89,7 @@ class _MidiLayout:
     ticks_per_beat: int
     tracks: tuple[_TrackChunk, ...]
     tempo_events: tuple[_TempoEvent, ...]
+    document: MidiDocument
 
 
 def retime_midi_bytes(
@@ -139,7 +149,7 @@ def retime_midi_bytes(
 
     speed_ratio = target / effective_source
     target_microseconds = _bpm_to_microseconds(target)
-    output = bytearray(raw)
+    edits = []
     for event in layout.tempo_events:
         microseconds = (
             target_microseconds
@@ -147,13 +157,26 @@ def retime_midi_bytes(
             else int(round(event.microseconds_per_quarter / speed_ratio))
         )
         _validate_tempo_microseconds(microseconds, target)
-        start = event.payload_offset
-        output[start : start + 3] = microseconds.to_bytes(3, "big")
+        edits.append(
+            MidiEdit.replace_event_data(
+                layout.document,
+                event.event,
+                microseconds.to_bytes(3, "big"),
+            )
+        )
 
     if inserted:
-        output = bytearray(
-            _insert_tick_zero_tempo(bytes(output), layout.tracks[0], target_microseconds)
+        edits.append(
+            MidiEdit.insert_track_event(
+                layout.document,
+                layout.document.tracks[0],
+                (
+                    b"\x00\xff\x51\x03" + target_microseconds.to_bytes(3, "big")
+                ),
+            )
         )
+
+    output = rewrite_midi(layout.document, edits)
 
     change = MidiTempoChange(
         source_bpm=effective_source,
@@ -167,7 +190,7 @@ def retime_midi_bytes(
         ticks_per_beat=layout.ticks_per_beat,
         track_count=len(layout.tracks),
     )
-    return bytes(output), change
+    return output, change
 
 
 def retime_midi_path(
@@ -304,173 +327,45 @@ def retime_midi_path(
 
 
 def _scan_midi(data: bytes) -> _MidiLayout:
-    if len(data) < 14 or data[:4] != b"MThd":
-        raise ValueError("not a Standard MIDI File")
-    header_length = struct.unpack(">I", data[4:8])[0]
-    if header_length < 6 or len(data) < 8 + header_length:
-        raise ValueError("invalid or truncated MIDI header")
-    midi_format, track_count, division = struct.unpack(">HHH", data[8:14])
-    if midi_format not in {0, 1}:
+    header = inspect_midi_header(data)
+    if header.midi_format not in {0, 1}:
         raise ValueError("only Standard MIDI File format 0 and 1 are supported")
-    if track_count < 1:
-        raise ValueError("MIDI file contains no tracks")
-    if division & 0x8000:
+    if header.division & 0x8000:
         raise ValueError("SMPTE-time MIDI cannot be retimed with tempo events")
-    if division == 0:
-        raise ValueError("MIDI ticks per beat must be greater than zero")
-
-    position = 8 + header_length
-    tracks: list[_TrackChunk] = []
-    tempo_events: list[_TempoEvent] = []
-    for track_index in range(track_count):
-        if position + 8 > len(data) or data[position : position + 4] != b"MTrk":
-            raise ValueError(f"missing or truncated MIDI track {track_index}")
-        length = struct.unpack(">I", data[position + 4 : position + 8])[0]
-        data_offset = position + 8
-        end = data_offset + length
-        if end > len(data):
-            raise ValueError(f"truncated MIDI track {track_index}")
-        track = _TrackChunk(position, data_offset, length)
-        tracks.append(track)
-        tempo_events.extend(
-            _scan_track(data[data_offset:end], data_offset, track_index)
-        )
-        position = end
-
+    document = parse_midi(data)
+    tracks = tuple(
+        _TrackChunk(track.header_offset, track.data_offset, track.length)
+        for track in document.tracks
+    )
+    tempo_events = []
+    for track in document.tracks:
+        for event in track.events:
+            if event.category != "meta" or event.meta_type != 0x51:
+                continue
+            if event.data_length != 3:
+                raise ValueError("Set Tempo meta event must contain exactly three bytes")
+            microseconds = int.from_bytes(
+                document.source[event.data_start : event.data_end],
+                "big",
+            )
+            if microseconds == 0:
+                raise ValueError("Set Tempo meta event cannot be zero")
+            tempo_events.append(
+                _TempoEvent(
+                    track.index,
+                    event.tick,
+                    event.data_start,
+                    microseconds,
+                    event,
+                )
+            )
     return _MidiLayout(
-        midi_format,
-        division,
-        tuple(tracks),
+        document.midi_format,
+        document.division,
+        tracks,
         tuple(tempo_events),
+        document,
     )
-
-
-def _scan_track(data: bytes, base_offset: int, track_index: int) -> list[_TempoEvent]:
-    position = 0
-    tick = 0
-    running_status: int | None = None
-    result: list[_TempoEvent] = []
-    while position < len(data):
-        delta, position = _read_varlen(data, position)
-        tick += delta
-        if position >= len(data):
-            raise ValueError(f"truncated event in MIDI track {track_index}")
-
-        status_byte = data[position]
-        if status_byte & 0x80:
-            status = status_byte
-            position += 1
-            if status < 0xF0:
-                running_status = status
-        else:
-            if running_status is None:
-                raise ValueError(
-                    f"running status used before a status byte in MIDI track {track_index}"
-                )
-            status = running_status
-
-        if status == 0xFF:
-            running_status = None
-            if position >= len(data):
-                raise ValueError(f"truncated meta event in MIDI track {track_index}")
-            kind = data[position]
-            position += 1
-            length, position = _read_varlen(data, position)
-            payload_offset = position
-            end = position + length
-            if end > len(data):
-                raise ValueError(f"truncated meta payload in MIDI track {track_index}")
-            if kind == 0x51:
-                if length != 3:
-                    raise ValueError("Set Tempo meta event must contain exactly three bytes")
-                microseconds = int.from_bytes(data[position:end], "big")
-                if microseconds == 0:
-                    raise ValueError("Set Tempo meta event cannot be zero")
-                result.append(
-                    _TempoEvent(
-                        track_index,
-                        tick,
-                        base_offset + payload_offset,
-                        microseconds,
-                    )
-                )
-            position = end
-            if kind == 0x2F:
-                break
-            continue
-
-        if status in {0xF0, 0xF7}:
-            running_status = None
-            length, position = _read_varlen(data, position)
-            position += length
-            if position > len(data):
-                raise ValueError(f"truncated SysEx event in MIDI track {track_index}")
-            continue
-
-        if status >= 0xF0:
-            lengths = {
-                0xF1: 1,
-                0xF2: 2,
-                0xF3: 1,
-                0xF6: 0,
-                0xF8: 0,
-                0xFA: 0,
-                0xFB: 0,
-                0xFC: 0,
-                0xFE: 0,
-            }
-            if status not in lengths:
-                raise ValueError(f"unsupported MIDI system event 0x{status:02x}")
-            if status < 0xF8:
-                running_status = None
-            position += lengths[status]
-            if position > len(data):
-                raise ValueError(f"truncated system event in MIDI track {track_index}")
-            continue
-
-        event_type = status & 0xF0
-        if event_type not in {0x80, 0x90, 0xA0, 0xB0, 0xC0, 0xD0, 0xE0}:
-            raise ValueError(f"unsupported channel event 0x{status:02x}")
-        length = 1 if event_type in {0xC0, 0xD0} else 2
-        end = position + length
-        if end > len(data):
-            raise ValueError(f"truncated channel event in MIDI track {track_index}")
-        if any(byte & 0x80 for byte in data[position:end]):
-            raise ValueError(f"invalid channel-event data in MIDI track {track_index}")
-        position = end
-    return result
-
-
-def _insert_tick_zero_tempo(
-    data: bytes,
-    first_track: _TrackChunk,
-    microseconds_per_quarter: int,
-) -> bytes:
-    event = b"\x00\xff\x51\x03" + microseconds_per_quarter.to_bytes(3, "big")
-    new_length = first_track.length + len(event)
-    if new_length > 0xFFFFFFFF:
-        raise ValueError("MIDI track is too large to insert a tempo event")
-    output = bytearray(data)
-    length_offset = first_track.header_offset + 4
-    output[length_offset : length_offset + 4] = struct.pack(">I", new_length)
-    return bytes(
-        output[: first_track.data_offset]
-        + event
-        + output[first_track.data_offset :]
-    )
-
-
-def _read_varlen(data: bytes, position: int) -> tuple[int, int]:
-    value = 0
-    for _ in range(4):
-        if position >= len(data):
-            raise ValueError("truncated MIDI variable-length value")
-        byte = data[position]
-        position += 1
-        value = (value << 7) | (byte & 0x7F)
-        if not byte & 0x80:
-            return value, position
-    raise ValueError("MIDI variable-length value is too long")
 
 
 def _validated_bpm(value: float, label: str, *, require_encodable: bool) -> float:

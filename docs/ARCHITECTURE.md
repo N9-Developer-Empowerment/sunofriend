@@ -85,8 +85,10 @@ CLI/application services (`cli.py`)
         |       --> composite drums: review-required mixed-kit MIDI
         +--> stem refinement (`loop.py`)
         +--> vocal extraction (`vocal.py`)
-        +--> lossless MIDI transforms (`midi_tempo.py`, `midi_transform.py`,
-        |                            `midi_anchor.py`)
+        +--> source-bound lossless MIDI codec (`midi_codec.py`)
+        |       --> first migrated transform (`midi_tempo.py`)
+        |       --> pending compatibility migrations (`midi_transform.py`,
+        |                                             `midi_anchor.py`)
         +--> creative grid rebuild (`midi_align.py`)
         +--> short MIDI-guided cleanup evidence (`midi_mask.py`)
         +--> isolated learned cleanup challenger (`ai_cleanup.py`,
@@ -2435,8 +2437,10 @@ The safest next boundaries are:
 3. Extend the new `workbench_instrument_policy.py` server-owned pair registry
    cautiously; keep broader role aliases, channels and GarageBand suggestions
    separate until their different evidence contracts can be unified safely.
-4. Introduce a lossless Standard MIDI File codec and shared batch/path-safety
-   utilities, then migrate one command at a time against a common fixture set.
+4. Continue the implemented lossless Standard MIDI File codec one caller at a
+   time. Migrate `midi_transform._parse_midi` next behind compatibility
+   functions; keep Clip semantics and shared batch/path-safety utilities as
+   separate changes against the common fixture set.
 5. Share phase-safe audio loading and an explicit beat-grid to `TempoMap`
    adapter.
 6. Split the large Clip and vocal modules only after compatibility re-exports

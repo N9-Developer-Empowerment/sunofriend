@@ -621,9 +621,16 @@ ratchet rather than silently treating all historical functions as new.
   facade. `_tree_snapshot` fell from CRAP 33.323566 to 3.000000, nine synthetic
   boundary cases were added, and both ratchets still pass. See
   [`CODE_QUALITY_RECOVERY_TREE_SNAPSHOT_REFACTOR_2026-08-24.md`](CODE_QUALITY_RECOVERY_TREE_SNAPSHOT_REFACTOR_2026-08-24.md).
-- The accepted recovery-facade warning queue is now exhausted. Select the next
-  bounded seam independently rather than combining the following tracks.
-- Introduce the lossless MIDI codec and migrate one caller per change.
+- **Increment 4 complete on 2026-08-25.** A source-bound lossless Standard MIDI
+  File codec now owns exact chunks, events and typed rewrites, and the tempo
+  command is the first migrated compatibility boundary. The old tempo scanner
+  warning is removed, repository CRAP load fell by 12.554470, and both ratchets
+  pass. See
+  [`CODE_QUALITY_MIDI_CODEC_REFACTOR_2026-08-25.md`](CODE_QUALITY_MIDI_CODEC_REFACTOR_2026-08-25.md).
+- The accepted recovery-facade warning queue is exhausted. Continue one bounded
+  seam independently rather than combining the following tracks.
+- Migrate one additional lossless-MIDI caller per change; prefer
+  `midi_transform._parse_midi` next and keep `Clip` separate.
 - Consolidate remaining review transport mechanics.
 - Add Import Linter with the planned package structure.
 - Consider JavaScript mutation testing only after focused web/browser unit
