@@ -12,6 +12,7 @@ from devtools.architecture_viewer.analyzer import analyse_source_tree
 from devtools.architecture_viewer.overlays import build_overlay_bundle
 from devtools.code_risk import (
     ComplexityFunction,
+    build_parser,
     build_code_risk_document,
     build_coverage_binding_document,
     collect_complexities,
@@ -168,6 +169,29 @@ def test_report_is_nested_source_bound_branch_aware_and_deterministic(tmp_path: 
     assert output.stat().st_mode & 0o777 == 0o600
     with pytest.raises(FileExistsError, match="already exists"):
         write_fresh_report(output, report)
+
+
+def test_cli_accepts_an_explicit_comparison_repository_root(tmp_path: Path) -> None:
+    repository = tmp_path / "base-tree"
+    source = repository / "src" / "sunofriend"
+    coverage = tmp_path / "coverage.json"
+    output = tmp_path / "code-risk.json"
+
+    args = build_parser().parse_args(
+        [
+            "--repository-root",
+            str(repository),
+            "--source-root",
+            str(source),
+            "--coverage-json",
+            str(coverage),
+            "--out",
+            str(output),
+        ]
+    )
+
+    assert args.repository_root == repository
+    assert args.source_root == source
 
 
 def test_nested_function_report_attaches_to_architecture_overlay(tmp_path: Path) -> None:

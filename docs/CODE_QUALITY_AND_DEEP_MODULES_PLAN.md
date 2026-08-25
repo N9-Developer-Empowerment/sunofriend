@@ -478,12 +478,36 @@ Do not slow every existing job immediately.
 - run mutation testing only for changed pilot modules within a fixed time
   budget.
 
+This is now implemented in `.github/workflows/quality.yml`. On a pull request,
+GitHub checks out the proposed merge, while the workflow materializes the exact
+`pull_request.base.sha` in a detached worktree. It runs the complete
+non-`trusted_local` macOS branch-coverage suite over both trees, generates both
+reports with one pinned reporter and compares function source hashes. Untouched
+historical warnings therefore do not block an unrelated pull request.
+
+The Linux mutation job first diffs the exact three pilot paths against the pull
+request base. It does not install or run mutmut when none changed. When one did,
+it runs only the selected module targets and emits a selected-module,
+source-bound advisory report. Existing classified survivors are not
+misrepresented as a passing global mutation score; the report itself must be
+complete and is retained for review.
+
+The root `AGENTS.md` makes this gauntlet repository policy, and the pull-request
+template records the six deep-module review questions. Tests, Ruff and
+architecture contracts protect the whole proposed merged tree; CRAP and
+mutation selection remain change-scoped.
+
 ### Nightly or manual quality run
 
 - run the full non-`trusted_local` macOS Python 3.11 suite with branch coverage;
 - generate the complete CRAP JSON and a short human-readable summary;
 - run the complete three-module mutation pilot; and
 - retain only path-free quality reports and logs with no private inputs.
+
+The same workflow runs these two complete lanes nightly at 03:17 UTC and by
+manual dispatch. The macOS lane publishes the architecture plan/check,
+branch-aware coverage, coverage binding and CRAP report. The Linux lane runs
+the complete three-module mutation pilot and publishes its source-bound report.
 
 Use macOS coverage for the complete package because the existing Linux CI
 deliberately excludes separation tests. A Linux-only coverage report would
@@ -586,10 +610,11 @@ work/quality/venv/bin/python scripts/check-code-risk-ratchet.py \
   --current work/quality/CURRENT/code-risk.json
 ```
 
-The complete reports remain local artifacts rather than a large tracked
-snapshot. A pull-request workflow may obtain the accepted base report from its
-quality artifact store; absence, incompleteness or formula drift must block the
-ratchet rather than silently treating all historical functions as new.
+The complete reports remain local or CI artifacts rather than a large tracked
+snapshot. The pull-request workflow regenerates the exact base report from the
+base SHA instead of depending on a potentially stale artifact. Absence,
+incompleteness or formula drift blocks the ratchet rather than silently treating
+all historical functions as new.
 
 ### Phase 3 — first deep-module refactor
 
@@ -641,6 +666,13 @@ ratchet rather than silently treating all historical functions as new.
   full branch coverage, and repository CRAP load fell by 16.285714. Both
   ratchets pass. See
   [`CODE_QUALITY_MIDI_PATH_ORCHESTRATION_REFACTOR_2026-08-25.md`](CODE_QUALITY_MIDI_PATH_ORCHESTRATION_REFACTOR_2026-08-25.md).
+- **Quality-workflow increment complete on 2026-08-25.** Repository-wide agent
+  instructions and the pull-request checklist now require the bounded quality
+  gauntlet and six-question deep-module review. Pull requests compare complete
+  branch-aware CRAP reports for the exact base and proposed merged tree, while
+  mutation runs only for changed pilot modules. Complete CRAP and mutation lanes
+  remain nightly or manually dispatchable. See
+  [`CODE_QUALITY_WORKFLOW_INCREMENT_2026-08-25.md`](CODE_QUALITY_WORKFLOW_INCREMENT_2026-08-25.md).
 - The accepted recovery-facade and `midi_transform` warning queues are
   exhausted. Continue one bounded seam independently rather than combining
   the following tracks.

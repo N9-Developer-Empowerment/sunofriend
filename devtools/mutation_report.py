@@ -197,6 +197,7 @@ def build_mutation_report(
     classifications_path: Path,
     source_tree_sha256_before: str,
     mutmut_version: str,
+    selected_modules: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """Bind completed mutmut metadata to exact current source functions."""
 
@@ -207,6 +208,17 @@ def build_mutation_report(
         raise ValueError("source tree changed during mutation measurement")
     if not mutmut_version.strip():
         raise ValueError("mutmut version is required")
+    selected = None
+    if selected_modules is not None:
+        selected = frozenset(module.strip() for module in selected_modules)
+        if not selected or "" in selected:
+            raise ValueError("selected mutation modules must be non-empty")
+        unknown = selected.difference(architecture["modules"])
+        if unknown:
+            raise ValueError(
+                f"selected mutation modules are absent from current source: "
+                f"{', '.join(sorted(unknown))}"
+            )
     default_survivor, rules = _load_classifications(classifications_path)
     meta_paths = sorted(mutants_root.glob("src/**/*.py.meta"))
     if not meta_paths:
@@ -242,6 +254,8 @@ def build_mutation_report(
         module_name, qualified_name = _mutant_identity(
             mutant_id, architecture["modules"]
         )
+        if selected is not None and module_name not in selected:
+            continue
         definition = definitions_by_module[module_name].get(qualified_name)
         if definition is None:
             raise ValueError(
@@ -278,11 +292,14 @@ def build_mutation_report(
             }
         )
 
+    if not mutants:
+        raise ValueError("no mutation results matched the selected modules")
+
     unfinished = status_counts["untested"] + status_counts["error"]
     run_status = "advisory_complete" if unfinished == 0 else "incomplete"
-    return {
+    document = {
         "schema": REPORT_SCHEMA,
-        "lane": "three-module-pilot",
+        "lane": "three-module-pilot" if selected is None else "selected-module-pilot",
         "run_status": run_status,
         "binding": {
             "source_tree_sha256_before": source_tree_sha256_before,
@@ -303,6 +320,9 @@ def build_mutation_report(
         },
         "mutants": mutants,
     }
+    if selected is not None:
+        document["selection"] = {"modules": sorted(selected)}
+    return document
 
 
 def serialize_report(document: Mapping[str, Any]) -> bytes:
@@ -343,6 +363,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--source-tree-sha256-before", required=True)
     parser.add_argument("--mutmut-version")
+    parser.add_argument(
+        "--module",
+        action="append",
+        dest="modules",
+        help="Include one exact module from a bounded mutmut run (repeatable)",
+    )
     return parser
 
 
@@ -379,6 +405,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             classifications_path=args.classifications.resolve(),
             source_tree_sha256_before=args.source_tree_sha256_before,
             mutmut_version=version,
+            selected_modules=args.modules,
         )
         write_fresh_report(output, document)
     except (FileExistsError, importlib.metadata.PackageNotFoundError, ValueError) as error:

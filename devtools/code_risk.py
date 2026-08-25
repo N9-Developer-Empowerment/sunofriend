@@ -509,7 +509,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coverage-json", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True, help="Fresh path-free JSON report")
-    parser.add_argument("--source-root", type=Path, default=repository_root / "src" / "sunofriend")
+    parser.add_argument(
+        "--repository-root",
+        type=Path,
+        default=repository_root,
+        help="Repository tree represented by the report (default: current checkout)",
+    )
+    parser.add_argument(
+        "--source-root",
+        type=Path,
+        help="Package root (default: REPOSITORY_ROOT/src/sunofriend)",
+    )
     parser.add_argument("--threshold", type=Decimal, default=DEFAULT_THRESHOLD)
     parser.add_argument("--top", type=int, default=25, help="Rows to print (default: 25)")
     parser.add_argument(
@@ -535,17 +545,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(
             "--coverage-binding-out and --source-tree-sha256-before are required together"
         )
-    repository_root = Path(__file__).resolve().parents[1]
+    repository_root = args.repository_root.resolve()
+    source_root = (
+        args.source_root.resolve()
+        if args.source_root is not None
+        else repository_root / "src" / "sunofriend"
+    )
     try:
         document = generate_code_risk_report(
             repository_root=repository_root,
-            source_root=args.source_root,
+            source_root=source_root,
             coverage_json=args.coverage_json,
             threshold=args.threshold,
         )
         output = args.out.resolve()
         try:
-            output.relative_to(args.source_root.resolve())
+            output.relative_to(source_root)
         except ValueError:
             pass
         else:
@@ -555,7 +570,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.coverage_binding_out is not None:
             binding_output = args.coverage_binding_out.resolve()
             try:
-                binding_output.relative_to(args.source_root.resolve())
+                binding_output.relative_to(source_root)
             except ValueError:
                 pass
             else:
@@ -564,7 +579,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise ValueError("code-risk and coverage binding outputs must differ")
             coverage, coverage_raw = read_coverage_json(args.coverage_json)
             architecture = analyse_source_tree(
-                args.source_root.resolve(), repository_root=repository_root
+                source_root, repository_root=repository_root
             )
             binding_document = build_coverage_binding_document(
                 architecture,

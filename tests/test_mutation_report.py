@@ -145,3 +145,51 @@ def test_report_rejects_stale_source_and_unknown_results(tmp_path: Path) -> None
             source_tree_sha256_before=architecture["source_tree_sha256"],
             mutmut_version="3.fixture",
         )
+
+
+def test_report_can_select_only_modules_executed_by_a_pull_request(
+    tmp_path: Path,
+) -> None:
+    _, mutants_root, classifications = _fixture(tmp_path)
+    extra = tmp_path / "src" / "sample" / "extra.py"
+    extra.write_text("def unused():\n    return 1\n", encoding="utf-8")
+    extra_metadata = mutants_root / "src" / "sample" / "extra.py.meta"
+    extra_metadata.write_text(
+        json.dumps(
+            {
+                "exit_code_by_key": {
+                    "sample.extra.x_unused__mutmut_1": None,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    architecture = analyse_source_tree(
+        tmp_path / "src" / "sample", repository_root=tmp_path
+    )
+
+    report = build_mutation_report(
+        architecture=architecture,
+        mutants_root=mutants_root,
+        classifications_path=classifications,
+        source_tree_sha256_before=architecture["source_tree_sha256"],
+        mutmut_version="3.fixture",
+        selected_modules=["sample.logic"],
+    )
+
+    assert report["run_status"] == "advisory_complete"
+    assert report["lane"] == "selected-module-pilot"
+    assert report["selection"] == {"modules": ["sample.logic"]}
+    assert {record["target"]["module"] for record in report["mutants"]} == {
+        "sample.logic"
+    }
+
+    with pytest.raises(ValueError, match="absent from current source"):
+        build_mutation_report(
+            architecture=architecture,
+            mutants_root=mutants_root,
+            classifications_path=classifications,
+            source_tree_sha256_before=architecture["source_tree_sha256"],
+            mutmut_version="3.fixture",
+            selected_modules=["sample.missing"],
+        )
