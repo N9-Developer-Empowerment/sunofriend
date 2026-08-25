@@ -73,12 +73,11 @@ select a take, correct a vocal, assemble a final comp, generate a remix or add
 a public product command. Those capabilities require their own gates and
 listening evidence.
 
-This foundation retains path-free worker request/result contracts, but it does
-not expose an executable CUDA canary. GPU execution belongs to a separately
-qualified follow-up with hermetic runtime tests, bounded resource evidence and
-the same CRAP and architecture gates. A future canary may prove reproducible
-training mechanics; it still cannot claim that a musical model is musically
-valid, selected for product use or authorized to open private audio.
+GPU worker request/result contracts and executable CUDA canaries belong to a
+separately qualified follow-up with hermetic runtime tests, bounded resource
+evidence and the same CRAP and architecture gates. A future canary may prove
+reproducible training mechanics; it still cannot claim that a musical model is
+musically valid, selected for product use or authorized to open private audio.
 
 ## Privacy and authority
 
