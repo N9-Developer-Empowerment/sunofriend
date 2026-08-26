@@ -1,203 +1,24 @@
-name: Quality
+name: Manual Full Quality
 
 on:
-  pull_request:
-  schedule:
-    - cron: "17 3 * * *"
   workflow_dispatch:
+    inputs:
+      run_mutation:
+        description: Run the complete three-module mutation pilot
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: manual-quality-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  pull-request-crap-ratchet:
-    name: Changed-function CRAP ratchet
-    if: github.event_name == 'pull_request'
-    runs-on: macos-14
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-      - name: Install the isolated quality stack
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e '.[all,dev,quality]'
-      - name: Materialize the exact pull-request base
-        id: base
-        shell: bash
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          base_root="${RUNNER_TEMP}/sunofriend-quality-base-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          git worktree add --detach "$base_root" "$BASE_SHA"
-          echo "root=$base_root" >> "$GITHUB_OUTPUT"
-      - name: Measure the base revision
-        shell: bash
-        env:
-          BASE_ROOT: ${{ steps.base.outputs.root }}
-          COVERAGE_FILE: ${{ runner.temp }}/sunofriend-quality-base.coverage
-        run: |
-          set -euo pipefail
-          mkdir -p work/quality/pull-request
-          (
-            cd "$BASE_ROOT"
-            PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
-              python -m coverage run --rcfile="$GITHUB_WORKSPACE/pyproject.toml" \
-              -m pytest -q -m 'not trusted_local'
-            python -m coverage json --rcfile="$GITHUB_WORKSPACE/pyproject.toml" \
-              -o "$GITHUB_WORKSPACE/work/quality/pull-request/base-coverage.json"
-          )
-          python scripts/report-code-risk.py \
-            --repository-root "$BASE_ROOT" \
-            --source-root "$BASE_ROOT/src/sunofriend" \
-            --coverage-json work/quality/pull-request/base-coverage.json \
-            --out work/quality/pull-request/base-code-risk.json \
-            --top 0
-      - name: Measure the proposed merged tree
-        shell: bash
-        env:
-          COVERAGE_FILE: ${{ runner.temp }}/sunofriend-quality-current.coverage
-        run: |
-          set -euo pipefail
-          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
-            python -m coverage run -m pytest -q -m 'not trusted_local'
-          python -m coverage json \
-            -o work/quality/pull-request/current-coverage.json
-          python scripts/report-code-risk.py \
-            --coverage-json work/quality/pull-request/current-coverage.json \
-            --out work/quality/pull-request/current-code-risk.json \
-            --top 0
-      - name: Enforce the changed-function ratchet
-        run: |
-          python scripts/check-code-risk-ratchet.py \
-            --baseline work/quality/pull-request/base-code-risk.json \
-            --current work/quality/pull-request/current-code-risk.json \
-            > work/quality/pull-request/ratchet.json
-      - name: Retain path-free pull-request quality evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pull-request-code-risk-${{ github.run_id }}-${{ github.run_attempt }}
-          if-no-files-found: warn
-          retention-days: 14
-          path: |
-            work/quality/pull-request/base-code-risk.json
-            work/quality/pull-request/current-code-risk.json
-            work/quality/pull-request/ratchet.json
-
-  pull-request-mutation:
-    name: Changed pilot-module mutation evidence
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Select changed pilot modules
-        id: changes
-        shell: bash
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          modules=""
-          while IFS= read -r path; do
-            case "$path" in
-              src/sunofriend/source_roles.py)
-                modules="$modules sunofriend.source_roles"
-                ;;
-              src/sunofriend/automatic_selection.py)
-                modules="$modules sunofriend.automatic_selection"
-                ;;
-              src/sunofriend/separation_review_transport.py)
-                modules="$modules sunofriend.separation_review_transport"
-                ;;
-            esac
-          done < <(git diff --name-only "$BASE_SHA" HEAD -- \
-            src/sunofriend/source_roles.py \
-            src/sunofriend/automatic_selection.py \
-            src/sunofriend/separation_review_transport.py)
-          modules="${modules# }"
-          if [[ -n "$modules" ]]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "modules=$modules" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/setup-python@v5
-        if: steps.changes.outputs.run == 'true'
-        with:
-          python-version: "3.11"
-          cache: pip
-      - name: Install the bounded mutation stack
-        if: steps.changes.outputs.run == 'true'
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e '.[all,dev,quality,mutation]'
-      - name: Bind the mutation run to current source
-        if: steps.changes.outputs.run == 'true'
-        id: mutation-source
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p work/quality/pull-request-mutation
-          python -m devtools.architecture_viewer --plan \
-            > work/quality/pull-request-mutation/architecture-plan.json
-          source_hash="$(python -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["source_tree_sha256"])' work/quality/pull-request-mutation/architecture-plan.json)"
-          echo "hash=$source_hash" >> "$GITHUB_OUTPUT"
-      - name: Run changed pilot modules
-        if: steps.changes.outputs.run == 'true'
-        shell: bash
-        env:
-          MODULES: ${{ steps.changes.outputs.modules }}
-        run: |
-          set -euo pipefail
-          for module in $MODULES; do
-            python -m mutmut run --max-children 4 "${module}*"
-          done
-      - name: Build the bounded mutation report
-        if: steps.changes.outputs.run == 'true'
-        shell: bash
-        env:
-          MODULES: ${{ steps.changes.outputs.modules }}
-          SOURCE_HASH: ${{ steps.mutation-source.outputs.hash }}
-        run: |
-          set -euo pipefail
-          module_args=()
-          for module in $MODULES; do
-            module_args+=(--module "$module")
-          done
-          python scripts/report-mutation.py \
-            --mutants-root mutants \
-            --classifications docs/mutation-pilot-classifications.json \
-            --out work/quality/pull-request-mutation/mutation.json \
-            --source-tree-sha256-before "$SOURCE_HASH" \
-            "${module_args[@]}"
-      - name: Retain path-free mutation evidence
-        if: always() && steps.changes.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pull-request-mutation-${{ github.run_id }}-${{ github.run_attempt }}
-          if-no-files-found: warn
-          retention-days: 14
-          path: |
-            work/quality/pull-request-mutation/architecture-plan.json
-            work/quality/pull-request-mutation/mutation.json
-
   complete-quality:
     name: Complete macOS quality baseline
-    if: github.event_name != 'pull_request'
     runs-on: macos-14
     timeout-minutes: 60
     steps:
@@ -254,7 +75,7 @@ jobs:
 
   complete-mutation:
     name: Complete three-module mutation pilot
-    if: github.event_name != 'pull_request'
+    if: ${{ inputs.run_mutation }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:

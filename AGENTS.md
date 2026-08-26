@@ -27,8 +27,9 @@ refactor:
    order, persistence or other compatibility behaviour.
 3. Prefer one coherent module that hides design knowledge behind a small
    interface. Do not create many forwarding helpers merely to reduce a score.
-4. Run focused tests, Ruff, the applicable full suite, architecture contracts,
-   the changed-function CRAP ratchet and any selected mutation lane.
+4. Always run focused tests, Ruff and architecture contracts locally. Run the
+   applicable full suite, changed-function CRAP ratchet and selected mutation
+   lane locally when the risk triggers below apply.
 5. Inspect the dependency and public-interface diff before accepting the
    change. Do not expose a private implementation module as a new integration
    API.
@@ -37,14 +38,17 @@ For CRAP:
 
 - New executable functions must have CRAP at or below 30.
 - A materially changed existing function must not increase CRAP or reduce its
-  branch-aware coverage relative to the pull request's base revision.
+  branch-aware coverage relative to the feature branch's recorded base
+  revision.
 - Historical untouched hotspots are advisory. Do not broaden a feature just to
   improve unrelated repository totals.
 
 For mutation testing:
 
-- Pull requests run mutation testing only when they change one of the bounded
-  pilot modules in `pyproject.toml`.
+- Do not run mutation testing automatically for every pull request. Run the
+  bounded local mutation lane when a change touches one of the pilot modules
+  in `pyproject.toml`, changes a safety-critical condition, or introduces a
+  test whose assertion strength is uncertain.
 - Surviving mutants remain explicit review evidence; do not hide them with a
   broad exclusion or treat a timeout, crash or collection failure as killed.
 - Do not mutate model loaders, private-audio runners, network guards, native
@@ -64,19 +68,37 @@ CRAP and mutation testing cannot prove that a module is deep. The architecture
 viewer supplies dependency and interface evidence; a reviewer makes the design
 judgment.
 
-## What CI compares
+## Fast CI and local quality
 
-- `main` is the accepted baseline. Scheduled and manually dispatched quality
-  jobs measure the complete current `main` tree.
-- A pull request is tested as the proposed merged tree: the feature branch
-  combined with its current base revision.
-- Tests, Ruff and architecture contracts protect the whole proposed merged
-  tree. The CRAP ratchet compares only new or materially changed functions with
-  the exact pull-request base. Mutation work is limited to changed pilot
-  modules.
-- Therefore checks cover both integration with `main` and the code proposed for
-  merge; they do not make every historical `main` warning block an unrelated
-  feature.
+- Pull requests run one short Linux/Python 3.11 gate: Ruff, architecture
+  contracts, a bounded invariant suite, distribution build and wheel smoke.
+- Ordinary pushes and merges do not rerun the test matrix. The complete
+  coverage/CRAP and mutation workflow is manual-only; normal quality evidence
+  is produced locally in the feature worktree.
+- Always run focused tests for changed behaviour. Also run the complete local
+  non-`trusted_local` suite when a change crosses module boundaries, changes a
+  public interface/schema/persistence or authority rule, alters dependencies,
+  packaging, audio/ML/platform behaviour, fixes an integration regression, or
+  is being prepared for a release.
+- Run the local CRAP base-versus-candidate ratchet for new or materially
+  changed executable functions. Run the bounded mutation lane under the
+  triggers above. Documentation-only and CI-only changes normally need the
+  fast invariant checks rather than the complete suite.
+- `main` remains the accepted baseline. Record the exact base SHA in the work
+  evidence and attach the local commands/results to the pull request. A manual
+  GitHub `Manual Full Quality` dispatch is an optional clean-machine fallback,
+  not a routine merge gate.
+
+The standard complete local suite is:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+  .venv/bin/python -m pytest -q -m 'not trusted_local'
+```
+
+Use the isolated commands in `docs/CODE_QUALITY_AND_DEEP_MODULES_PLAN.md` for
+coverage, CRAP and mutation evidence. Do not claim a skipped applicable local
+lane passed.
 
 ## Concurrent work
 

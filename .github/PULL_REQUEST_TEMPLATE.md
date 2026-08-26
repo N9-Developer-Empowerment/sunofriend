@@ -9,12 +9,15 @@ facade or workflow affected.
       24-hour boundary, `main` was refreshed and proposed-merge checks were
       rerun after integration.
 - [ ] Focused tests cover the changed behaviour and failure boundaries.
-- [ ] The applicable full test suite and Ruff pass.
-- [ ] Architecture contracts pass for the proposed merged tree.
-- [ ] The changed-function CRAP ratchet passes, or this PR explains why it is
-      not applicable.
-- [ ] A bounded mutation report was reviewed when a configured pilot module
-      changed, or this PR explains why it is not applicable.
+- [ ] Ruff and architecture contracts pass locally.
+- [ ] The complete local suite passed when the `AGENTS.md` risk triggers apply,
+      or the notes explain why it is not applicable.
+- [ ] The local changed-function CRAP ratchet passed for new or materially
+      changed executable functions, or the notes explain why it is not
+      applicable.
+- [ ] A bounded local mutation report was reviewed when a configured pilot
+      module or safety-critical condition changed, or the notes explain why it
+      is not applicable.
 - [ ] No private audio, MIDI, reviews, filenames, credentials or local quality
       caches are included.
 
@@ -32,3 +35,5 @@ facade or workflow affected.
 Explain any unchecked item or mark it not applicable:
 
 <!-- Design and quality notes -->
+
+<!-- Include exact local commands, base SHA and concise results. -->
