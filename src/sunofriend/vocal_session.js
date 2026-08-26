@@ -23,6 +23,9 @@ let captureOriginContextTime = null;
 let captureStartContextTime = null;
 let recordedAttempt = null;
 let attemptObjectUrl = null;
+let workingAuditionContext = null;
+let workingAuditionNodes = [];
+let workingAuditionTimer = null;
 const player = document.querySelector("#player");
 
 function apiPath(path) {
@@ -55,6 +58,12 @@ function isHumanSourceForPhrase(item, phraseId) {
   }
   return ["human_vocal_phrase_capture", "unreviewed_vocal_candidate"].includes(item.source_class)
     && item.bound_phrase_id === phraseId;
+}
+
+function isPhraseLocalSource(item) {
+  return ["human_vocal_phrase_capture", "unreviewed_vocal_candidate"].includes(
+    item?.source_class,
+  );
 }
 
 function formatTime(seconds) {
@@ -181,6 +190,8 @@ function render() {
   );
   document.querySelector("#use-human").disabled = !isHumanSourceForPhrase(source(activeSourceId), row.phrase_id);
   document.querySelector("#play-original").disabled = !appState.context_playback.original_source_id;
+  const workingChoices = appState.candidate_vault?.working_choices?.choices || {};
+  document.querySelector("#play-working-audition").disabled = !Object.keys(workingChoices).length;
   document.querySelectorAll("[data-context-scope]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.contextScope === contextScope));
   });
@@ -263,7 +274,7 @@ async function playSource(sourceId) {
     // waitForMetadata resolves only after loadedmetadata, before any currentTime seek.
     await waitForMetadata(player);
     const window = contextWindow();
-    const sourceLocalCapture = item.source_class === "human_vocal_phrase_capture";
+    const sourceLocalCapture = isPhraseLocalSource(item);
     player.currentTime = sourceLocalCapture
       ? (item.playback_start_seconds ?? 0)
       : window.start;
@@ -284,7 +295,62 @@ function stopPlayback() {
   player.removeAttribute("src");
   player.load();
   stopAt = null;
+  window.clearTimeout(workingAuditionTimer);
+  workingAuditionTimer = null;
+  workingAuditionNodes.forEach((node) => {
+    try { node.stop(); } catch (error) { /* already stopped */ }
+  });
+  workingAuditionNodes = [];
+  if (workingAuditionContext) {
+    workingAuditionContext.close().catch(() => {});
+    workingAuditionContext = null;
+  }
   document.querySelectorAll(".source-button.playing").forEach((button) => button.classList.remove("playing"));
+}
+
+async function decodeAuditionSource(context, mediaUrl) {
+  const response = await fetch(mediaUrl, {cache: "no-store"});
+  if (!response.ok) throw new Error("A working-audition source could not be loaded.");
+  return context.decodeAudioData(await response.arrayBuffer());
+}
+
+async function playWorkingAudition() {
+  stopPlayback();
+  try {
+    const plan = await api(`/api/working-audition?scope=${encodeURIComponent(contextScope)}&phrase_id=${encodeURIComponent(activePhraseId)}`);
+    workingAuditionContext = new AudioContext({latencyHint: "playback"});
+    const context = workingAuditionContext;
+    const buffers = new Map();
+    await Promise.all([...new Set(plan.segments.map((row) => row.media_url))].map(async (url) => {
+      buffers.set(url, await decodeAuditionSource(context, url));
+    }));
+    await context.resume();
+    const clockStart = context.currentTime + 0.05;
+    plan.segments.forEach((segment) => {
+      const sourceNode = context.createBufferSource();
+      const gainNode = context.createGain();
+      const duration = segment.source_end_seconds - segment.source_start_seconds;
+      const fade = Math.min(plan.join.edge_fade_seconds, duration / 2);
+      const scheduledStart = clockStart + segment.destination_start_seconds;
+      sourceNode.buffer = buffers.get(segment.media_url);
+      sourceNode.connect(gainNode).connect(context.destination);
+      gainNode.gain.setValueAtTime(0, scheduledStart);
+      gainNode.gain.linearRampToValueAtTime(1, scheduledStart + fade);
+      gainNode.gain.setValueAtTime(1, scheduledStart + duration - fade);
+      gainNode.gain.linearRampToValueAtTime(0, scheduledStart + duration);
+      sourceNode.start(scheduledStart, segment.source_start_seconds, duration);
+      sourceNode.stop(scheduledStart + duration);
+      workingAuditionNodes.push(sourceNode);
+    });
+    workingAuditionTimer = window.setTimeout(
+      stopPlayback,
+      Math.ceil((plan.duration_seconds + 0.1) * 1000),
+    );
+    showNotice("Playing a browser-only rough audition. Nothing is saved, selected or rendered.");
+  } catch (error) {
+    stopPlayback();
+    showNotice(error.message, true);
+  }
 }
 
 player.addEventListener("timeupdate", () => {
@@ -425,6 +491,7 @@ document.querySelector("#play-original").addEventListener("click", () => {
   const original = appState.context_playback.original_source_id;
   if (original) playSource(original);
 });
+document.querySelector("#play-working-audition").addEventListener("click", playWorkingAudition);
 document.querySelectorAll("[data-context-scope]").forEach((button) => {
   button.addEventListener("click", () => {
     contextScope = button.dataset.contextScope;

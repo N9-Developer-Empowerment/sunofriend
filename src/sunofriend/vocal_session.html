@@ -53,7 +53,10 @@
             <p class="eyebrow">Original and context</p>
             <h2>Hear where this phrase belongs</h2>
           </div>
-          <button id="play-original" type="button">Play original</button>
+          <div class="context-actions">
+            <button id="play-original" type="button">Play original</button>
+            <button id="play-working-audition" type="button">Play working version</button>
+          </div>
         </div>
         <div class="scope-switch" role="group" aria-label="Playback context">
           <button type="button" data-context-scope="phrase" aria-pressed="true">Phrase</button>
@@ -61,8 +64,9 @@
           <button type="button" data-context-scope="song" aria-pressed="false">Song</button>
         </div>
         <p id="context-help" class="support-copy">
-          Start with the original, then compare any human attempt across the same context window.
-          Playback is only an audition and never saves a choice.
+          Start with the original, then hear your reversible working choices in the
+          same phrase, surrounding section or song window. Playback is a rough
+          browser audition only; it never saves a decision or renders a vocal.
         </p>
       </div>
 

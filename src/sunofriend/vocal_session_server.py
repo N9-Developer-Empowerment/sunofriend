@@ -36,6 +36,7 @@ from .vocal_session import (
     build_vocal_session_transition_request,
     create_vocal_session_transition,
 )
+from .vocal_working_audition import create_vocal_working_audition
 
 
 _MAXIMUM_JSON_REQUEST_BYTES = 64 * 1024
@@ -404,8 +405,27 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
             ),
             "keep_url": "/api/candidate",
             "working_choices_url": "/api/working-choices",
+            "working_audition_url": "/api/working-audition",
             "authority": "none",
         }
+
+    def working_audition_plan(
+        self, *, active_phrase_id: str, scope: str
+    ) -> dict[str, Any]:
+        """Return one zero-authority browser schedule for current choices."""
+
+        state = self.browser_state()
+        context = state["context_playback"]
+        return create_vocal_working_audition(
+            state["session"],
+            state["sources"],
+            state["candidate_vault"]["working_choices"],
+            active_phrase_id=active_phrase_id,
+            scope=scope,
+            section_phrase_radius=int(context["section_phrase_radius"]),
+            song_start_seconds=float(context["song_start_seconds"]),
+            song_end_seconds=float(context["song_end_seconds"]),
+        )
 
     def _candidate_browser_projection(
         self, candidate: Mapping[str, Any]
@@ -804,6 +824,20 @@ class _VocalSessionHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/session":
             self._json(HTTPStatus.OK, self.server.browser_state(), head_only=head_only)
             return
+        if parsed.path == "/api/working-audition":
+            try:
+                query = parse_qs(parsed.query)
+                if set(query) != {"token", "scope", "phrase_id"}:
+                    raise ValueError("working audition query fields changed")
+                plan = self.server.working_audition_plan(
+                    active_phrase_id=_single_query_value(query, "phrase_id"),
+                    scope=_single_query_value(query, "scope"),
+                )
+            except (ValueError, OSError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+                return
+            self._json(HTTPStatus.OK, plan, head_only=head_only)
+            return
         self._error(HTTPStatus.NOT_FOUND, "vocal session route not found")
 
     def _begin(self, parsed: Any, *, mutation: bool) -> bool:
@@ -1030,6 +1064,13 @@ def _file_sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _single_query_value(query: Mapping[str, list[str]], field: str) -> str:
+    values = query.get(field)
+    if not isinstance(values, list) or len(values) != 1:
+        raise ValueError(f"working audition {field} must occur once")
+    return _text(values[0], field, 256)
 
 
 def _mapping(value: Any, label: str) -> dict[str, Any]:

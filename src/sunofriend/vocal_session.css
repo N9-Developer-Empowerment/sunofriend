@@ -81,6 +81,7 @@ h2 { margin-bottom: 0.4rem; font-size: 1.12rem; }
 
 .panel { padding: clamp(1.2rem, 2.3vw, 2rem); background: var(--panel); }
 .panel-heading, .listen-heading, .stage-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.context-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.45rem; }
 .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.82rem; }
 .progress-track { height: 4px; margin: 1.2rem 0 1.5rem; overflow: hidden; border-radius: 999px; background: #303532; }
 .progress-track span { display: block; height: 100%; width: 0; background: var(--aqua); transition: width 240ms ease; }

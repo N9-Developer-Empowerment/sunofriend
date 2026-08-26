@@ -48,7 +48,7 @@ def test_source_playback_waits_for_metadata_before_seeking() -> None:
     assert metadata >= 0, "playSource must wait for loadedmetadata"
     assert seek >= 0, "playSource must seek to the reviewed phrase start"
     assert metadata < seek, "loadedmetadata must be awaited before currentTime is set"
-    assert 'item.source_class === "human_vocal_phrase_capture"' in playback
+    assert "isPhraseLocalSource(item)" in playback
     assert "Boolean(item.bound_phrase_id)" not in playback
 
 
@@ -115,6 +115,18 @@ def test_recording_save_uses_server_declared_destination() -> None:
     assert 'appState.recording.save_url === "/api/candidate"' in save
     assert "api(appState.recording.save_url" in save
     assert "working draft" in save
+
+
+def test_working_version_audition_is_browser_only_and_handles_short_candidates() -> None:
+    """Phrase, section and song audition must not seek a pickup on the song clock."""
+
+    assert 'id="play-working-audition"' in HTML
+    assert '"human_vocal_phrase_capture", "unreviewed_vocal_candidate"' in JAVASCRIPT
+    assert 'api(`/api/working-audition?scope=${encodeURIComponent(contextScope)}' in JAVASCRIPT
+    assert "createBufferSource()" in JAVASCRIPT
+    assert "createGain()" in JAVASCRIPT
+    assert "browser-only rough audition" in JAVASCRIPT
+    assert "workingAuditionContext.close()" in JAVASCRIPT
 
 
 def test_large_song_navigation_has_status_filters_and_next_open_phrase() -> None:

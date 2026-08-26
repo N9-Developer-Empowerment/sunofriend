@@ -151,6 +151,37 @@ def test_launch_is_loopback_only_uses_a_fresh_token_and_returns_path_free_state(
         second.close()
 
 
+@pytest.mark.parametrize(
+    ("route", "content_type"),
+    (
+        ("/vocal_session.js", "text/javascript"),
+        ("/vocal_session.css", "text/css"),
+    ),
+)
+def test_static_browser_assets_are_loopback_read_only_resources(
+    vocal_http: _VocalSessionHTTP,
+    route: str,
+    content_type: str,
+) -> None:
+    """The two public asset branches must remain explicit, bounded reads."""
+
+    status, headers, body = vocal_http.request("GET", route)
+
+    assert status == 200
+    assert body
+    assert headers["content-type"].startswith(content_type)
+    assert headers["cache-control"] == "no-store"
+
+
+def test_unknown_read_route_fails_closed(vocal_http: _VocalSessionHTTP) -> None:
+    status, _, payload = vocal_http.json_request(
+        "GET", f"/not-a-vocal-route?token={vocal_http.token}"
+    )
+
+    assert status == 404
+    assert payload == {"error": "vocal session route not found"}
+
+
 def test_mutation_requires_token_same_origin_and_an_explicit_decision(
     vocal_http: _VocalSessionHTTP,
 ) -> None:

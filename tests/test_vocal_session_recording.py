@@ -283,6 +283,7 @@ def test_candidate_vault_keeps_attempt_without_growing_the_musical_state(
         "working_choices": None,
         "keep_url": "/api/candidate",
         "working_choices_url": "/api/working-choices",
+        "working_audition_url": "/api/working-audition",
         "authority": "none",
     }
 
@@ -358,6 +359,80 @@ def test_working_choice_is_reversible_zero_authority_and_not_a_phrase_decision(
     assert cleared["working_choices"]["revision"] == 2
     assert cleared["working_choices"]["choices"] == {}
     assert fixture.browser_state()["session"]["coverage"]["decision_count"] == 0
+
+
+def test_working_audition_uses_candidate_then_reference_without_rendering(
+    candidate_vault_http: _RecordingHTTP,
+) -> None:
+    fixture = candidate_vault_http
+    status, _, kept = fixture.keep_candidate(fixture.capture_request())
+    assert status == 201
+    source_id = kept["candidate"]["source_id"]
+    status, _, _ = fixture.json_request(
+        "PUT",
+        f"/api/working-choices?token={fixture.token}",
+        {
+            "expected_revision": 0,
+            "working_source_by_phrase": {"phrase-001": source_id},
+        },
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 200
+
+    status, _, plan = fixture.json_request(
+        "GET",
+        f"/api/working-audition?token={fixture.token}"
+        "&scope=song&phrase_id=phrase-001",
+    )
+
+    assert status == 200
+    assert plan["schema"] == "sunofriend.vocal-working-audition.v1"
+    assert plan["status"] == "planned_browser_audition_only"
+    assert plan["scope"] == "song"
+    assert plan["window"] == {"start_seconds": 0.0, "end_seconds": 1.7}
+    assert [row["phrase_id"] for row in plan["segments"]] == [
+        "phrase-001",
+        "phrase-002",
+    ]
+    candidate, fallback = plan["segments"]
+    assert candidate["source_id"] == source_id
+    assert candidate["source_class"] == "unreviewed_vocal_candidate"
+    assert candidate["selection"] == "reversible_working_choice"
+    assert candidate["source_start_seconds"] == pytest.approx(PRE_GUARD_SECONDS)
+    assert candidate["destination_start_seconds"] == pytest.approx(0.6)
+    assert fallback["source_id"] == "reference-vocal-001"
+    assert fallback["selection"] == "original_reference_fallback"
+    assert fallback["source_start_seconds"] == pytest.approx(1.2)
+    assert fallback["destination_start_seconds"] == pytest.approx(1.2)
+    assert plan["join"] == {
+        "policy": "browser_scheduled_phrase_boundaries",
+        "edge_fade_seconds": 0.005,
+        "rendered_artifact": False,
+        "join_reviewed": False,
+    }
+    assert plan["authority"] == "none"
+    assert not any(plan["effects"].values())
+    assert plan["network_used"] is False
+    assert fixture.server.store.current_session(fixture.musical_state)["coverage"][
+        "decision_count"
+    ] == 0
+
+
+def test_working_audition_rejects_unknown_scope_without_side_effects(
+    candidate_vault_http: _RecordingHTTP,
+) -> None:
+    fixture = candidate_vault_http
+    before = _tree_snapshot(fixture.candidate_vault_dir)
+
+    status, _, payload = fixture.json_request(
+        "GET",
+        f"/api/working-audition?token={fixture.token}"
+        "&scope=album&phrase_id=phrase-001",
+    )
+
+    assert status == 400
+    assert payload == {"error": "working audition scope is not supported"}
+    assert _tree_snapshot(fixture.candidate_vault_dir) == before
 
 
 def test_candidate_keep_and_working_choice_reject_duplicate_stale_or_wrong_binding(
