@@ -318,6 +318,43 @@ def test_report_marks_missing_function_region_incomplete(tmp_path: Path) -> None
     assert report["functions"][0]["unmeasured_reason"].startswith("matching coverage")
 
 
+def test_named_coverage_region_accepts_body_start_within_function(
+    tmp_path: Path,
+) -> None:
+    """Coverage may report the first executable body line, not the ``def`` line."""
+
+    _, architecture = _fixture(tmp_path)
+    module = architecture["modules"]["riskpkg.risk"]
+    definition = next(
+        item
+        for item in module["function_definitions"]
+        if item["qualified_name"] == "API.run"
+    )
+    coverage = _coverage(architecture)
+    coverage["files"][module["path"]]["functions"]["API.run"]["start_line"] = (
+        definition["line"] + 1
+    )
+
+    report = build_code_risk_document(
+        architecture,
+        coverage,
+        [
+            ComplexityFunction(
+                path=module["path"],
+                qualified_name="API.run",
+                line=definition["line"],
+                end_line=definition["end_line"],
+                complexity=1,
+                source_sha256="a" * 64,
+            )
+        ],
+        radon_version="6.fixture",
+    )
+
+    assert report["status"] == "advisory_complete"
+    assert report["functions"][0]["coverage"]["percentage"] == "100.000"
+
+
 def test_zero_opportunity_declaration_is_explicitly_not_applicable(
     tmp_path: Path,
 ) -> None:

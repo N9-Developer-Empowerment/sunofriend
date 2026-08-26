@@ -98,7 +98,12 @@ def _coverage_region(
     if not isinstance(regions, Mapping):
         return 0, 0, "coverage JSON has no per-function regions"
     region = regions.get(function.qualified_name)
-    if not isinstance(region, Mapping) or int(region.get("start_line", -1)) != function.line:
+    named_region_matches = isinstance(region, Mapping) and (
+        function.line
+        <= int(region.get("start_line", -1))
+        <= function.end_line
+    )
+    if not named_region_matches:
         matches = [
             value
             for name, value in regions.items()

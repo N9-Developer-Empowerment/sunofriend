@@ -47,8 +47,14 @@ class SourceImportReceipt:
 def canonical_json_bytes(document: Mapping[str, Any]) -> bytes:
     """Return the repository's stable JSON representation."""
 
+    return (_render_finite_json(document) + "\n").encode("utf-8")
+
+
+def _render_finite_json(document: Mapping[str, Any]) -> str:
+    """Own finite-number enforcement and its stable public error."""
+
     try:
-        rendered = json.dumps(
+        return json.dumps(
             document,
             ensure_ascii=False,
             indent=2,
@@ -57,7 +63,6 @@ def canonical_json_bytes(document: Mapping[str, Any]) -> bytes:
         )
     except ValueError as error:
         raise ValueError("document values must be finite JSON numbers") from error
-    return (rendered + "\n").encode("utf-8")
 
 
 def document_sha256(document: Mapping[str, Any]) -> str:

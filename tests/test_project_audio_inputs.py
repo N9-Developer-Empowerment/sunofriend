@@ -121,6 +121,11 @@ def _prepared_project(root: Path) -> None:
 
 
 class ProjectAudioInputTests(unittest.TestCase):
+    def test_canonical_json_rejects_non_finite_numbers(self) -> None:
+        self.assertEqual(canonical_json_bytes({"finite": 1.5}), b'{\n  "finite": 1.5\n}\n')
+        with self.assertRaisesRegex(ValueError, "finite JSON numbers"):
+            canonical_json_bytes({"not_finite": float("nan")})
+
     def test_empty_folder_requests_prepared_wav_stems(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             project = Path(temporary)
