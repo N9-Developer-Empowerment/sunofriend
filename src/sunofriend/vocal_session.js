@@ -53,7 +53,7 @@ function isHumanSourceForPhrase(item, phraseId) {
   if (item.source_class === "human_vocal_take") {
     return !item.eligible_phrase_ids || item.eligible_phrase_ids.includes(phraseId);
   }
-  return item.source_class === "human_vocal_phrase_capture"
+  return ["human_vocal_phrase_capture", "unreviewed_vocal_candidate"].includes(item.source_class)
     && item.bound_phrase_id === phraseId;
 }
 
@@ -121,6 +121,9 @@ function render() {
   chip.classList.toggle("decided", Boolean(row.decision));
 
   const selected = row.decision?.selected_source_id || null;
+  const workingSelected = appState.candidate_vault?.working_choices?.choices?.[
+    row.phrase_id
+  ]?.source_id || null;
   const tray = document.querySelector("#source-tray");
   const availableSources = appState.sources.filter(
     (item) => isHumanSourceForPhrase(item, row.phrase_id),
@@ -128,10 +131,10 @@ function render() {
   tray.replaceChildren(...availableSources.map((item, attemptIndex) => {
     const card = document.createElement("article");
     const activeAudition = item.source_id === activeSourceId;
-    card.className = `source-card${item.source_id === selected ? " selected" : ""}${activeAudition ? " active-audition" : ""}`;
+    card.className = `source-card${item.source_id === selected ? " selected" : ""}${item.source_id === workingSelected ? " working-choice" : ""}${activeAudition ? " active-audition" : ""}`;
     card.dataset.sourceId = item.source_id;
     const label = document.createElement("strong");
-    label.textContent = `Attempt ${attemptIndex + 1}`;
+    label.textContent = item.display_label || `Attempt ${attemptIndex + 1}`;
     const actions = document.createElement("div");
     actions.className = "source-card-actions";
     const play = document.createElement("button");
@@ -143,9 +146,14 @@ function render() {
     const use = document.createElement("button");
     use.type = "button";
     use.className = "quiet-button";
-    use.textContent = item.source_id === selected ? "Saved choice" : "Use this attempt";
+    const provisional = item.source_class === "unreviewed_vocal_candidate";
+    use.textContent = item.source_id === selected
+      ? "Saved choice"
+      : (item.source_id === workingSelected ? "Working choice" : (provisional ? "Use in draft" : "Use this attempt"));
     use.disabled = Boolean(row.decision);
-    use.addEventListener("click", () => decide("human_take", item.source_id));
+    use.addEventListener("click", () => provisional
+      ? useWorkingChoice(item.source_id)
+      : decide("human_take", item.source_id));
     actions.append(play, use);
     card.append(label, actions);
     return card;
@@ -344,7 +352,37 @@ async function decide(outcome, sourceId = null) {
   }
 }
 
-document.querySelector("#use-human").addEventListener("click", () => decide("human_take", activeSourceId));
+async function useWorkingChoice(sourceId) {
+  const current = appState.candidate_vault?.working_choices;
+  const choices = {};
+  Object.entries(current?.choices || {}).forEach(([phraseId, choice]) => {
+    choices[phraseId] = choice.source_id;
+  });
+  choices[activePhraseId] = sourceId;
+  try {
+    const result = await api("/api/working-choices", {
+      method: "PUT",
+      body: JSON.stringify({
+        expected_revision: current?.revision || 0,
+        working_source_by_phrase: choices,
+      }),
+    });
+    appState.candidate_vault.working_choices = result.working_choices;
+    showNotice("Working choice updated. This is reversible and is not a saved phrase decision.");
+    render();
+  } catch (error) {
+    showNotice(error.message, true);
+  }
+}
+
+document.querySelector("#use-human").addEventListener("click", () => {
+  const active = source(activeSourceId);
+  if (active?.source_class === "unreviewed_vocal_candidate") {
+    useWorkingChoice(activeSourceId);
+  } else {
+    decide("human_take", activeSourceId);
+  }
+});
 document.querySelector("#no-candidate").addEventListener("click", () => decide("no_acceptable_candidate"));
 document.querySelector("#ai-fallback").addEventListener("click", () => decide("ai_fallback"));
 
@@ -702,10 +740,13 @@ async function blobBase64(blob) {
 
 async function saveRecordedAttempt() {
   if (!recordedAttempt || recordedAttempt.phraseId !== activePhraseId) return;
-  const transitionRequired = Boolean(appState.recording.transition_required);
-  const confirmation = transitionRequired
+  const vaultMode = appState.recording.save_url === "/api/candidate";
+  const transitionRequired = !vaultMode && Boolean(appState.recording.transition_required);
+  const confirmation = vaultMode
+    ? "Keep this recording as an unreviewed local candidate? It will not change the Musical State or choose this take."
+    : (transitionRequired
     ? "Start an explicit new recording round and save this unreviewed source? The target phrase will reopen. Earlier decisions remain immutable; only choices whose phrase and source hashes are unchanged will be revalidated."
-    : "Save this recording as a new unreviewed phrase source? This does not choose or correct it.";
+    : "Save this recording as a new unreviewed phrase source? This does not choose or correct it.");
   if (!window.confirm(confirmation)) return;
   const button = document.querySelector("#save-recording");
   button.disabled = true;
@@ -729,18 +770,20 @@ async function saveRecordedAttempt() {
       actual_processing: recordedAttempt.actualProcessing,
     };
     if (transitionRequired) payload.transition = phrasePlan.transition;
-    const result = await api("/api/capture", {
+    const result = await api(appState.recording.save_url, {
       method: "POST",
       body: JSON.stringify(payload),
     });
     discardRecordedAttempt();
     appState = result.state;
-    activeSourceId = result.admission.source_id;
+    activeSourceId = result.candidate?.source_id || result.admission?.source_id || null;
     draftNotes = {...(appState.draft?.draft?.notes_by_phrase || draftNotes)};
     render();
-    showNotice(result.transition
+    showNotice(result.candidate
+      ? "Candidate kept locally. It is available for the working draft and has not been selected."
+      : (result.transition
       ? "New round saved. The target phrase is open; unchanged earlier decisions were explicitly revalidated. No take was selected."
-      : "Recording saved locally as an unreviewed phrase source. No take was selected.");
+      : "Recording saved locally as an unreviewed phrase source. No take was selected."));
   } catch (error) {
     showNotice(error.message, true);
     setRecorderStatus(`Attempt was not saved: ${error.message}`, true);

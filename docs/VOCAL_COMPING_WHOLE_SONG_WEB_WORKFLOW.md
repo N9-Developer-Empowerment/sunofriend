@@ -11,6 +11,35 @@ Status: product and engineering design with the first reusable phrase-session
 and browser-recording increment implemented. It does not yet select, assemble,
 correct or render a complete vocal comp.
 
+## Implementation checkpoint — 26 August 2026
+
+The first scaling increment is now implemented behind
+`VocalCandidateVault`. A private Vocal Session can opt into candidate-vault
+mode instead of immediate Musical State admission. **Keep** then stores the
+exact PCM24 WAV, its validated capture receipt and a path-free candidate entry
+in an owner-only append-only directory. The current Musical State, phrase
+decisions and source map remain byte-for-byte unchanged.
+
+Kept candidates appear immediately as phrase-bound playback sources. **Use in
+draft** writes a revision-checked working-choice projection for the complete
+phrase map; it is reversible and explicitly has no musical, render, correction
+or training authority. A candidate cannot be used for another phrase, stale
+working-choice writes fail with a conflict, and retained entry, receipt and
+audio identities are revalidated before projection or playback.
+
+Legacy `--capture-output-dir` admission remains available and unchanged.
+Candidate-vault mode is a separate opt-in through `--candidate-vault-dir`; the
+two destinations are mutually exclusive. This keeps the previous immutable
+source-admission contract while allowing a singer to collect and compare many
+attempts without creating one Musical State per audition.
+
+This increment still does not create a composite audition, section checkpoint,
+join, pitch/timing correction, render or training label. The next product
+slice is a deterministic working-comp audition that places the reversible
+choices against an exact carried base/backing while keeping its output
+audition-only. Section checkpointing follows only after that playback surface
+is reviewable.
+
 ## Implementation checkpoint — 20 August 2026
 
 The reusable W1/W2 foundation is now implemented on the current research
@@ -37,10 +66,9 @@ the earlier decision. Reopen events and capture-round transitions preserve the
 append-only history.
 
 This is the immediate two-phrase vertical slice, not yet the complete
-hundred-phrase interface. The next scaling increment is a candidate vault that
-keeps rejected and unsaved-to-comp recordings without creating a fresh Musical
-State for every audition, plus filters, **Next phrase needing me**, keyboard
-shortcuts and section-level checkpoints. A later audition plan must bind the
+hundred-phrase interface. The candidate vault, filters and **Next phrase
+needing me** are now implemented; keyboard shortcuts, working-comp playback
+and section-level checkpoints remain. The next audition plan must bind the
 backing/full-mix asset so phrase, section and song playback can compare the
 working comp in music context; the current scope controls audition vocal
 sources only.

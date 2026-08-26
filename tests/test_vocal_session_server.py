@@ -208,6 +208,28 @@ def test_mutation_requires_token_same_origin_and_an_explicit_decision(
     assert not _keys_named_path(payload)
 
 
+def test_unknown_post_route_is_rejected_without_recording_an_event(
+    vocal_http: _VocalSessionHTTP,
+) -> None:
+    """A same-origin POST must still target an explicitly supported operation."""
+
+    fixture = vocal_http
+    session_id = fixture.server.store.current_session(fixture.musical_state)[
+        "session_id"
+    ]
+
+    status, _, payload = fixture.json_request(
+        "POST",
+        f"/api/not-a-vocal-operation?token={fixture.token}",
+        {},
+        headers={"Origin": fixture.origin},
+    )
+
+    assert status == 404
+    assert payload == {"error": "vocal session route not found"}
+    assert fixture.server.store.events(session_id) == []
+
+
 def test_explicit_reopen_retains_history_and_allows_a_new_phrase_choice(
     vocal_http: _VocalSessionHTTP,
 ) -> None:

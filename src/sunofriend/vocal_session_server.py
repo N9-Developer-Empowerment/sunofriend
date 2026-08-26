@@ -24,6 +24,10 @@ from .musical_state import admit_vocal_phrase_capture, validate_musical_state
 from .separation_review_transport import parse_file_range
 from .source_receipt import canonical_json_bytes
 from .vocal_capture import create_vocal_capture
+from .vocal_candidate_vault import (
+    VocalCandidateVault,
+    VocalCandidateVaultConflictError,
+)
 from .vocal_phrase_decision import create_phrase_decision
 from .vocal_session import (
     VocalSessionDraftConflictError,
@@ -67,6 +71,7 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
         token: str,
         recording_cue_source_id: str | None,
         capture_output_dir: str | Path | None,
+        candidate_vault_dir: str | Path | None,
     ) -> None:
         state_path = Path(musical_state_path).expanduser().resolve(strict=True)
         try:
@@ -81,30 +86,24 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
         self.store = VocalSessionStore(state_dir)
         self.title = str(title).strip() or "Vocal comp session"
         self.token = token
-        if (recording_cue_source_id is None) != (capture_output_dir is None):
+        capture_path, candidate_vault_path, recording_target = _recording_paths(
+            capture_output_dir, candidate_vault_dir, self.musical_state_root
+        )
+        if (recording_cue_source_id is None) != (recording_target is None):
             raise ValueError(
-                "recording cue and capture output directory must be supplied together"
+                "recording cue and one capture destination must be supplied together"
             )
         self.recording_cue_source_id = recording_cue_source_id
-        self.capture_output_dir = (
-            Path(capture_output_dir).expanduser().absolute()
-            if capture_output_dir is not None
-            else None
-        )
-        if self.capture_output_dir is not None:
-            if (
-                self.capture_output_dir == self.musical_state_root
-                or self.musical_state_root in self.capture_output_dir.parents
-            ):
-                raise ValueError(
-                    "capture output directory must be outside the Musical State"
-                )
+        self.capture_output_dir = capture_path
+        self.candidate_vault = _open_candidate_vault(candidate_vault_path)
+        if recording_target is not None:
             self._recording_reference()
         self._refresh_media()
         super().__init__(address, _VocalSessionHandler)
 
     def _refresh_media(self) -> None:
         self.media = _authorised_media(self.musical_state, self.musical_state_root)
+        self.media.update(self._candidate_media())
         self.media_capabilities = {
             secrets.token_urlsafe(24): record for record in self.media.values()
         }
@@ -112,6 +111,17 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
             record["source_id"]: capability
             for capability, record in self.media_capabilities.items()
         }
+
+    def _candidate_media(self) -> dict[str, dict[str, Any]]:
+        if self.candidate_vault is None:
+            return {}
+        records = {
+            record["source_id"]: record
+            for record in self.candidate_vault.media_records(self.musical_state)
+        }
+        if set(records) & set(self.media):
+            raise ValueError("candidate source identity conflicts with admitted audio")
+        return records
 
     def _recording_reference(self) -> Mapping[str, Any]:
         reference = self.musical_state["vocal_performance_state"].get("reference")
@@ -130,137 +140,14 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
 
         if self.capture_output_dir is None or self.recording_cue_source_id is None:
             raise ValueError("vocal session recording is not configured")
-        session = self.store.current_session(self.musical_state)
-        allowed = {
-            "expected_musical_state_sha256",
-            "phrase_id",
-            "capture_id",
-            "cue_id",
-            "cue_asset_sha256",
-            "audio_wav_base64",
-            "placement",
-            "actual_processing",
-        }
-        has_decisions = bool(session["coverage"]["decision_count"])
-        if has_decisions:
-            allowed.add("transition")
-        if set(request) != allowed:
-            if has_decisions and "transition" not in request:
-                raise VocalSessionCaptureConflictError(
-                    "an explicit state transition is required after phrase decisions"
-                )
-            raise ValueError("vocal capture request fields changed")
-        phrase_id = _text(request.get("phrase_id"), "phrase_id", 128)
-        if (
-            request.get("expected_musical_state_sha256")
-            != self.musical_state["document_sha256"]
-        ):
-            raise ValueError("vocal capture Musical State identity changed")
-        phrase = next(
-            (
-                row
-                for row in self.musical_state["structure"]["phrases"]
-                if row["phrase_id"] == phrase_id
-            ),
-            None,
-        )
-        if phrase is None:
-            raise ValueError("vocal capture phrase is unknown")
-        transition_request: Mapping[str, Any] | None = None
-        parent_decisions = self.store.current_decisions(self.musical_state)
-        if has_decisions:
-            transition_request = _mapping(request.get("transition"), "transition")
-            expected_transition = build_vocal_session_transition_request(
-                session, phrase_id
-            )
-            if dict(transition_request) != expected_transition:
-                raise VocalSessionCaptureConflictError(
-                    "the explicit state transition does not match the exact current decisions"
-                )
-        capture_id = _text(request.get("capture_id"), "capture_id", 128)
-        encoded = _text(
-            request.get("audio_wav_base64"),
-            "audio_wav_base64",
-            _MAXIMUM_CAPTURE_REQUEST_BYTES,
-        )
-        try:
-            wav_bytes = base64.b64decode(encoded, validate=True)
-        except (binascii.Error, ValueError) as exc:
-            raise ValueError("vocal capture audio WAV base64 is invalid") from exc
-        geometry = _pcm24_wav_geometry(wav_bytes)
-        sample_rate = geometry["sample_rate"]
-        frame_count = geometry["frames"]
-        placement = _mapping(request.get("placement"), "placement")
-        expected_placement_keys = {
-            "source_phrase_start_frame",
-            "source_phrase_end_frame",
-            "pre_guard_frames",
-            "post_guard_frames",
-            "destination_start_seconds",
-            "destination_end_seconds",
-        }
-        if set(placement) != expected_placement_keys:
-            raise ValueError("vocal capture placement fields changed")
-        phrase_start_frame = _integer(
-            placement.get("source_phrase_start_frame"), "source_phrase_start_frame"
-        )
-        phrase_end_frame = _integer(
-            placement.get("source_phrase_end_frame"), "source_phrase_end_frame"
-        )
-        pre_guard_frames = _integer(
-            placement.get("pre_guard_frames"), "pre_guard_frames"
-        )
-        post_guard_frames = _integer(
-            placement.get("post_guard_frames"), "post_guard_frames"
-        )
-        expected_guard = round(_CAPTURE_GUARD_SECONDS * sample_rate)
-        expected_phrase_frames = round(
-            (float(phrase["end_seconds"]) - float(phrase["start_seconds"]))
-            * sample_rate
-        )
-        if (
-            pre_guard_frames != expected_guard
-            or post_guard_frames != expected_guard
-            or phrase_start_frame != pre_guard_frames
-            or phrase_end_frame != phrase_start_frame + expected_phrase_frames
-            or frame_count != phrase_end_frame + post_guard_frames
-        ):
-            raise ValueError(
-                "vocal capture must match the reviewed phrase plus fixed half-second guards"
-            )
-        if (
-            placement.get("destination_start_seconds") != phrase["start_seconds"]
-            or placement.get("destination_end_seconds") != phrase["end_seconds"]
-        ):
-            raise ValueError("vocal capture destination geometry changed")
-        actual_processing = _mapping(
-            request.get("actual_processing"), "actual_processing"
-        )
-        reference = self._recording_reference()
-        if (
-            request.get("cue_id") != reference["source_id"]
-            or request.get("cue_asset_sha256") != reference["audio"]["sha256"]
-        ):
-            raise ValueError("vocal capture cue identity changed")
-        receipt = create_vocal_capture(
-            self.musical_state,
-            capture_id=capture_id,
-            phrase_id=phrase_id,
-            cue_id=str(reference["source_id"]),
-            cue_asset_sha256=str(reference["audio"]["sha256"]),
-            audio_sha256=hashlib.sha256(wav_bytes).hexdigest(),
-            audio_bytes=len(wav_bytes),
-            sample_rate=sample_rate,
-            frame_count=frame_count,
-            phrase_start_frame=phrase_start_frame,
-            phrase_end_frame=phrase_end_frame,
-            destination_start_seconds=float(phrase["start_seconds"]),
-            destination_end_seconds=float(phrase["end_seconds"]),
-            pre_guard_frames=pre_guard_frames,
-            post_guard_frames=post_guard_frames,
-            requested_processing=_REQUESTED_MICROPHONE_PROCESSING,
-            actual_processing=actual_processing,
-        )
+        prepared = self._prepare_capture(request, require_transition=True)
+        session = prepared["session"]
+        phrase_id = prepared["phrase_id"]
+        capture_id = prepared["capture_id"]
+        wav_bytes = prepared["wav_bytes"]
+        receipt = prepared["receipt"]
+        transition_request = prepared["transition_request"]
+        parent_decisions = prepared["parent_decisions"]
         child = self.capture_output_dir / (
             f"capture-{capture_id}-{receipt['document_sha256'][:12]}"
         )
@@ -318,6 +205,105 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
             result["transition"] = transition
         return result
 
+    def keep_candidate(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        """Keep one provisional source without changing the Musical State."""
+
+        if self.candidate_vault is None or self.recording_cue_source_id is None:
+            raise ValueError("vocal candidate vault recording is not configured")
+        prepared = self._prepare_capture(request, require_transition=False)
+        candidate = self.candidate_vault.keep(
+            self.musical_state,
+            capture_receipt=prepared["receipt"],
+            wav_bytes=prepared["wav_bytes"],
+            label=f"Recorded attempt for {prepared['phrase_id']}",
+        )
+        self._refresh_media()
+        return {"candidate": candidate, "state": self.browser_state()}
+
+    def _prepare_capture(
+        self, request: Mapping[str, Any], *, require_transition: bool
+    ) -> dict[str, Any]:
+        session = self.store.current_session(self.musical_state)
+        has_decisions = bool(session["coverage"]["decision_count"])
+        allowed = _capture_request_fields()
+        if require_transition and has_decisions:
+            allowed.add("transition")
+        if set(request) != allowed:
+            if require_transition and has_decisions and "transition" not in request:
+                raise VocalSessionCaptureConflictError(
+                    "an explicit state transition is required after phrase decisions"
+                )
+            raise ValueError("vocal capture request fields changed")
+        phrase_id = _text(request.get("phrase_id"), "phrase_id", 128)
+        if (
+            request.get("expected_musical_state_sha256")
+            != self.musical_state["document_sha256"]
+        ):
+            raise ValueError("vocal capture Musical State identity changed")
+        phrase = next(
+            (
+                row
+                for row in self.musical_state["structure"]["phrases"]
+                if row["phrase_id"] == phrase_id
+            ),
+            None,
+        )
+        if phrase is None:
+            raise ValueError("vocal capture phrase is unknown")
+        transition_request: Mapping[str, Any] | None = None
+        parent_decisions = self.store.current_decisions(self.musical_state)
+        if require_transition and has_decisions:
+            transition_request = _mapping(request.get("transition"), "transition")
+            expected_transition = build_vocal_session_transition_request(
+                session, phrase_id
+            )
+            if dict(transition_request) != expected_transition:
+                raise VocalSessionCaptureConflictError(
+                    "the explicit state transition does not match the exact current decisions"
+                )
+        capture_id = _text(request.get("capture_id"), "capture_id", 128)
+        wav_bytes = _decode_capture_wav(request.get("audio_wav_base64"))
+        geometry = _pcm24_wav_geometry(wav_bytes)
+        placement = _validated_capture_placement(
+            request.get("placement"), phrase=phrase, geometry=geometry
+        )
+        reference = self._recording_reference()
+        if (
+            request.get("cue_id") != reference["source_id"]
+            or request.get("cue_asset_sha256") != reference["audio"]["sha256"]
+        ):
+            raise ValueError("vocal capture cue identity changed")
+        receipt = create_vocal_capture(
+            self.musical_state,
+            capture_id=capture_id,
+            phrase_id=phrase_id,
+            cue_id=str(reference["source_id"]),
+            cue_asset_sha256=str(reference["audio"]["sha256"]),
+            audio_sha256=hashlib.sha256(wav_bytes).hexdigest(),
+            audio_bytes=len(wav_bytes),
+            sample_rate=geometry["sample_rate"],
+            frame_count=geometry["frames"],
+            phrase_start_frame=placement["source_phrase_start_frame"],
+            phrase_end_frame=placement["source_phrase_end_frame"],
+            destination_start_seconds=float(phrase["start_seconds"]),
+            destination_end_seconds=float(phrase["end_seconds"]),
+            pre_guard_frames=placement["pre_guard_frames"],
+            post_guard_frames=placement["post_guard_frames"],
+            requested_processing=_REQUESTED_MICROPHONE_PROCESSING,
+            actual_processing=_mapping(
+                request.get("actual_processing"), "actual_processing"
+            ),
+        )
+        return {
+            "session": session,
+            "phrase_id": phrase_id,
+            "capture_id": capture_id,
+            "wav_bytes": wav_bytes,
+            "receipt": receipt,
+            "transition_request": transition_request,
+            "parent_decisions": parent_decisions,
+        }
+
     @property
     def url(self) -> str:
         return f"http://127.0.0.1:{self.server_port}/?token={self.token}"
@@ -354,11 +340,14 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
                     "playback_end_seconds": media.get("playback_end_seconds"),
                 }
             )
+        candidate_sources, candidate_state = self._candidate_browser_state()
+        sources.extend(candidate_sources)
         return {
             "title": self.title,
             "session": session,
             "draft": draft,
             "sources": sources,
+            "candidate_vault": candidate_state,
             "recording": {
                 **self._recording_state(session),
             },
@@ -391,6 +380,52 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
                 "uploads_available": False,
                 "playback_creates_decision": False,
             },
+        }
+
+    def _candidate_browser_state(
+        self,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        if self.candidate_vault is None:
+            return [], {
+                "available": False,
+                "entries": [],
+                "working_choices": None,
+                "authority": "none",
+            }
+        projections = [
+            self._candidate_browser_projection(candidate)
+            for candidate in self.candidate_vault.entries(self.musical_state)
+        ]
+        return projections, {
+            "available": True,
+            "entries": projections,
+            "working_choices": self.candidate_vault.load_working_choices(
+                self.musical_state
+            ),
+            "keep_url": "/api/candidate",
+            "working_choices_url": "/api/working-choices",
+            "authority": "none",
+        }
+
+    def _candidate_browser_projection(
+        self, candidate: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        source_id = candidate["source_id"]
+        capability = self.media_capability_by_source[source_id]
+        media = self.media[source_id]
+        phrase_id = candidate["phrase"]["phrase_id"]
+        return {
+            "source_id": source_id,
+            "source_class": candidate["source_class"],
+            "label": candidate["label"],
+            "display_label": candidate["label"],
+            "audio_sha256": candidate["audio"]["sha256"],
+            "eligible_phrase_ids": [phrase_id],
+            "bound_phrase_id": phrase_id,
+            "media_url": f"/media/{capability}",
+            "playback_start_seconds": media["playback_start_seconds"],
+            "playback_end_seconds": media["playback_end_seconds"],
+            "candidate_document_sha256": candidate["document_sha256"],
         }
 
     def _recording_state(self, session: Mapping[str, Any]) -> dict[str, Any]:
@@ -438,7 +473,9 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
                     ),
                 }
             )
-        requires_transition = bool(session["coverage"]["decision_count"])
+        requires_transition = _capture_transition_required(
+            self.candidate_vault, session
+        )
         return {
             "available": True,
             "reason": (
@@ -463,10 +500,53 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
             },
             "placement_authority": "intended_cue_clock_only_not_verified_microphone_latency",
             "automatic_timing_correction": False,
-            "save_url": "/api/capture",
+            "save_url": _capture_save_url(self.candidate_vault),
             "max_json_bytes": _MAXIMUM_CAPTURE_REQUEST_BYTES,
             "phrases": phrase_plans,
         }
+
+
+def _recording_paths(
+    capture_output_dir: str | Path | None,
+    candidate_vault_dir: str | Path | None,
+    musical_state_root: Path,
+) -> tuple[Path | None, Path | None, Path | None]:
+    if capture_output_dir is not None and candidate_vault_dir is not None:
+        raise ValueError(
+            "capture admission and candidate vault modes are mutually exclusive"
+        )
+    capture = _optional_absolute_path(capture_output_dir)
+    candidate = _optional_absolute_path(candidate_vault_dir)
+    target = capture or candidate
+    _validate_capture_destination(target, musical_state_root)
+    return capture, candidate, target
+
+
+def _optional_absolute_path(value: str | Path | None) -> Path | None:
+    return Path(value).expanduser().absolute() if value is not None else None
+
+
+def _validate_capture_destination(
+    destination: Path | None, musical_state_root: Path
+) -> None:
+    if destination is not None and (
+        destination == musical_state_root or musical_state_root in destination.parents
+    ):
+        raise ValueError("capture destination must be outside the Musical State")
+
+
+def _open_candidate_vault(path: Path | None) -> VocalCandidateVault | None:
+    return VocalCandidateVault(path) if path is not None else None
+
+
+def _capture_transition_required(
+    candidate_vault: VocalCandidateVault | None, session: Mapping[str, Any]
+) -> bool:
+    return candidate_vault is None and bool(session["coverage"]["decision_count"])
+
+
+def _capture_save_url(candidate_vault: VocalCandidateVault | None) -> str:
+    return "/api/candidate" if candidate_vault is not None else "/api/capture"
 
 
 def create_vocal_session_server(
@@ -478,6 +558,7 @@ def create_vocal_session_server(
     token: str | None = None,
     recording_cue_source_id: str | None = None,
     capture_output_dir: str | Path | None = None,
+    candidate_vault_dir: str | Path | None = None,
 ) -> VocalSessionHTTPServer:
     """Create, but do not start, a private loopback Vocal Session server."""
 
@@ -491,6 +572,7 @@ def create_vocal_session_server(
         token=token or secrets.token_urlsafe(32),
         recording_cue_source_id=recording_cue_source_id,
         capture_output_dir=capture_output_dir,
+        candidate_vault_dir=candidate_vault_dir,
     )
 
 
@@ -503,6 +585,7 @@ def run_vocal_session(
     open_browser: bool = False,
     recording_cue_source_id: str | None = None,
     capture_output_dir: str | Path | None = None,
+    candidate_vault_dir: str | Path | None = None,
 ) -> None:
     """Run the Vocal Session until interrupted."""
 
@@ -513,6 +596,7 @@ def run_vocal_session(
         port=port,
         recording_cue_source_id=recording_cue_source_id,
         capture_output_dir=capture_output_dir,
+        candidate_vault_dir=candidate_vault_dir,
     )
     print(f"Private vocal session: {server.url}")
     if open_browser:
@@ -536,47 +620,59 @@ class _VocalSessionHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if not self._begin(parsed, mutation=True):
             return
-        if parsed.path != "/api/draft":
+        if parsed.path not in {"/api/draft", "/api/working-choices"}:
             self._error(HTTPStatus.NOT_FOUND, "vocal session route not found")
             return
         try:
-            request = self._request_json()
-            session = self.server.store.current_session(self.server.musical_state)
-            saved = self.server.store.save_draft(
-                session,
-                _mapping(request.get("draft"), "draft"),
-                expected_revision=_integer(
-                    request.get("expected_revision"), "expected_revision"
-                ),
-            )
-        except VocalSessionDraftConflictError as exc:
+            payload = self._put_payload(parsed.path)
+        except (
+            VocalCandidateVaultConflictError,
+            VocalSessionDraftConflictError,
+        ) as exc:
             self._error(HTTPStatus.CONFLICT, str(exc))
             return
         except (ValueError, OSError) as exc:
             self._error(HTTPStatus.BAD_REQUEST, str(exc))
             return
-        self._json(HTTPStatus.OK, {"draft": saved})
+        self._json(HTTPStatus.OK, payload)
+
+    def _put_payload(self, path: str) -> dict[str, Any]:
+        request = self._request_json()
+        if path == "/api/working-choices":
+            return {"working_choices": self._save_working_choices(request)}
+        session = self.server.store.current_session(self.server.musical_state)
+        saved = self.server.store.save_draft(
+            session,
+            _mapping(request.get("draft"), "draft"),
+            expected_revision=_integer(
+                request.get("expected_revision"), "expected_revision"
+            ),
+        )
+        return {"draft": saved}
+
+    def _save_working_choices(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        vault = self.server.candidate_vault
+        if vault is None:
+            raise ValueError("vocal candidate vault is not configured")
+        if set(request) != {"expected_revision", "working_source_by_phrase"}:
+            raise ValueError("working choice request fields changed")
+        return vault.save_working_choices(
+            self.server.musical_state,
+            _mapping(
+                request.get("working_source_by_phrase"),
+                "working_source_by_phrase",
+            ),
+            expected_revision=_integer(
+                request.get("expected_revision"), "expected_revision"
+            ),
+        )
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         if not self._begin(parsed, mutation=True):
             return
-        if parsed.path == "/api/capture":
-            try:
-                request = self._request_json(
-                    maximum_bytes=_MAXIMUM_CAPTURE_REQUEST_BYTES
-                )
-                result = self.server.admit_capture(request)
-            except VocalSessionCaptureConflictError as exc:
-                self._error(HTTPStatus.CONFLICT, str(exc))
-                return
-            except VocalSessionRequestTooLargeError as exc:
-                self._error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, str(exc))
-                return
-            except (ValueError, OSError) as exc:
-                self._error(HTTPStatus.BAD_REQUEST, str(exc))
-                return
-            self._json(HTTPStatus.CREATED, result)
+        if parsed.path in {"/api/capture", "/api/candidate"}:
+            self._post_recording_source(parsed.path)
             return
         if parsed.path == "/api/reopen":
             try:
@@ -654,6 +750,29 @@ class _VocalSessionHandler(BaseHTTPRequestHandler):
                 "state": self.server.browser_state(),
             },
         )
+
+    def _post_recording_source(self, path: str) -> None:
+        try:
+            request = self._request_json(maximum_bytes=_MAXIMUM_CAPTURE_REQUEST_BYTES)
+            operation = (
+                self.server.keep_candidate
+                if path == "/api/candidate"
+                else self.server.admit_capture
+            )
+            result = operation(request)
+        except (
+            VocalCandidateVaultConflictError,
+            VocalSessionCaptureConflictError,
+        ) as exc:
+            self._error(HTTPStatus.CONFLICT, str(exc))
+            return
+        except VocalSessionRequestTooLargeError as exc:
+            self._error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, str(exc))
+            return
+        except (ValueError, OSError) as exc:
+            self._error(HTTPStatus.BAD_REQUEST, str(exc))
+            return
+        self._json(HTTPStatus.CREATED, result)
 
     def _read_request(self, *, head_only: bool) -> None:
         parsed = urlparse(self.path)
@@ -923,6 +1042,77 @@ def _integer(value: Any, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{label} must be an integer")
     return value
+
+
+def _capture_request_fields() -> set[str]:
+    return {
+        "expected_musical_state_sha256",
+        "phrase_id",
+        "capture_id",
+        "cue_id",
+        "cue_asset_sha256",
+        "audio_wav_base64",
+        "placement",
+        "actual_processing",
+    }
+
+
+def _decode_capture_wav(value: Any) -> bytes:
+    encoded = _text(
+        value,
+        "audio_wav_base64",
+        _MAXIMUM_CAPTURE_REQUEST_BYTES,
+    )
+    try:
+        return base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("vocal capture audio WAV base64 is invalid") from exc
+
+
+def _validated_capture_placement(
+    value: Any,
+    *,
+    phrase: Mapping[str, Any],
+    geometry: Mapping[str, int],
+) -> dict[str, Any]:
+    placement = _mapping(value, "placement")
+    expected_keys = {
+        "source_phrase_start_frame",
+        "source_phrase_end_frame",
+        "pre_guard_frames",
+        "post_guard_frames",
+        "destination_start_seconds",
+        "destination_end_seconds",
+    }
+    if set(placement) != expected_keys:
+        raise ValueError("vocal capture placement fields changed")
+    start = _integer(
+        placement.get("source_phrase_start_frame"), "source_phrase_start_frame"
+    )
+    end = _integer(placement.get("source_phrase_end_frame"), "source_phrase_end_frame")
+    pre_guard = _integer(placement.get("pre_guard_frames"), "pre_guard_frames")
+    post_guard = _integer(placement.get("post_guard_frames"), "post_guard_frames")
+    sample_rate = geometry["sample_rate"]
+    expected_guard = round(_CAPTURE_GUARD_SECONDS * sample_rate)
+    expected_phrase_frames = round(
+        (float(phrase["end_seconds"]) - float(phrase["start_seconds"])) * sample_rate
+    )
+    if (
+        pre_guard != expected_guard
+        or post_guard != expected_guard
+        or start != pre_guard
+        or end != start + expected_phrase_frames
+        or geometry["frames"] != end + post_guard
+    ):
+        raise ValueError(
+            "vocal capture must match the reviewed phrase plus fixed half-second guards"
+        )
+    if (
+        placement.get("destination_start_seconds") != phrase["start_seconds"]
+        or placement.get("destination_end_seconds") != phrase["end_seconds"]
+    ):
+        raise ValueError("vocal capture destination geometry changed")
+    return placement
 
 
 def _pcm24_wav_geometry(payload: bytes) -> dict[str, int]:

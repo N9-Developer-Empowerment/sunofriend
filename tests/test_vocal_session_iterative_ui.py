@@ -85,9 +85,36 @@ def test_private_launcher_exposes_and_forwards_recording_configuration() -> None
 
     assert '"--recording-cue-source-id"' in LAUNCHER
     assert '"--capture-output-dir"' in LAUNCHER
+    assert '"--candidate-vault-dir"' in LAUNCHER
     invocation = LAUNCHER.split("run_vocal_session(", 1)[1]
     assert "recording_cue_source_id=args.recording_cue_source_id" in invocation
     assert "capture_output_dir=args.capture_output_dir" in invocation
+    assert "candidate_vault_dir=args.candidate_vault_dir" in invocation
+
+
+def test_provisional_candidate_uses_reversible_working_choice_not_decision() -> None:
+    """A kept candidate may enter a draft without becoming musical authority."""
+
+    candidate_filter = _function_body("isHumanSourceForPhrase", next_name="formatTime")
+    assert '"unreviewed_vocal_candidate"' in candidate_filter
+    render = _function_body("render", next_name="selectPhrase")
+    assert "Use in draft" in render
+    assert "Working choice" in render
+    working_choice = JAVASCRIPT.split("async function useWorkingChoice", 1)[1].split(
+        'document.querySelector("#use-human")', 1
+    )[0]
+    assert 'api("/api/working-choices"' in working_choice
+    assert "expected_revision" in working_choice
+    assert "decide(" not in working_choice
+
+
+def test_recording_save_uses_server_declared_destination() -> None:
+    """The same recorder supports legacy admission and the candidate vault."""
+
+    save = _function_body("saveRecordedAttempt", next_name="showNotice")
+    assert 'appState.recording.save_url === "/api/candidate"' in save
+    assert "api(appState.recording.save_url" in save
+    assert "working draft" in save
 
 
 def test_large_song_navigation_has_status_filters_and_next_open_phrase() -> None:

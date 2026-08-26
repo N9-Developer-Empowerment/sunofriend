@@ -27,6 +27,14 @@ def main() -> int:
         type=Path,
         help="Fresh parent directory for owner-only phrase-capture states",
     )
+    parser.add_argument(
+        "--candidate-vault-dir",
+        type=Path,
+        help=(
+            "Owner-only provisional attempt vault; mutually exclusive with "
+            "--capture-output-dir"
+        ),
+    )
     args = parser.parse_args()
     run_vocal_session(
         args.musical_state,
@@ -36,6 +44,7 @@ def main() -> int:
         open_browser=args.open,
         recording_cue_source_id=args.recording_cue_source_id,
         capture_output_dir=args.capture_output_dir,
+        candidate_vault_dir=args.candidate_vault_dir,
     )
     return 0
 
