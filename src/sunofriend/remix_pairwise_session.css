@@ -1,0 +1,42 @@
+:root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0d1110; color: #f4f5f2; }
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at 20% 0%, #18332d 0, #0d1110 32rem); }
+header, main { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+header { padding: 28px 0 20px; display: flex; justify-content: space-between; gap: 24px; align-items: center; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: clamp(2rem, 5vw, 4.6rem); letter-spacing: -.05em; }
+h2 { margin-bottom: 10px; font-size: clamp(1.3rem, 2.4vw, 2rem); }
+.eyebrow { color: #62dfc3; text-transform: uppercase; letter-spacing: .14em; font-weight: 800; font-size: .78rem; margin-bottom: 9px; }
+.support { color: #b9c0bb; line-height: 1.55; }
+.privacy { background: #18231f; border: 1px solid #33483f; border-radius: 999px; padding: 10px 15px; white-space: nowrap; }
+.privacy i { display: inline-block; width: 9px; height: 9px; background: #62dfc3; border-radius: 50%; margin-right: 7px; }
+main { padding-bottom: 60px; }
+.card, .player-card { background: rgba(24, 29, 27, .94); border: 1px solid #303936; border-radius: 26px; padding: 28px; }
+.intro { display: flex; justify-content: space-between; gap: 32px; align-items: center; }
+.boundary { min-width: 260px; max-width: 360px; padding: 18px; border-radius: 16px; background: #101714; border: 1px solid #2b4239; }
+.boundary strong, .boundary span { display: block; }
+.boundary strong { color: #f1c667; margin-bottom: 6px; }
+.boundary span { color: #adb5b0; line-height: 1.4; }
+.listen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 20px 0 14px; }
+.player-card { min-height: 250px; display: flex; flex-direction: column; }
+.player-card.control { border-color: #6f5d33; }
+button, select { font: inherit; color: inherit; background: #242b28; border: 1px solid #414b47; border-radius: 14px; padding: 13px 16px; }
+button { cursor: pointer; }
+button:hover, button:focus-visible { border-color: #62dfc3; outline: none; }
+.player-card button { margin-top: auto; }
+.heard { margin-top: 12px; color: #89918c; font-size: .9rem; }
+.heard.yes { color: #62dfc3; }
+#player { display: block; width: 100%; margin-bottom: 20px; }
+.decision { margin-top: 20px; }
+fieldset { border: 0; padding: 0; margin: 26px 0; }
+legend, .identity-grid > label { font-weight: 750; margin-bottom: 12px; }
+.choice-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.choice-grid label, .confirmations label { display: flex; gap: 10px; align-items: flex-start; background: #121816; border: 1px solid #303936; border-radius: 14px; padding: 14px; }
+.identity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.identity-grid label { display: grid; gap: 10px; }
+.confirmations { display: grid; gap: 10px; margin: 24px 0 16px; }
+.primary { background: #62dfc3; color: #07120f; font-weight: 850; border-color: transparent; }
+.primary:disabled { opacity: .45; cursor: not-allowed; }
+#notice { min-height: 1.4em; color: #f1c667; margin: 14px 0 0; }
+input { accent-color: #62dfc3; }
+@media (max-width: 800px) { .listen-grid, .choice-grid, .identity-grid { grid-template-columns: 1fr; } .intro, header { align-items: flex-start; flex-direction: column; } .boundary { max-width: none; } }

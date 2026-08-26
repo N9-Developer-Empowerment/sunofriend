@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sunofriend Remix A/B Review</title>
+  <link rel="stylesheet" href="/remix_pairwise_session.css">
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">Sunofriend · Remix learning lab</p>
+      <h1 id="title">Remix A/B review</h1>
+    </div>
+    <span class="privacy"><i></i> Private on this computer</span>
+  </header>
+
+  <main>
+    <section class="intro card">
+      <div>
+        <p class="eyebrow">One controlled musical question</p>
+        <h2>Which version is more useful while keeping the song recognisable?</h2>
+        <p id="anchor-copy" class="support">Loading the owner-named anchor…</p>
+      </div>
+      <div class="boundary">
+        <strong>Listening chooses nothing</strong>
+        <span>The model is not running. Saving this review does not select a remix.</span>
+      </div>
+    </section>
+
+    <section class="listen-grid" aria-label="Anonymous remix comparison">
+      <article class="player-card control">
+        <p class="eyebrow">Start here</p>
+        <h2>Unchanged control</h2>
+        <p class="support">The exact original comparison window.</p>
+        <button type="button" data-play="control">Play unchanged control</button>
+        <span class="heard" data-heard="control">Not marked as heard</span>
+      </article>
+      <article class="player-card">
+        <p class="eyebrow">Anonymous challenger</p>
+        <h2>Version A</h2>
+        <p class="support">One transparent, single-variable remix change.</p>
+        <button type="button" data-play="a">Play Version A</button>
+        <span class="heard" data-heard="a">Not marked as heard</span>
+      </article>
+      <article class="player-card">
+        <p class="eyebrow">Anonymous challenger</p>
+        <h2>Version B</h2>
+        <p class="support">The same source and anchor; a different bounded change.</p>
+        <button type="button" data-play="b">Play Version B</button>
+        <span class="heard" data-heard="b">Not marked as heard</span>
+      </article>
+    </section>
+    <audio id="player" controls preload="metadata"></audio>
+
+    <section class="decision card">
+      <p class="eyebrow">Your explicit comparison</p>
+      <h2>Record what you heard</h2>
+
+      <fieldset>
+        <legend>Overall result</legend>
+        <div class="choice-grid outcomes">
+          <label><input type="radio" name="outcome" value="a"> Prefer A</label>
+          <label><input type="radio" name="outcome" value="b"> Prefer B</label>
+          <label><input type="radio" name="outcome" value="equivalent"> About equal</label>
+          <label><input type="radio" name="outcome" value="neither"> Neither is useful</label>
+          <label><input type="radio" name="outcome" value="cannot_tell"> Cannot tell</label>
+        </div>
+      </fieldset>
+
+      <div class="identity-grid">
+        <label>Does A preserve the musical identity?
+          <select id="identity-a">
+            <option value="">Choose…</option>
+            <option value="preserved">Yes</option>
+            <option value="partly_preserved">Partly</option>
+            <option value="lost">No</option>
+            <option value="cannot_tell">Cannot tell</option>
+          </select>
+        </label>
+        <label>Does B preserve the musical identity?
+          <select id="identity-b">
+            <option value="">Choose…</option>
+            <option value="preserved">Yes</option>
+            <option value="partly_preserved">Partly</option>
+            <option value="lost">No</option>
+            <option value="cannot_tell">Cannot tell</option>
+          </select>
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>Why? Choose one to four</legend>
+        <div class="choice-grid reasons">
+          <label><input type="checkbox" value="change_more_useful"> More useful musical change</label>
+          <label><input type="checkbox" value="identity_better_preserved"> Identity better preserved</label>
+          <label><input type="checkbox" value="energy_shape"> Better energy shape</label>
+          <label><input type="checkbox" value="groove_fit"> Better groove fit</label>
+          <label><input type="checkbox" value="arrangement_fit"> Better arrangement fit</label>
+          <label><input type="checkbox" value="separation_artifact"> Separation artifact</label>
+          <label><input type="checkbox" value="change_inaudible"> Change is inaudible</label>
+          <label><input type="checkbox" value="both_unusable"> Both unusable</label>
+          <label><input type="checkbox" value="unable_to_compare"> Unable to compare</label>
+          <label><input type="checkbox" value="other"> Other</label>
+        </div>
+      </fieldset>
+
+      <div class="confirmations">
+        <label><input id="heard-confirmation" type="checkbox"> I listened to the unchanged control, A and B.</label>
+        <label><input id="training-admission" type="checkbox"> Admit this exact comparison as owner-local training evidence.</label>
+      </div>
+      <p class="support">This creates one immutable label. It remains training-ineligible by itself and starts no training.</p>
+      <button id="save-label" class="primary" type="button">Save explicit A/B label</button>
+      <p id="notice" role="status"></p>
+    </section>
+  </main>
+  <script src="/remix_pairwise_session.js"></script>
+</body>
+</html>
