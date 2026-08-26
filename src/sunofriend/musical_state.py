@@ -20,6 +20,10 @@ from typing import Any, Mapping, Sequence
 from .audio_formats import file_sha256
 from .source_project import RIGHTS_CATEGORIES
 from .source_receipt import canonical_json_bytes, document_sha256
+from .vocal_capture_contract import (
+    VOCAL_CAPTURE_SCHEMA,
+    validate_vocal_capture_against_state,
+)
 
 
 MUSICAL_STATE_SCHEMA = "sunofriend.musical-state.v0"
@@ -408,8 +412,6 @@ def admit_vocal_phrase_capture(
     state is changed and no phrase decision is migrated or created.
     """
 
-    from .vocal_capture import VOCAL_CAPTURE_SCHEMA, validate_vocal_capture
-
     parent_path = _file(base_manifest, "base musical-state manifest")
     parent_root = parent_path.parent.resolve()
     parent = validate_musical_state(parent_path, root=parent_root)
@@ -419,7 +421,7 @@ def admit_vocal_phrase_capture(
     else:
         receipt_source = _file(capture_receipt, "vocal capture receipt")
         receipt_input = _read_json(receipt_source)
-    receipt = validate_vocal_capture(receipt_input, parent)
+    receipt = validate_vocal_capture_against_state(receipt_input, parent)
     source_audio = _file(capture_wav, "vocal phrase capture")
     if source_audio.stat().st_size != receipt["audio"]["bytes"]:
         raise ValueError("vocal phrase capture byte count does not match receipt")
@@ -939,8 +941,6 @@ def _validate_capture_lineage_shape(document: Mapping[str, Any]) -> None:
 
 
 def _validate_phrase_capture_lineage(document: Mapping[str, Any], base: Path) -> None:
-    from .vocal_capture import validate_vocal_capture
-
     lineage = document["lineage"]
     parent_record = lineage["parent"]["manifest"]
     parent_path = _record_path(base, parent_record)
@@ -987,7 +987,7 @@ def _validate_phrase_capture_lineage(document: Mapping[str, Any], base: Path) ->
         raise ValueError("admitted capture lineage does not match capture roster")
     receipt_path = _record_path(base, admitted_row["capture_receipt"]["artifact"])
     receipt = _read_json(receipt_path)
-    validate_vocal_capture(receipt, parent)
+    validate_vocal_capture_against_state(receipt, parent)
     if receipt["document_sha256"] != admitted["document_sha256"]:
         raise ValueError("capture receipt lineage hash changed")
     if receipt["capture"]["source_id"] != admitted_row["source_id"]:
