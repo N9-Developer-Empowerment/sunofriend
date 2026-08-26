@@ -35,3 +35,9 @@ examples/*.mp3
 examples/*.m4a
 examples/*.ogg
 examples/*.opus
+
+# Local private album-art workbench. It contains credentials, selected source
+# photos and generated assets that are outside the Sunofriend source boundary.
+/.album-cover-venv/
+/album-cover/
+/Ezzy - So Many People in the World - Album Cover.jpg

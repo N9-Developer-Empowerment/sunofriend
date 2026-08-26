@@ -12,10 +12,7 @@ from typing import Any, Mapping
 from urllib.parse import quote
 
 from .separation_fine_stem_canary_audio import file_sha256
-from .separation_review_transport import (
-    LocalReviewRequestHandler,
-    atomic_write_private_json,
-)
+from .separation_review_transport import LocalReviewApplication
 from .separation_fine_stem_synth_provider_qualification import (
     validate_fine_stem_synth_provider_qualification,
 )
@@ -379,57 +376,25 @@ def build_provider_review_server(
     )
     page = render_provider_review(report).encode("utf-8")
     result_path = package / "REVIEW/PROVIDER-PRESENCE.json"
-    routes: dict[str, Path] = {}
+    routes: dict[str, tuple[Path, str]] = {}
     for case in report["cases"]:
         encoded = quote(case["case_id"], safe="")
         for role in ("reference", "provider_synth"):
-            routes[f"/audio/{encoded}/{role}.wav"] = _regular_artifact(
-                package, case["artifacts"][role]
+            routes[f"/audio/{encoded}/{role}.wav"] = (
+                _regular_artifact(package, case["artifacts"][role]),
+                "audio/wav",
             )
 
-    class Handler(LocalReviewRequestHandler):
-        server_version = "SunofriendProviderSynthReview/1"
-
-        def do_GET(self) -> None:  # noqa: N802
-            route = self.path.partition("?")[0]
-            if route in {"/", "/REVIEW/provider_review.html"}:
-                self.send_no_store(200, "text/html; charset=utf-8", page)
-            elif route == "/healthz":
-                self.send_no_store(200, "application/json", b'{"status":"ok"}\n')
-            elif route == "/saved-result" and result_path.is_file():
-                self.send_no_store(200, "application/json", result_path.read_bytes())
-            elif route == "/download-review" and result_path.is_file():
-                self.send_attachment(
-                    result_path.read_bytes(),
-                    filename="sunofriend-provider-synth-presence-review.json",
-                )
-            elif route in routes:
-                self.send_ranged_file(routes[route], "audio/wav")
-            else:
-                self.send_error(404)
-
-        def do_HEAD(self) -> None:  # noqa: N802
-            route = self.path.partition("?")[0]
-            if route in routes:
-                self.send_ranged_file(routes[route], "audio/wav", body=False)
-            else:
-                self.send_error(404)
-
-        def do_POST(self) -> None:  # noqa: N802
-            if self.path != "/save-review":
-                self.send_error(404)
-                return
-            try:
-                value = validate_provider_review(
-                    self.read_review_json(), report
-                )
-                payload = atomic_write_private_json(result_path, value)
-            except (OSError, UnicodeError, ValueError) as error:
-                self.send_review_error(error)
-                return
-            self.send_no_store(200, "application/json", payload)
-
-    return ThreadingHTTPServer((host, port), Handler)
+    application = LocalReviewApplication(
+        server_version="SunofriendProviderSynthReview/1",
+        page=page,
+        page_path="/REVIEW/provider_review.html",
+        result_path=result_path,
+        download_filename="sunofriend-provider-synth-presence-review.json",
+        media_routes=routes,
+        validate_review=lambda value: validate_provider_review(value, report),
+    )
+    return application.build_server(host=host, port=port)
 
 
 __all__ = [

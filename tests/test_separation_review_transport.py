@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import http.client
 from io import BytesIO
 import json
 import os
+import threading
 
 import pytest
 
 from sunofriend.separation_review_transport import (
+    LocalReviewApplication,
     LocalReviewRequestHandler,
     ReviewRequestError,
     atomic_write_private_json,
@@ -262,3 +265,154 @@ def test_send_ranged_file_can_suppress_body(
     assert responses == [200]
     assert ("Content-Length", "5") in response_headers
     assert handler.wfile.getvalue() == b""
+
+
+def test_local_review_application_composes_standard_transport_routes(tmp_path) -> None:
+    media = tmp_path / "clip.wav"
+    media.write_bytes(b"0123456789")
+    result_path = tmp_path / "review.json"
+    validated_values: list[dict[str, object]] = []
+
+    def validate_review(value: dict[str, object]) -> dict[str, object]:
+        validated_values.append(value)
+        if value.get("answer") == "reject":
+            raise ValueError("review answer was rejected")
+        return {"answer": value["answer"], "validated": True}
+
+    application = LocalReviewApplication(
+        server_version="SunofriendTestReview/1",
+        page=b"<h1>Review</h1>",
+        page_path="/REVIEW/test.html",
+        result_path=result_path,
+        download_filename="sunofriend-test-review.json",
+        media_routes={"/audio/clip.wav": (media, "audio/wav")},
+        validate_review=validate_review,
+        download_content_type="application/vnd.sunofriend.review+json",
+    )
+
+    with pytest.raises(ValueError, match="review server must bind to localhost"):
+        application.build_server(host="0.0.0.0", port=0)
+
+    server = application.build_server(port=0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        connection = http.client.HTTPConnection(*server.server_address, timeout=5)
+
+        connection.request("GET", "/REVIEW/test.html?fresh=1")
+        page = connection.getresponse()
+        assert page.status == 200
+        assert page.getheader("Server").startswith("SunofriendTestReview/1")
+        assert page.getheader("Content-Type") == "text/html; charset=utf-8"
+        assert page.getheader("Cache-Control") == "no-store"
+        assert page.read() == b"<h1>Review</h1>"
+
+        connection.request("GET", "/")
+        root_page = connection.getresponse()
+        assert root_page.status == 200
+        assert root_page.read() == b"<h1>Review</h1>"
+
+        connection.request("GET", "/healthz")
+        health = connection.getresponse()
+        assert health.status == 200
+        assert health.getheader("Content-Type") == "application/json"
+        assert health.getheader("Cache-Control") == "no-store"
+        assert health.read() == b'{"status":"ok"}\n'
+
+        connection.request("GET", "/saved-result")
+        missing = connection.getresponse()
+        assert missing.status == 404
+        missing.read()
+
+        connection.request("GET", "/download-review")
+        missing_download = connection.getresponse()
+        assert missing_download.status == 404
+        missing_download.read()
+
+        connection.request("HEAD", "/REVIEW/test.html")
+        head_page = connection.getresponse()
+        assert head_page.status == 404
+        head_page.read()
+
+        connection.request(
+            "HEAD",
+            "/audio/clip.wav?fresh=1",
+            headers={"Range": "bytes=2-5"},
+        )
+        head = connection.getresponse()
+        assert head.status == 206
+        assert head.getheader("Content-Type") == "audio/wav"
+        assert head.getheader("Content-Range") == "bytes 2-5/10"
+        assert head.getheader("Content-Length") == "4"
+        assert head.read() == b""
+
+        connection.request(
+            "GET",
+            "/audio/clip.wav",
+            headers={"Range": "bytes=2-5"},
+        )
+        ranged = connection.getresponse()
+        assert ranged.status == 206
+        assert ranged.getheader("Content-Type") == "audio/wav"
+        assert ranged.read() == b"2345"
+
+        connection.request("POST", "/not-save-review", body=b"{}")
+        wrong_route = connection.getresponse()
+        assert wrong_route.status == 404
+        wrong_route.read()
+
+        connection.request(
+            "POST",
+            "/save-review",
+            body=json.dumps({"answer": "reject"}),
+            headers={"Content-Type": "application/json"},
+        )
+        rejected = connection.getresponse()
+        assert rejected.status == 400
+        assert rejected.getheader("Content-Type") == "application/json"
+        assert json.loads(rejected.read()) == {
+            "error": "review answer was rejected"
+        }
+
+        request_value = {"answer": "present"}
+        connection.request(
+            "POST",
+            "/save-review",
+            body=json.dumps(request_value),
+            headers={"Content-Type": "application/json"},
+        )
+        saved = connection.getresponse()
+        expected = encode_review_json({"answer": "present", "validated": True})
+        assert saved.status == 200
+        assert saved.getheader("Content-Type") == "application/json"
+        assert saved.getheader("Cache-Control") == "no-store"
+        assert saved.read() == expected
+        assert validated_values == [
+            {"answer": "reject"},
+            request_value,
+        ]
+        assert result_path.read_bytes() == expected
+        assert os.stat(result_path).st_mode & 0o777 == 0o600
+
+        connection.request("GET", "/saved-result")
+        persisted = connection.getresponse()
+        assert persisted.status == 200
+        assert persisted.getheader("Content-Type") == "application/json"
+        assert persisted.getheader("Cache-Control") == "no-store"
+        assert persisted.read() == expected
+
+        connection.request("GET", "/download-review")
+        download = connection.getresponse()
+        assert download.status == 200
+        assert download.getheader("Content-Disposition") == (
+            'attachment; filename="sunofriend-test-review.json"'
+        )
+        assert download.getheader("Content-Type") == (
+            "application/vnd.sunofriend.review+json"
+        )
+        assert download.getheader("Cache-Control") == "no-store"
+        assert download.read() == expected
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)

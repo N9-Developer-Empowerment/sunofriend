@@ -5,6 +5,9 @@ facade or workflow affected.
 
 ## Verification
 
+- [ ] This branch was created from current `origin/main`; if work crossed a
+      24-hour boundary, `main` was refreshed and proposed-merge checks were
+      rerun after integration.
 - [ ] Focused tests cover the changed behaviour and failure boundaries.
 - [ ] The applicable full test suite and Ruff pass.
 - [ ] Architecture contracts pass for the proposed merged tree.
