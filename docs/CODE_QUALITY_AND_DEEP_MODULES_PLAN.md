@@ -448,8 +448,9 @@ Use this loop for one small story or seam:
 5. Sketch two possible interfaces and choose the one that hides more knowledge
    with fewer caller obligations.
 6. Refactor one seam behind the existing facade.
-7. Run focused tests, Ruff, the full applicable suite, the CRAP ratchet,
-   mutation checks and architecture contracts.
+7. Run focused tests, Ruff and architecture contracts. Run the full local
+   suite, CRAP ratchet and mutation checks when the repository risk triggers
+   require them.
 8. Inspect the dependency change and public surface. Update architecture,
    technical-tour and skill text only where behaviour or a maintained path
    genuinely changed.
@@ -467,47 +468,40 @@ decisions.
 
 ## CI shape
 
-Do not slow every existing job immediately.
+The original complete matrix made ordinary pull requests wait on repeated
+whole-repository macOS, Linux, coverage and mutation runs. The repository now
+uses a short merge signal and performs most expensive validation locally when
+the change warrants it.
 
 ### Pull requests
 
-- retain the current pytest and Ruff jobs;
-- run a fast architecture-contract test;
-- generate the changed-function CRAP report on Python 3.11;
-- fail only on an invalid report or a changed-code ratchet violation; and
-- run mutation testing only for changed pilot modules within a fixed time
-  budget.
+- `.github/workflows/ci.yml` runs only for pull requests to `main` or an
+  explicit manual dispatch; ordinary pushes and merges do not duplicate it;
+- use one Linux/Python 3.11 job instead of a four-platform/version matrix;
+- run Ruff, architecture contracts and a bounded invariant suite covering the
+  product contract, source roles, automatic selection, architecture tooling,
+  quality-report adapters, skill bootstrap and shared review transport;
+- build and inspect the distributions and smoke-test the wheel; and
+- do not run complete coverage, CRAP, mutation, audio/ML or the entire pytest
+  suite as a routine merge gate.
 
-This is now implemented in `.github/workflows/quality.yml`. On a pull request,
-GitHub checks out the proposed merge, while the workflow materializes the exact
-`pull_request.base.sha` in a detached worktree. It runs the complete
-non-`trusted_local` macOS branch-coverage suite over both trees, generates both
-reports with one pinned reporter and compares function source hashes. Untouched
-historical warnings therefore do not block an unrelated pull request.
+The root `AGENTS.md` defines when the heavier local lanes are required, and the
+pull-request template records their exact commands/results plus the six
+deep-module review questions. The fast CI signal catches repository-level
+breakage; it is not represented as complete validation of every feature.
 
-The Linux mutation job first diffs the exact three pilot paths against the pull
-request base. It does not install or run mutmut when none changed. When one did,
-it runs only the selected module targets and emits a selected-module,
-source-bound advisory report. Existing classified survivors are not
-misrepresented as a passing global mutation score; the report itself must be
-complete and is retained for review.
-
-The root `AGENTS.md` makes this gauntlet repository policy, and the pull-request
-template records the six deep-module review questions. Tests, Ruff and
-architecture contracts protect the whole proposed merged tree; CRAP and
-mutation selection remain change-scoped.
-
-### Nightly or manual quality run
+### Local or explicitly dispatched quality run
 
 - run the full non-`trusted_local` macOS Python 3.11 suite with branch coverage;
 - generate the complete CRAP JSON and a short human-readable summary;
 - run the complete three-module mutation pilot; and
 - retain only path-free quality reports and logs with no private inputs.
 
-The same workflow runs these two complete lanes nightly at 03:17 UTC and by
-manual dispatch. The macOS lane publishes the architecture plan/check,
-branch-aware coverage, coverage binding and CRAP report. The Linux lane runs
-the complete three-module mutation pilot and publishes its source-bound report.
+These lanes normally run in the feature's local worktree under the risk-based
+rules in `AGENTS.md`. `.github/workflows/quality.yml` is manual-only and offers
+the same complete macOS coverage/CRAP lane plus an optional complete mutation
+pilot when a clean hosted runner is useful. There is no scheduled or automatic
+pull-request quality run.
 
 Use macOS coverage for the complete package because the existing Linux CI
 deliberately excludes separation tests. A Linux-only coverage report would
