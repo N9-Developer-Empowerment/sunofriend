@@ -165,14 +165,23 @@ destination or making a network request. It retains the bundle inside the new
 runtime for later verification. Callers must execute the handoff directly and
 must not reproduce its schema checks externally.
 
-The checkpoint loader and CUDA synthetic-feature execution are intentionally a
-separate follow-up gate. This foundation does not expose a model-loading or GPU
-execution interface and does not claim that a retained Windows result is a
-portable product capability. The follow-up must add hermetic loader/runtime
-characterization, satisfy the changed-function CRAP ratchet and pass the same
-architecture and authority checks before it can re-enter `main`. Until then,
-the retained setup receipt is technical evidence only; no private audio,
-training execution, checkpoint promotion or product ranking is authorized.
+The checkpoint loader and CUDA synthetic-feature execution now sit behind the
+separate `sunofriend.remix_musicfm_canary` facade. Framework-specific model
+construction, strict state loading, the two exact compatibility migrations,
+offline socket/environment guard and fixed synthetic signal are hidden in one
+private loader module. The caller supplies one path-free request plus an
+existing isolated runtime and receives independently verifiable feature and
+result artifacts. The facade never downloads, opens private audio or starts
+training.
+
+This re-entry makes the retained Windows result reproducible from repository
+code; it does not claim that the RTX run was repeated on this Mac or that the
+runtime is a portable product capability. The request/result validators retain
+the qualified 2-second, layer-7, `[1, 50, 1024]` float32, 25 Hz and exact-repeat
+contract. See
+[`MUSICFM_FMA_SYNTHETIC_CANARY.md`](MUSICFM_FMA_SYNTHETIC_CANARY.md).
+Private audio, training execution, checkpoint promotion and product ranking
+remain unauthorized.
 
 ### Private anchor confirmation
 
@@ -280,15 +289,18 @@ result and output-audio hashes. This uses no model and decodes no audio. Its
 readiness document names the remaining real-model blockers without granting
 execution authority.
 
-`sunofriend.remix_musicfm_feature_plan` now binds the next learned-feature
+`sunofriend.remix_musicfm_feature_plan` binds the next learned-feature
 boundary without opening audio or loading MusicFM. For every controlled
 challenger it records the exact source control, separation estimate and
 challenger identities, their shared audio clock, the owner anchor, a clamped
 two-second context window and the composition-disjoint assignment. It fixes the
-24 kHz mono, layer-7, 25 Hz, 1,024-dimensional float32 contract while leaving
-feature-frame count explicitly unclaimed until the synthetic canary measures
-it. The current plan remains blocked by the native Windows dependency closure,
-isolated runtime, restricted load and synthetic feature-clock gates.
+24 kHz mono, layer-7, 25 Hz, 1,024-dimensional float32 contract. Its v0
+no-effects document deliberately still reports the feature-frame and runtime
+gates as unclaimed: the qualified synthetic canary is separate evidence and
+must be joined through a new admission artifact rather than silently changing
+an older plan. The canary has measured 50 frames for its exact 2-second signal;
+real case windows may have different frame counts and must bind their own
+arrays.
 
 Once an exact training snapshot and transparent-operation manifest exist, the
 no-write plan is printed with `scripts/plan-remix-musicfm-features.py`. It
