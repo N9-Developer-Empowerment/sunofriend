@@ -583,7 +583,7 @@ and explore its compact [worked MIDI pack](examples/the-aisle-at-lidl/).
 | Compare results visually | [Workbench](docs/WORKBENCH.md) |
 | Understand the WAV and mix boundary | [Musical rendering](docs/MUSICAL_RENDERING_AND_MASTERING.md) |
 | Work with vocal melody | [Vocal melody](docs/VOCAL_MELODY.md) |
-| Try or review experimental evidence-first vocal comping | [Ranked-evidence pilot](docs/VOCAL_COMPING_PILOT.md), [design](docs/VOCAL_COMPING_DESIGN.md) and [implementation plan](docs/VOCAL_COMPING_IMPLEMENTATION_PLAN.md) |
+| Plan or review audio-native vocal comping and Musical State | [Canonical forward plan](docs/SEMANTIC_MUSICAL_STATE_AND_VOCAL_COMPING_PLAN.md), [ranked-evidence v1 pilot](docs/VOCAL_COMPING_PILOT.md) and [original design](docs/VOCAL_COMPING_DESIGN.md) |
 | Match or build instruments | [Instruments](docs/INSTRUMENTS.md) |
 | Review the iterative reference-to-song goal | [Reference-conditioned generation specification](docs/REFERENCE_CONDITIONED_SONG_GENERATION_SPEC.md) |
 | Follow the private-song model comparison | [Empirical song-generation evaluation plan](docs/REFERENCE_CONDITIONED_SONG_GENERATION_EVALUATION_PLAN.md) and [provider policy](docs/SONG_GENERATION_PROVIDERS.md) |

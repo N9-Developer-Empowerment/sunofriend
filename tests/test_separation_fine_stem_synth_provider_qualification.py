@@ -407,11 +407,27 @@ def test_provider_review_is_source_visible_checkbox_free_and_saved(
         downloaded = connection.getresponse()
         assert downloaded.status == 200
         assert "attachment" in downloaded.getheader("Content-Disposition")
+        assert downloaded.getheader("Content-Type") == "application/json"
         assert json.loads(downloaded.read())["status"] == review["status"]
     finally:
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+def test_provider_review_rejects_non_local_bind_before_opening_root(
+    tmp_path: Path,
+) -> None:
+    try:
+        build_provider_review_server(
+            tmp_path / "missing-package",
+            host="0.0.0.0",
+            port=0,
+        )
+    except ValueError as error:
+        assert str(error) == "provider review must bind to localhost"
+    else:
+        raise AssertionError("provider review accepted a non-local bind")
 
 
 def test_provider_qualification_fails_closed_on_wrong_song(tmp_path: Path) -> None:

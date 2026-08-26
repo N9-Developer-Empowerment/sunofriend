@@ -8,13 +8,13 @@ serve already-verified local artifacts and persist validated JSON.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
 import re
 import tempfile
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 
 MAX_REVIEW_JSON_BYTES = 1_000_000
@@ -223,8 +223,124 @@ class LocalReviewRequestHandler(BaseHTTPRequestHandler):
         return
 
 
+@dataclass(frozen=True)
+class LocalReviewApplication:
+    """Compose one review's policy with the shared localhost transport.
+
+    Review modules provide already-verified media paths, rendered page bytes
+    and their own schema validator. This boundary owns only the fixed HTTP
+    routes and persistence mechanics shared by those modules.
+    """
+
+    server_version: str
+    page: bytes
+    page_path: str
+    result_path: Path
+    download_filename: str
+    media_routes: Mapping[str, tuple[Path, str]]
+    validate_review: Callable[[dict[str, Any]], Mapping[str, Any]]
+    download_content_type: str = "application/json"
+
+    def build_server(
+        self,
+        *,
+        host: str = "127.0.0.1",
+        port: int,
+    ) -> ThreadingHTTPServer:
+        """Build a localhost-only server without acquiring musical authority."""
+
+        if host not in {"127.0.0.1", "localhost"}:
+            raise ValueError("review server must bind to localhost")
+
+        application = LocalReviewApplication(
+            server_version=self.server_version,
+            page=bytes(self.page),
+            page_path=self.page_path,
+            result_path=Path(self.result_path),
+            download_filename=self.download_filename,
+            download_content_type=self.download_content_type,
+            media_routes={
+                route: (Path(path), content_type)
+                for route, (path, content_type) in self.media_routes.items()
+            },
+            validate_review=self.validate_review,
+        )
+        handler_type = type(
+            "BoundLocalReviewRequestHandler",
+            (_LocalReviewApplicationRequestHandler,),
+            {
+                "application": application,
+                "server_version": application.server_version,
+            },
+        )
+        return ThreadingHTTPServer((host, port), handler_type)
+
+
+class _LocalReviewApplicationRequestHandler(LocalReviewRequestHandler):
+    """Private HTTP implementation bound to one immutable application view."""
+
+    application: LocalReviewApplication
+
+    def do_GET(self) -> None:  # noqa: N802
+        route = self.path.partition("?")[0]
+        application = self.application
+        if route in {"/", application.page_path}:
+            self.send_no_store(
+                200,
+                "text/html; charset=utf-8",
+                application.page,
+            )
+        elif route == "/healthz":
+            self.send_no_store(
+                200,
+                "application/json",
+                b'{"status":"ok"}\n',
+            )
+        elif route == "/saved-result" and application.result_path.is_file():
+            self.send_no_store(
+                200,
+                "application/json",
+                application.result_path.read_bytes(),
+            )
+        elif route == "/download-review" and application.result_path.is_file():
+            self.send_attachment(
+                application.result_path.read_bytes(),
+                filename=application.download_filename,
+                content_type=application.download_content_type,
+            )
+        elif route in application.media_routes:
+            path, content_type = application.media_routes[route]
+            self.send_ranged_file(path, content_type)
+        else:
+            self.send_error(404)
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        route = self.path.partition("?")[0]
+        if route in self.application.media_routes:
+            path, content_type = self.application.media_routes[route]
+            self.send_ranged_file(path, content_type, body=False)
+        else:
+            self.send_error(404)
+
+    def do_POST(self) -> None:  # noqa: N802
+        if self.path != "/save-review":
+            self.send_error(404)
+            return
+        try:
+            value = self.application.validate_review(self.read_review_json())
+            payload = atomic_write_private_json(
+                self.application.result_path,
+                value,
+            )
+        except (OSError, UnicodeError, ValueError) as error:
+            self.send_review_error(error)
+            return
+        self.send_no_store(200, "application/json", payload)
+
+
 __all__ = [
     "FileRange",
+    "LocalReviewApplication",
     "LocalReviewRequestHandler",
     "MAX_REVIEW_JSON_BYTES",
     "ReviewRequestError",

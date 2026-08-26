@@ -673,10 +673,18 @@ all historical functions as new.
   mutation runs only for changed pilot modules. Complete CRAP and mutation lanes
   remain nightly or manually dispatchable. See
   [`CODE_QUALITY_WORKFLOW_INCREMENT_2026-08-25.md`](CODE_QUALITY_WORKFLOW_INCREMENT_2026-08-25.md).
+- **Increment 7 complete on 2026-08-26.** One provider review now supplies
+  review-specific configuration to a shared localhost application façade
+  instead of reimplementing its handler, routes and persistence coordination.
+  The transport mutation lane gained 100 testable mutants, its kill rate rose
+  from 86.386% to 88.690%, genuine survivors fell from 55 to 54, and both
+  architecture and changed-code CRAP ratchets pass. See
+  [`CODE_QUALITY_REVIEW_TRANSPORT_REFACTOR_2026-08-26.md`](CODE_QUALITY_REVIEW_TRANSPORT_REFACTOR_2026-08-26.md).
 - The accepted recovery-facade and `midi_transform` warning queues are
   exhausted. Continue one bounded seam independently rather than combining
   the following tracks.
-- Consolidate remaining review transport mechanics.
+- Migrate one remaining review-server assembly at a time behind the accepted
+  transport façade, preserving each caller's schema and policy.
 - Add Import Linter with the planned package structure.
 - Consider JavaScript mutation testing only after focused web/browser unit
   tests exist.

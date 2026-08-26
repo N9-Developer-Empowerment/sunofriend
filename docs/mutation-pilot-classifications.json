@@ -9,6 +9,12 @@
       "module": "sunofriend.source_roles",
       "qualified_name": "_definition",
       "rationale": "mutmut selects function trampolines after module initialization, but this private builder has already populated the immutable registry"
+    },
+    {
+      "classification": "tool_model_limitation",
+      "module": "sunofriend.separation_review_transport",
+      "qualified_name": "_LocalReviewApplicationRequestHandler.do_HEAD",
+      "rationale": "the base ranged-file sender always suppresses bytes for an HTTP HEAD command, so mutating its redundant body argument cannot change observable behaviour"
     }
   ],
   "schema": "sunofriend-mutation-classifications.v1"

@@ -82,7 +82,20 @@ judgment.
 
 The user may continue feature development while another agent reviews or
 measures code, but use a separate Git branch. Use a separate Git worktree
-whenever practical. Do not edit the same mutable checkout concurrently. Before
-final acceptance, refresh the merge base and rerun the checks against the
-resulting proposed merge. Never stage, rewrite or discard unrelated user
-changes.
+whenever practical. Do not edit the same mutable checkout concurrently.
+
+- Before starting a material feature or refactor, fetch `origin`, fast-forward
+  the clean local `main` worktree, and create the branch/worktree from the exact
+  current `origin/main` commit. Record that base commit in the work evidence.
+- During active work that spans more than 24 hours, fetch `origin/main` and
+  attempt to fast-forward the clean local `main` worktree at least once in each
+  24-hour period. Never force an update through a dirty or shared worktree;
+  report the blocker and continue from a fresh worktree based on `origin/main`.
+- If `main` advances, integrate it in a clean worktree and rerun the applicable
+  proposed-merge checks before final acceptance. Do not continue new work on a
+  branch that has already been merged or superseded.
+- After merge, delete local and remote feature branches only after verifying
+  that they contain no unique commits, patches or uncommitted files. Preserve
+  active or unique work explicitly with a named worktree, branch or archive.
+
+Never stage, rewrite or discard unrelated user changes.
