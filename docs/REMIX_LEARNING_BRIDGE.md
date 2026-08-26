@@ -307,6 +307,34 @@ no-write plan is printed with `scripts/plan-remix-musicfm-features.py`. It
 requires every upstream evidence document plus the resolver report, so a hash
 projection alone cannot silently substitute a provider, checkpoint or runtime.
 
+### Real dataset preparation facade
+
+`sunofriend.remix_training_dataset` and
+`scripts/prepare-remix-training-dataset.py` now remove the error-prone manual
+assignment step. The caller supplies only the exact registries, controlled
+variant sets, explicitly admitted owner labels and one `train`, `validation`
+or `test` choice per opaque composition ID. The facade derives group,
+Musical-State and variant-family identities from the sealed evidence, then
+delegates to the canonical snapshot validator. Missing and unused composition
+assignments fail closed.
+
+The output embeds the canonical path-free snapshot and an exact shortfall
+report for every provisional evidence threshold. It reads JSON only, writes
+one fresh owner-only file and keeps private-audio extraction, training,
+checkpoint promotion and product ordering unauthorized. It therefore makes a
+growing real corpus mechanically ready for the later frozen-feature gate; it
+does not make a short corpus trainable.
+
+```bash
+python3 scripts/prepare-remix-training-dataset.py \
+  --snapshot-id OWNER_PILOT_ID \
+  --owner-registry REGISTRY.json \
+  --variant-set VARIANTS.json \
+  --label LABEL.json \
+  --split COMPOSITION_ID=train \
+  --out FRESH_PRIVATE_PREPARATION.json
+```
+
 ## Remaining evidence and implementation
 
 The smallest honest training run is blocked by evidence, not GPU capacity.
@@ -582,8 +610,9 @@ useful or authorize product use.
 2. **Next, D+H:** add a two-challenger randomized pairwise review and append one
    explicit label. Repeat as each new song is remixed; usable deterministic
    tracks continue to be delivered every few days.
-3. **In parallel, D:** implement the registry, variant manifest, snapshot and
-   feature-manifest validators with synthetic fixtures and tamper tests.
+3. **In parallel, D:** keep using the implemented registry, variant manifest,
+   snapshot, real-dataset preparation and feature-manifest validators with
+   synthetic fixtures and tamper tests.
 4. **In parallel, D+T:** run a synthetic clean/shuffled/resume canary locally
    and on the RTX worker. This is pipeline evidence only.
 5. **After the evidence gate, D+I:** freeze and compare deterministic features,
