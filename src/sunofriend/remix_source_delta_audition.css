@@ -1,0 +1,17 @@
+:root { color-scheme: dark; --bg:#101411; --panel:#1a201c; --line:#344038; --ink:#f5f4ee; --muted:#b6bdb7; --mint:#5ce0bf; --gold:#f3c668; }
+* { box-sizing: border-box; }
+body { margin:0; min-height:100vh; background:radial-gradient(circle at 12% 0,#173128 0,transparent 30%),var(--bg); color:var(--ink); font:17px/1.5 ui-sans-serif,system-ui,sans-serif; }
+header,main { width:min(1180px,calc(100% - 40px)); margin:auto; }
+header { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:48px 0 28px; }
+h1,h2,p { margin-top:0; } h1 { margin-bottom:0; font-size:clamp(2.1rem,5vw,4.3rem); line-height:1; } h2 { font-size:clamp(1.35rem,2.4vw,2rem); }
+.eyebrow { color:var(--mint); text-transform:uppercase; letter-spacing:.16em; font-size:.8rem; font-weight:800; }
+.privacy { color:var(--muted); white-space:nowrap; }.privacy i { display:inline-block; width:.65rem; height:.65rem; margin-right:.5rem; border-radius:50%; background:var(--mint); }
+.card,.player-card { border:1px solid var(--line); border-radius:28px; background:rgba(26,32,28,.92); }
+.intro { display:grid; grid-template-columns:1.5fr 1fr; gap:36px; padding:36px; }
+.boundary { border-left:2px solid var(--gold); padding-left:24px; display:flex; flex-direction:column; justify-content:center; gap:8px; color:var(--muted); }.boundary strong { color:var(--gold); }
+.listen-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin:22px 0; }
+.player-card { padding:28px; display:flex; flex-direction:column; min-height:280px; }.player-card p:not(.eyebrow) { color:var(--muted); flex:1; }.control { border-color:#6d5a34; }
+button { border:1px solid #526158; border-radius:16px; padding:16px 18px; background:#28312c; color:var(--ink); font:inherit; cursor:pointer; }button:hover,button:focus-visible { border-color:var(--mint); background:#31433a; outline:none; }
+.heard { margin-top:14px; color:var(--muted); font-size:.88rem; }.heard.yes { color:var(--mint); }
+.player-shell { padding:24px 30px; margin-bottom:40px; }audio { width:100%; }#notice { color:var(--muted); margin:14px 0 0; }
+@media (max-width:800px) { header,.intro { display:block; }.privacy { display:inline-block; margin-top:18px; }.boundary { margin-top:26px; }.listen-grid { grid-template-columns:1fr; }.player-card { min-height:0; } }

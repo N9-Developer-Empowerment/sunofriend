@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from contextlib import contextmanager
+import json
 from pathlib import Path
+from threading import Thread
+from typing import Iterator
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 import numpy as np
 import pytest
@@ -19,6 +25,10 @@ from sunofriend.remix_source_delta import (
     render_remix_source_delta,
     validate_remix_source_delta_plan,
     verify_remix_source_delta_result,
+)
+from sunofriend.remix_source_delta_audition import (
+    REMIX_SOURCE_DELTA_AUDITION_SCHEMA,
+    create_remix_source_delta_audition_server,
 )
 from sunofriend.remix_source_state import create_remix_source_state
 from sunofriend.source_receipt import document_sha256
@@ -148,6 +158,111 @@ def test_target_anchor_alias_tamper_and_artifact_change_fail_closed(
         verify_remix_source_delta_result(output)
 
 
+def test_render_opens_as_hidden_playback_only_ab_without_writes(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    plan = _plan(fixture)
+    authorization = create_remix_source_delta_render_authorization(
+        plan, confirm_private_ab_preview=True
+    )
+    output = tmp_path / "render"
+    render_remix_source_delta(
+        plan,
+        authorization,
+        source_audio=fixture["source_path"],
+        target_estimate_audio=fixture["drums_path"],
+        out_dir=output,
+        expected_plan_sha256=plan["document_sha256"],
+        confirm_render=True,
+    )
+    before = _file_roster(output)
+    server = create_remix_source_delta_audition_server(
+        output,
+        title="Private rhythm-restraint A/B",
+        token="a" * 40,
+        presentation_seed=20260827,
+    )
+
+    with _running(server):
+        state = _get_json(server, "/api/session")
+        assert state["schema"] == REMIX_SOURCE_DELTA_AUDITION_SCHEMA
+        assert state["status"] == "private_hidden_ab_audition_only"
+        assert state["title"] == "Private rhythm-restraint A/B"
+        assert state["authority"] == {
+            "playback_creates_review": False,
+            "preference_can_be_saved": False,
+            "training_label_created": False,
+            "training_execution_authorized": False,
+            "product_selection_authorized": False,
+        }
+        assert set(server.display_variant_ids) == {"a", "b"}
+        assert set(server.display_variant_ids.values()) == {
+            "gentle-rhythm-restraint",
+            "strong-rhythm-restraint",
+        }
+        assert str(tmp_path) not in json.dumps(state)
+
+        for name in ("control", "a", "b"):
+            media_url = state["media"][name]["media_url"]
+            request = Request(_url(server, media_url), headers={"Range": "bytes=0-31"})
+            with urlopen(request) as response:
+                assert response.status == 206
+                assert len(response.read()) == 32
+
+        html = _get_bytes(server, "/").decode()
+        script = _get_bytes(server, "/remix_source_delta_audition.js").decode()
+        assert "Audition only" in html
+        assert "cannot save" in html
+        assert 'data-play="a"' in html and 'data-play="b"' in html
+        assert "/api/label" not in html + script
+
+        request = Request(
+            _url(server, "/api/label"),
+            method="POST",
+            data=b"{}",
+            headers={"Content-Type": "application/json"},
+        )
+        with pytest.raises(HTTPError) as error:
+            urlopen(request)
+        assert error.value.code == 405
+
+    assert _file_roster(output) == before
+
+
+def test_audition_rechecks_audio_after_launch(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    plan = _plan(fixture)
+    authorization = create_remix_source_delta_render_authorization(
+        plan, confirm_private_ab_preview=True
+    )
+    output = tmp_path / "render"
+    render_remix_source_delta(
+        plan,
+        authorization,
+        source_audio=fixture["source_path"],
+        target_estimate_audio=fixture["drums_path"],
+        out_dir=output,
+        expected_plan_sha256=plan["document_sha256"],
+        confirm_render=True,
+    )
+    server = create_remix_source_delta_audition_server(
+        output, token="b" * 40, presentation_seed=4
+    )
+    selected = server.display_variant_ids["a"]
+    row = next(
+        item
+        for item in server.verified_result["artifacts"]["candidates"]
+        if item["variant_id"] == selected
+    )
+    with _running(server):
+        state = _get_json(server, "/api/session")
+        (output / row["path"]).write_bytes(b"changed")
+        with pytest.raises(HTTPError) as error:
+            urlopen(_url(server, state["media"]["a"]["media_url"]))
+        assert error.value.code == 409
+
+
 def _fixture(root: Path) -> dict:
     rate = 8_000
     frames = 16_000
@@ -220,6 +335,40 @@ def _fixture(root: Path) -> dict:
         "other": other_record,
         "drums": drums_estimate,
         "frames": frames,
+    }
+
+
+@contextmanager
+def _running(server) -> Iterator[None]:
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def _url(server, path: str) -> str:
+    separator = "&" if "?" in path else "?"
+    return f"http://127.0.0.1:{server.server_port}{path}{separator}token={server.token}"
+
+
+def _get_bytes(server, path: str) -> bytes:
+    with urlopen(_url(server, path)) as response:
+        return response.read()
+
+
+def _get_json(server, path: str) -> dict:
+    return json.loads(_get_bytes(server, path))
+
+
+def _file_roster(root: Path) -> dict[str, str]:
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes().hex()
+        for path in root.rglob("*")
+        if path.is_file()
     }
 
 
