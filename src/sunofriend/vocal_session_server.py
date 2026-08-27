@@ -16,7 +16,7 @@ from pathlib import Path, PurePosixPath
 import secrets
 import struct
 import tempfile
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 from urllib.parse import parse_qs, unquote, urlparse
 import webbrowser
 
@@ -24,6 +24,7 @@ from .musical_state import admit_vocal_phrase_capture, validate_musical_state
 from .separation_review_transport import parse_file_range
 from .source_receipt import canonical_json_bytes
 from .vocal_capture import create_vocal_capture
+from .vocal_context_sources import admit_vocal_context_sources
 from .vocal_candidate_vault import (
     VocalCandidateVault,
     VocalCandidateVaultConflictError,
@@ -73,6 +74,8 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
         recording_cue_source_id: str | None,
         capture_output_dir: str | Path | None,
         candidate_vault_dir: str | Path | None,
+        original_mix_audio: str | Path | None,
+        backing_audio: str | Path | None,
     ) -> None:
         state_path = Path(musical_state_path).expanduser().resolve(strict=True)
         try:
@@ -97,6 +100,10 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
         self.recording_cue_source_id = recording_cue_source_id
         self.capture_output_dir = capture_path
         self.candidate_vault = _open_candidate_vault(candidate_vault_path)
+        self.context_sources = admit_vocal_context_sources(
+            original_mix_audio=original_mix_audio,
+            backing_audio=backing_audio,
+        )
         if recording_target is not None:
             self._recording_reference()
         self._refresh_media()
@@ -104,6 +111,7 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
 
     def _refresh_media(self) -> None:
         self.media = _authorised_media(self.musical_state, self.musical_state_root)
+        self.media.update(self.context_sources.media_records())
         self.media.update(self._candidate_media())
         self.media_capabilities = {
             secrets.token_urlsafe(24): record for record in self.media.values()
@@ -312,6 +320,37 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
     def browser_state(self) -> dict[str, Any]:
         session = self.store.current_session(self.musical_state)
         draft = self.store.load_draft(session)
+        sources = self._browser_sources(session)
+        candidate_sources, candidate_state = self._candidate_browser_state()
+        sources.extend(candidate_sources)
+        sources.extend(
+            self.context_sources.browser_sources(self.media_capability_by_source)
+        )
+        return {
+            "title": self.title,
+            "session": session,
+            "draft": draft,
+            "sources": sources,
+            "candidate_vault": candidate_state,
+            "recording": {
+                **self._recording_state(session),
+            },
+            "context_playback": self._context_playback_state(session, sources),
+            # A reference-vocal cue authorises audition and guided recording only.
+            # AI fallback needs its own later, explicit render-use authorisation.
+            "ai_fallback_available": False,
+            "privacy": {
+                "local_only": True,
+                "uploads_available": False,
+                "playback_creates_decision": False,
+            },
+        }
+
+    def _browser_sources(
+        self, session: Mapping[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Project admitted session sources without exposing local paths."""
+
         sources = []
         human_index = 0
         phrase_capture_index = 0
@@ -339,48 +378,66 @@ class VocalSessionHTTPServer(ThreadingHTTPServer):
                     "media_url": f"/media/{capability}",
                     "playback_start_seconds": media.get("playback_start_seconds"),
                     "playback_end_seconds": media.get("playback_end_seconds"),
+                    "audio_properties": media.get("audio_properties"),
                 }
             )
-        candidate_sources, candidate_state = self._candidate_browser_state()
-        sources.extend(candidate_sources)
+        return sources
+
+    def _context_playback_state(
+        self,
+        session: Mapping[str, Any],
+        sources: Sequence[Mapping[str, Any]],
+    ) -> dict[str, Any]:
+        """Own source-role selection and playback-horizon policy for the UI."""
+
+        source_by_class = {row["source_class"]: row for row in sources}
+        original_context = source_by_class.get("authorised_original_mix")
+        backing_context = source_by_class.get("authorised_instrumental_backing")
+        reference_context = source_by_class.get("authorised_ai_vocal_reference")
+        original_playback = original_context or reference_context
         return {
-            "title": self.title,
-            "session": session,
-            "draft": draft,
-            "sources": sources,
-            "candidate_vault": candidate_state,
-            "recording": {
-                **self._recording_state(session),
-            },
-            "context_playback": {
-                "scopes": ["phrase", "section", "song"],
-                "default_scope": "phrase",
-                "section_phrase_radius": 2,
-                "original_source_id": next(
-                    (
-                        row["source_id"]
-                        for row in sources
-                        if row["source_class"] == "authorised_ai_vocal_reference"
+            "scopes": ["phrase", "section", "song"],
+            "default_scope": "phrase",
+            "section_phrase_radius": 2,
+            "original_source_id": (
+                original_playback["source_id"] if original_playback else None
+            ),
+            "original": (
+                {
+                    "source_id": original_playback["source_id"],
+                    "source_class": original_playback["source_class"],
+                    "media_url": original_playback["media_url"],
+                    "comparison_kind": (
+                        "full_mix"
+                        if original_context is not None
+                        else "reference_vocal_only"
                     ),
-                    None,
+                }
+                if original_playback
+                else None
+            ),
+            "working": {
+                "backing_available": backing_context is not None,
+                "backing_source_id": (
+                    backing_context["source_id"] if backing_context else None
                 ),
-                "song_start_seconds": 0.0,
-                "song_end_seconds": max(
+                "backing_media_url": (
+                    backing_context["media_url"] if backing_context else None
+                ),
+                "reference_context_preserved": reference_context is not None,
+            },
+            "song_start_seconds": 0.0,
+            "song_end_seconds": (
+                float(reference_context["audio_properties"]["duration_seconds"])
+                if reference_context is not None
+                else max(
                     (float(row["end_seconds"]) for row in session["phrases"]),
                     default=0.0,
-                ),
-                "authority": "audition_only",
-                "playback_creates_decision": False,
-                "artifact_created": False,
-            },
-            # A reference-vocal cue authorises audition and guided recording only.
-            # AI fallback needs its own later, explicit render-use authorisation.
-            "ai_fallback_available": False,
-            "privacy": {
-                "local_only": True,
-                "uploads_available": False,
-                "playback_creates_decision": False,
-            },
+                )
+            ),
+            "authority": "audition_only",
+            "playback_creates_decision": False,
+            "artifact_created": False,
         }
 
     def _candidate_browser_state(
@@ -579,6 +636,8 @@ def create_vocal_session_server(
     recording_cue_source_id: str | None = None,
     capture_output_dir: str | Path | None = None,
     candidate_vault_dir: str | Path | None = None,
+    original_mix_audio: str | Path | None = None,
+    backing_audio: str | Path | None = None,
 ) -> VocalSessionHTTPServer:
     """Create, but do not start, a private loopback Vocal Session server."""
 
@@ -593,6 +652,8 @@ def create_vocal_session_server(
         recording_cue_source_id=recording_cue_source_id,
         capture_output_dir=capture_output_dir,
         candidate_vault_dir=candidate_vault_dir,
+        original_mix_audio=original_mix_audio,
+        backing_audio=backing_audio,
     )
 
 
@@ -606,6 +667,8 @@ def run_vocal_session(
     recording_cue_source_id: str | None = None,
     capture_output_dir: str | Path | None = None,
     candidate_vault_dir: str | Path | None = None,
+    original_mix_audio: str | Path | None = None,
+    backing_audio: str | Path | None = None,
 ) -> None:
     """Run the Vocal Session until interrupted."""
 
@@ -617,6 +680,8 @@ def run_vocal_session(
         recording_cue_source_id=recording_cue_source_id,
         capture_output_dir=capture_output_dir,
         candidate_vault_dir=candidate_vault_dir,
+        original_mix_audio=original_mix_audio,
+        backing_audio=backing_audio,
     )
     print(f"Private vocal session: {server.url}")
     if open_browser:
@@ -1040,6 +1105,7 @@ def _authorised_media(
             "audio_bytes": size,
             "audio_sha256": digest,
             "private_path": str(path),
+            "audio_properties": dict(source["audio_properties"]),
             **(
                 {
                     "playback_start_seconds": source["placement"][

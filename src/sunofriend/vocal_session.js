@@ -189,9 +189,20 @@ function render() {
     !appState.ai_fallback_available,
   );
   document.querySelector("#use-human").disabled = !isHumanSourceForPhrase(source(activeSourceId), row.phrase_id);
-  document.querySelector("#play-original").disabled = !appState.context_playback.original_source_id;
-  const workingChoices = appState.candidate_vault?.working_choices?.choices || {};
-  document.querySelector("#play-working-audition").disabled = !Object.keys(workingChoices).length;
+  const originalContext = appState.context_playback.original;
+  const workingContext = appState.context_playback.working;
+  const originalButton = document.querySelector("#play-original");
+  originalButton.disabled = !appState.context_playback.original_source_id;
+  originalButton.textContent = originalContext?.comparison_kind === "full_mix"
+    ? "Play original full mix"
+    : "Play reference vocal";
+  document.querySelector("#play-working-audition").textContent = workingContext?.backing_available
+    ? "Play rough working comp"
+    : "Play working vocal only";
+  document.querySelector("#context-help").textContent = workingContext?.backing_available
+    ? "Compare the complete original mix with the instrumental backing plus your reversible working vocal. Unreplaced phrases, breaths, gaps and ad-libs stay on the reference vocal. Playback saves nothing and renders nothing."
+    : "No instrumental backing was supplied, so the working audition is vocal-only. Unreplaced phrases, breaths, gaps and ad-libs stay on the reference vocal. Playback saves nothing and renders nothing.";
+  document.querySelector("#play-working-audition").disabled = !appState.candidate_vault?.working_audition_url;
   document.querySelectorAll("[data-context-scope]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.contextScope === contextScope));
   });
@@ -321,12 +332,14 @@ async function playWorkingAudition() {
     workingAuditionContext = new AudioContext({latencyHint: "playback"});
     const context = workingAuditionContext;
     const buffers = new Map();
-    await Promise.all([...new Set(plan.segments.map((row) => row.media_url))].map(async (url) => {
+    const scheduledSegments = [...plan.working_mix.vocal_segments];
+    if (plan.working_mix.backing) scheduledSegments.unshift(plan.working_mix.backing);
+    await Promise.all([...new Set(scheduledSegments.map((row) => row.media_url))].map(async (url) => {
       buffers.set(url, await decodeAuditionSource(context, url));
     }));
     await context.resume();
     const clockStart = context.currentTime + 0.05;
-    plan.segments.forEach((segment) => {
+    scheduledSegments.forEach((segment) => {
       const sourceNode = context.createBufferSource();
       const gainNode = context.createGain();
       const duration = segment.source_end_seconds - segment.source_start_seconds;

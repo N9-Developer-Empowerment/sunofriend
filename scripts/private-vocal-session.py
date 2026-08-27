@@ -35,6 +35,16 @@ def main() -> int:
             "--capture-output-dir"
         ),
     )
+    parser.add_argument(
+        "--original-mix-audio",
+        type=Path,
+        help="Exact complete-mix audio used only for original comparison playback",
+    )
+    parser.add_argument(
+        "--backing-audio",
+        type=Path,
+        help="Exact instrumental backing used only beneath the rough working vocal",
+    )
     args = parser.parse_args()
     run_vocal_session(
         args.musical_state,
@@ -45,6 +55,8 @@ def main() -> int:
         recording_cue_source_id=args.recording_cue_source_id,
         capture_output_dir=args.capture_output_dir,
         candidate_vault_dir=args.candidate_vault_dir,
+        original_mix_audio=args.original_mix_audio,
+        backing_audio=args.backing_audio,
     )
     return 0
 

@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 from .source_receipt import document_sha256
 
 
-VOCAL_WORKING_AUDITION_SCHEMA = "sunofriend.vocal-working-audition.v1"
+VOCAL_WORKING_AUDITION_SCHEMA = "sunofriend.vocal-working-audition.v2"
 _SCOPES = {"phrase", "section", "song"}
 _PHRASE_LOCAL_CLASSES = {
     "human_vocal_phrase_capture",
@@ -50,18 +50,27 @@ def create_vocal_working_audition(
         song_end_seconds=song_end_seconds,
     )
     source_by_id = _sources(sources)
-    original = _original_reference(source_by_id.values())
+    reference = _original_reference(source_by_id.values())
+    original_mix = _optional_source(
+        source_by_id.values(), "authorised_original_mix"
+    )
+    backing = _optional_source(
+        source_by_id.values(), "authorised_instrumental_backing"
+    )
+    _require_source_horizon(reference, float(window["end_seconds"]))
+    if original_mix:
+        _require_source_horizon(original_mix, float(window["end_seconds"]))
+    if backing:
+        _require_source_horizon(backing, float(window["end_seconds"]))
     choices = _choices(working_choices)
-    segments = [
-        _segment(
-            phrase,
-            window_start=window["start_seconds"],
-            source_by_id=source_by_id,
-            original=original,
-            choices=choices,
-        )
-        for phrase in selected
-    ]
+    vocal_segments = _continuous_vocal_segments(
+        selected,
+        window=window,
+        source_by_id=source_by_id,
+        reference=reference,
+        choices=choices,
+    )
+    comparison_source = original_mix or reference
     document: dict[str, Any] = {
         "schema": VOCAL_WORKING_AUDITION_SCHEMA,
         "status": "planned_browser_audition_only",
@@ -75,7 +84,27 @@ def create_vocal_working_audition(
         },
         "window": window,
         "duration_seconds": window["end_seconds"] - window["start_seconds"],
-        "segments": segments,
+        "original_comparison": {
+            **_window_source(
+                comparison_source,
+                window=window,
+                window_start=window["start_seconds"],
+            ),
+            "comparison_kind": "full_mix" if original_mix else "reference_vocal_only",
+        },
+        "working_mix": {
+            "backing": (
+                _window_source(
+                    backing,
+                    window=window,
+                    window_start=window["start_seconds"],
+                )
+                if backing
+                else None
+            ),
+            "vocal_segments": vocal_segments,
+            "reference_context_preserved": True,
+        },
         "join": {
             "policy": "browser_scheduled_phrase_boundaries",
             "edge_fade_seconds": _EDGE_FADE_SECONDS,
@@ -104,7 +133,8 @@ def validate_vocal_working_audition(value: Mapping[str, Any]) -> dict[str, Any]:
         "binding",
         "window",
         "duration_seconds",
-        "segments",
+        "original_comparison",
+        "working_mix",
         "join",
         "authority",
         "effects",
@@ -129,11 +159,54 @@ def validate_vocal_working_audition(value: Mapping[str, Any]) -> dict[str, Any]:
         abs_tol=1e-9,
     ):
         raise ValueError("working audition duration changed")
-    segments = document.get("segments")
-    if not isinstance(segments, list) or not segments:
-        raise ValueError("working audition needs at least one segment")
+    _validate_original_comparison(document.get("original_comparison"), duration)
+    segments = _validate_working_mix(document.get("working_mix"), duration)
     for segment in segments:
         _validate_segment(segment, duration=duration)
+    _validate_continuous_destination(segments, duration=duration)
+    _validate_join_and_authority(document)
+    unhashed = dict(document)
+    supplied_hash = unhashed.pop("document_sha256", None)
+    if supplied_hash != document_sha256(unhashed):
+        raise ValueError("working audition document hash changed")
+    return document
+
+
+def _validate_original_comparison(value: Any, duration: float) -> None:
+    _validate_window_source(value, duration=duration)
+    comparison_kind = value.get("comparison_kind")
+    if comparison_kind not in {"full_mix", "reference_vocal_only"}:
+        raise ValueError("working audition comparison kind changed")
+    expected_class = (
+        "authorised_original_mix"
+        if comparison_kind == "full_mix"
+        else "authorised_ai_vocal_reference"
+    )
+    if value.get("source_class") != expected_class:
+        raise ValueError("working audition comparison source changed")
+
+
+def _validate_working_mix(value: Any, duration: float) -> list[Mapping[str, Any]]:
+    if not isinstance(value, Mapping) or set(value) != {
+        "backing",
+        "vocal_segments",
+        "reference_context_preserved",
+    }:
+        raise ValueError("working audition mix fields changed")
+    if value.get("reference_context_preserved") is not True:
+        raise ValueError("working audition reference-context policy changed")
+    backing = value.get("backing")
+    if backing is not None:
+        _validate_window_source(backing, duration=duration)
+        if backing.get("source_class") != "authorised_instrumental_backing":
+            raise ValueError("working audition backing class changed")
+    segments = value.get("vocal_segments")
+    if not isinstance(segments, list) or not segments:
+        raise ValueError("working audition needs at least one segment")
+    return segments
+
+
+def _validate_join_and_authority(document: Mapping[str, Any]) -> None:
     if document.get("join") != {
         "policy": "browser_scheduled_phrase_boundaries",
         "edge_fade_seconds": _EDGE_FADE_SECONDS,
@@ -147,11 +220,6 @@ def validate_vocal_working_audition(value: Mapping[str, Any]) -> dict[str, Any]:
         or document.get("network_used") is not False
     ):
         raise ValueError("working audition authority or effects changed")
-    unhashed = dict(document)
-    supplied_hash = unhashed.pop("document_sha256", None)
-    if supplied_hash != document_sha256(unhashed):
-        raise ValueError("working audition document hash changed")
-    return document
 
 
 def _phrases(session: Mapping[str, Any]) -> list[Mapping[str, Any]]:
@@ -253,6 +321,15 @@ def _original_reference(
     return matches[0]
 
 
+def _optional_source(
+    sources: Sequence[Mapping[str, Any]], source_class: str
+) -> Mapping[str, Any] | None:
+    matches = [source for source in sources if source.get("source_class") == source_class]
+    if len(matches) > 1:
+        raise ValueError(f"working audition has multiple {source_class} sources")
+    return matches[0] if matches else None
+
+
 def _choices(working_choices: Mapping[str, Any] | None) -> Mapping[str, Any]:
     if working_choices is None:
         return {}
@@ -262,18 +339,61 @@ def _choices(working_choices: Mapping[str, Any] | None) -> Mapping[str, Any]:
     return choices
 
 
-def _segment(
+def _continuous_vocal_segments(
+    phrases: Sequence[Mapping[str, Any]],
+    *,
+    window: Mapping[str, float],
+    source_by_id: Mapping[str, Mapping[str, Any]],
+    reference: Mapping[str, Any],
+    choices: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    segments: list[dict[str, Any]] = []
+    cursor = float(window["start_seconds"])
+    for phrase in phrases:
+        start = float(phrase["start_seconds"])
+        if start > cursor:
+            segments.append(
+                _reference_context_segment(
+                    reference,
+                    start=cursor,
+                    end=start,
+                    window_start=float(window["start_seconds"]),
+                )
+            )
+        segments.append(
+            _phrase_segment(
+                phrase,
+                window_start=float(window["start_seconds"]),
+                source_by_id=source_by_id,
+                reference=reference,
+                choices=choices,
+            )
+        )
+        cursor = float(phrase["end_seconds"])
+    if cursor < float(window["end_seconds"]):
+        segments.append(
+            _reference_context_segment(
+                reference,
+                start=cursor,
+                end=float(window["end_seconds"]),
+                window_start=float(window["start_seconds"]),
+            )
+        )
+    return segments
+
+
+def _phrase_segment(
     phrase: Mapping[str, Any],
     *,
     window_start: float,
     source_by_id: Mapping[str, Mapping[str, Any]],
-    original: Mapping[str, Any],
+    reference: Mapping[str, Any],
     choices: Mapping[str, Any],
 ) -> dict[str, Any]:
     phrase_id = str(phrase["phrase_id"])
     choice = choices.get(phrase_id)
     if choice is None:
-        source = original
+        source = reference
         selection = "original_reference_fallback"
     else:
         if not isinstance(choice, Mapping):
@@ -296,6 +416,7 @@ def _segment(
         source_start = start
         source_end = end
     return {
+        "segment_kind": "phrase",
         "phrase_id": phrase_id,
         "lyrics": str(phrase["lyrics"]),
         "source_id": str(source["source_id"]),
@@ -308,6 +429,58 @@ def _segment(
         "destination_start_seconds": start - window_start,
         "destination_end_seconds": end - window_start,
     }
+
+
+def _reference_context_segment(
+    reference: Mapping[str, Any],
+    *,
+    start: float,
+    end: float,
+    window_start: float,
+) -> dict[str, Any]:
+    return {
+        "segment_kind": "reference_context",
+        "phrase_id": None,
+        "lyrics": None,
+        "source_id": str(reference["source_id"]),
+        "source_class": str(reference["source_class"]),
+        "source_audio_sha256": _source_audio_sha256(reference),
+        "media_url": _safe_media_url(reference.get("media_url")),
+        "selection": "reference_context_preserved",
+        "source_start_seconds": start,
+        "source_end_seconds": end,
+        "destination_start_seconds": start - window_start,
+        "destination_end_seconds": end - window_start,
+    }
+
+
+def _window_source(
+    source: Mapping[str, Any],
+    *,
+    window: Mapping[str, float],
+    window_start: float,
+) -> dict[str, Any]:
+    start = float(window["start_seconds"])
+    end = float(window["end_seconds"])
+    return {
+        "source_id": str(source["source_id"]),
+        "source_class": str(source["source_class"]),
+        "source_audio_sha256": _source_audio_sha256(source),
+        "media_url": _safe_media_url(source.get("media_url")),
+        "source_start_seconds": start,
+        "source_end_seconds": end,
+        "destination_start_seconds": start - window_start,
+        "destination_end_seconds": end - window_start,
+    }
+
+
+def _require_source_horizon(source: Mapping[str, Any], end_seconds: float) -> None:
+    properties = source.get("audio_properties")
+    if not isinstance(properties, Mapping):
+        raise ValueError("working audition source audio properties changed")
+    duration = _finite(properties.get("duration_seconds"), "source duration")
+    if duration + 1e-9 < end_seconds:
+        raise ValueError("working audition source is shorter than its context window")
 
 
 def _musical_state_sha256(session: Mapping[str, Any]) -> str:
@@ -353,6 +526,7 @@ def _window(value: Any) -> dict[str, float]:
 
 def _validate_segment(value: Any, *, duration: float) -> None:
     expected = {
+        "segment_kind",
         "phrase_id",
         "lyrics",
         "source_id",
@@ -367,15 +541,45 @@ def _validate_segment(value: Any, *, duration: float) -> None:
     }
     if not isinstance(value, Mapping) or set(value) != expected:
         raise ValueError("working audition segment fields changed")
-    for key in ("phrase_id", "lyrics", "source_id", "source_class"):
+    _validate_segment_identity(value)
+    _validate_segment_clock(value, duration)
+
+
+def _validate_segment_identity(value: Mapping[str, Any]) -> None:
+    segment_kind = value.get("segment_kind")
+    if segment_kind not in {"phrase", "reference_context"}:
+        raise ValueError("working audition segment kind changed")
+    for key in ("source_id", "source_class"):
         _safe_text(value.get(key), key)
+    if segment_kind == "phrase":
+        _safe_text(value.get("phrase_id"), "phrase_id")
+        _safe_text(value.get("lyrics"), "lyrics")
+    elif value.get("phrase_id") is not None or value.get("lyrics") is not None:
+        raise ValueError("working audition reference context changed")
     _sha(value.get("source_audio_sha256"), "source audio")
     _safe_media_url(value.get("media_url"))
     if value.get("selection") not in {
         "reversible_working_choice",
         "original_reference_fallback",
+        "reference_context_preserved",
     }:
         raise ValueError("working audition segment selection changed")
+    if segment_kind == "reference_context" and (
+        value.get("selection") != "reference_context_preserved"
+        or value.get("source_class") != "authorised_ai_vocal_reference"
+    ):
+        raise ValueError("working audition reference context changed")
+    if segment_kind == "phrase" and (
+        value.get("selection") == "reference_context_preserved"
+        or (
+            value.get("selection") == "original_reference_fallback"
+            and value.get("source_class") != "authorised_ai_vocal_reference"
+        )
+    ):
+        raise ValueError("working audition phrase selection changed")
+
+
+def _validate_segment_clock(value: Mapping[str, Any], duration: float) -> None:
     source_start = _finite(value.get("source_start_seconds"), "source start")
     source_end = _finite(value.get("source_end_seconds"), "source end")
     destination_start = _finite(
@@ -397,6 +601,58 @@ def _validate_segment(value: Any, *, duration: float) -> None:
         )
     ):
         raise ValueError("working audition segment clock changed")
+
+
+def _validate_window_source(value: Any, *, duration: float) -> None:
+    expected = {
+        "source_id",
+        "source_class",
+        "source_audio_sha256",
+        "media_url",
+        "source_start_seconds",
+        "source_end_seconds",
+        "destination_start_seconds",
+        "destination_end_seconds",
+    }
+    if not isinstance(value, Mapping):
+        raise ValueError("working audition window source changed")
+    extra = set(value) - expected
+    if extra not in (set(), {"comparison_kind"}) or not expected.issubset(value):
+        raise ValueError("working audition window source fields changed")
+    for key in ("source_id", "source_class"):
+        _safe_text(value.get(key), key)
+    _sha(value.get("source_audio_sha256"), "source audio")
+    _safe_media_url(value.get("media_url"))
+    source_start = _finite(value.get("source_start_seconds"), "source start")
+    source_end = _finite(value.get("source_end_seconds"), "source end")
+    destination_start = _finite(
+        value.get("destination_start_seconds"), "destination start"
+    )
+    destination_end = _finite(
+        value.get("destination_end_seconds"), "destination end"
+    )
+    if (
+        source_start < 0.0
+        or source_end <= source_start
+        or destination_start != 0.0
+        or not math.isclose(destination_end, duration, abs_tol=1e-9)
+        or not math.isclose(source_end - source_start, duration, abs_tol=1e-9)
+    ):
+        raise ValueError("working audition window source clock changed")
+
+
+def _validate_continuous_destination(
+    segments: Sequence[Mapping[str, Any]], *, duration: float
+) -> None:
+    cursor = 0.0
+    for segment in segments:
+        start = float(segment["destination_start_seconds"])
+        end = float(segment["destination_end_seconds"])
+        if not math.isclose(start, cursor, abs_tol=1e-9):
+            raise ValueError("working audition vocal context is not continuous")
+        cursor = end
+    if not math.isclose(cursor, duration, abs_tol=1e-9):
+        raise ValueError("working audition vocal context is not continuous")
 
 
 def _safe_text(value: Any, label: str) -> str:
