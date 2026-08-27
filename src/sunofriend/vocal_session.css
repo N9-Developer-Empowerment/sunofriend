@@ -81,6 +81,9 @@ h2 { margin-bottom: 0.4rem; font-size: 1.12rem; }
 
 .panel { padding: clamp(1.2rem, 2.3vw, 2rem); background: var(--panel); }
 .panel-heading, .listen-heading, .stage-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.phrase-navigation { display: flex; align-items: center; gap: 0.55rem; }
+.phrase-navigation button { padding: 0.48rem 0.65rem; font-size: 0.75rem; }
+#phrase-position { min-width: 7.2rem; color: var(--ink); text-align: center; }
 .context-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.45rem; }
 .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.82rem; }
 .progress-track { height: 4px; margin: 1.2rem 0 1.5rem; overflow: hidden; border-radius: 999px; background: #303532; }
@@ -176,4 +179,6 @@ textarea { width: 100%; resize: vertical; min-height: 92px; padding: 0.8rem; col
   .lyrics { margin: 2.5rem auto; }
   .record-card { grid-template-columns: auto 1fr; }
   .record-actions { grid-column: 1 / -1; }
+  .stage-meta { align-items: flex-start; flex-wrap: wrap; }
+  .phrase-navigation { width: 100%; justify-content: space-between; }
 }
