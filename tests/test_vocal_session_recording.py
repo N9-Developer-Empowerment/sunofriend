@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from copy import deepcopy
 import hashlib
 import http.client
 from io import BytesIO
@@ -24,6 +25,7 @@ from sunofriend.musical_state import (
 )
 from sunofriend.source_receipt import document_sha256
 from sunofriend.vocal_session_server import create_vocal_session_server
+from sunofriend.vocal_working_audition import validate_vocal_working_audition
 
 
 SAMPLE_RATE = 8_000
@@ -33,16 +35,29 @@ MAX_CAPTURE_JSON_BYTES = 10 * 1024 * 1024
 
 
 class _RecordingHTTP:
-    def __init__(self, root: Path) -> None:
+    def __init__(
+        self,
+        root: Path,
+        *,
+        candidate_vault: bool = False,
+        context_audio: bool = False,
+    ) -> None:
         self.root = root
         self.state_root, self.musical_state = _create_musical_state(root)
         self.persistence_root = root / "session-state"
         self.capture_output_dir = root / "capture-states"
+        self.candidate_vault_dir = root / "candidate-vault"
+        original_mix, backing = (
+            _create_context_audio(root) if context_audio else (None, None)
+        )
         self.server = create_vocal_session_server(
             self.state_root / "musical-state.json",
             state_dir=self.persistence_root,
             recording_cue_source_id="reference-vocal-001",
-            capture_output_dir=self.capture_output_dir,
+            capture_output_dir=(None if candidate_vault else self.capture_output_dir),
+            candidate_vault_dir=(self.candidate_vault_dir if candidate_vault else None),
+            original_mix_audio=original_mix,
+            backing_audio=backing,
             port=0,
             token="recording-test-token",
         )
@@ -162,6 +177,16 @@ class _RecordingHTTP:
             headers={"Origin": self.origin},
         )
 
+    def keep_candidate(
+        self, request: Mapping[str, Any]
+    ) -> tuple[int, dict[str, str], dict[str, Any]]:
+        return self.json_request(
+            "POST",
+            f"/api/candidate?token={self.token}",
+            request,
+            headers={"Origin": self.origin},
+        )
+
     def close(self) -> None:
         self.server.shutdown()
         self.server.server_close()
@@ -171,6 +196,15 @@ class _RecordingHTTP:
 @pytest.fixture
 def recording_http(tmp_path: Path) -> _RecordingHTTP:
     fixture = _RecordingHTTP(tmp_path)
+    try:
+        yield fixture
+    finally:
+        fixture.close()
+
+
+@pytest.fixture
+def candidate_vault_http(tmp_path: Path) -> _RecordingHTTP:
+    fixture = _RecordingHTTP(tmp_path, candidate_vault=True)
     try:
         yield fixture
     finally:
@@ -246,6 +280,370 @@ def test_verified_reference_cue_is_bound_to_each_reviewed_phrase_and_headphones(
     )
     assert not _keys_named_path(state)
     assert str(fixture.root) not in json.dumps(state)
+
+
+def test_candidate_vault_keeps_attempt_without_growing_the_musical_state(
+    candidate_vault_http: _RecordingHTTP,
+) -> None:
+    fixture = candidate_vault_http
+    initial_state_sha256 = fixture.server.musical_state["document_sha256"]
+    initial_tree = _tree_snapshot(fixture.state_root)
+    browser = fixture.browser_state()
+    assert browser["recording"]["save_url"] == "/api/candidate"
+    assert browser["candidate_vault"] == {
+        "available": True,
+        "entries": [],
+        "working_choices": None,
+        "keep_url": "/api/candidate",
+        "working_choices_url": "/api/working-choices",
+        "working_audition_url": "/api/working-audition",
+        "authority": "none",
+    }
+
+    status, _, payload = fixture.keep_candidate(fixture.capture_request())
+
+    assert status == 201
+    assert payload["candidate"]["status"] == "kept_unreviewed_candidate"
+    assert payload["candidate"]["phrase"]["phrase_id"] == "phrase-001"
+    assert payload["candidate"]["authority"] == {
+        "source_evidence_only": True,
+        "working_choice_authority": "none",
+        "phrase_decision_created": False,
+        "render_authorized": False,
+        "training_label_created": False,
+    }
+    state = payload["state"]
+    assert state["session"]["binding"]["musical_state_sha256"] == (initial_state_sha256)
+    assert state["session"]["coverage"]["decision_count"] == 0
+    assert len(state["candidate_vault"]["entries"]) == 1
+    projected = state["candidate_vault"]["entries"][0]
+    assert projected["source_class"] == "unreviewed_vocal_candidate"
+    assert projected["bound_phrase_id"] == "phrase-001"
+    assert projected["media_url"].startswith("/media/")
+    assert fixture.request("GET", projected["media_url"])[0] == 200
+    assert fixture.server.musical_state["document_sha256"] == initial_state_sha256
+    assert _tree_snapshot(fixture.state_root) == initial_tree
+    assert not fixture.capture_output_dir.exists()
+    assert not _keys_named_path(payload)
+    assert str(fixture.root) not in json.dumps(payload)
+
+
+def test_working_choice_is_reversible_zero_authority_and_not_a_phrase_decision(
+    candidate_vault_http: _RecordingHTTP,
+) -> None:
+    fixture = candidate_vault_http
+    status, _, kept = fixture.keep_candidate(fixture.capture_request())
+    assert status == 201
+    source_id = kept["candidate"]["source_id"]
+
+    status, _, saved = fixture.json_request(
+        "PUT",
+        f"/api/working-choices?token={fixture.token}",
+        {
+            "expected_revision": 0,
+            "working_source_by_phrase": {"phrase-001": source_id},
+        },
+        headers={"Origin": fixture.origin},
+    )
+
+    assert status == 200
+    assert saved["working_choices"]["revision"] == 1
+    assert saved["working_choices"]["choices"] == {
+        "phrase-001": {
+            "source_id": source_id,
+            "source_class": "unreviewed_vocal_candidate",
+            "source_audio_sha256": kept["candidate"]["audio"]["sha256"],
+        }
+    }
+    assert saved["working_choices"]["authority"] == "none"
+    assert not any(saved["working_choices"]["effects"].values())
+    browser = fixture.browser_state()
+    assert browser["candidate_vault"]["working_choices"] == saved["working_choices"]
+    assert browser["session"]["coverage"]["decision_count"] == 0
+    assert all(row["decision"] is None for row in browser["session"]["phrases"])
+
+    status, _, cleared = fixture.json_request(
+        "PUT",
+        f"/api/working-choices?token={fixture.token}",
+        {"expected_revision": 1, "working_source_by_phrase": {}},
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 200
+    assert cleared["working_choices"]["revision"] == 2
+    assert cleared["working_choices"]["choices"] == {}
+    assert fixture.browser_state()["session"]["coverage"]["decision_count"] == 0
+
+
+def test_working_audition_uses_candidate_then_reference_without_rendering(
+    candidate_vault_http: _RecordingHTTP,
+) -> None:
+    fixture = candidate_vault_http
+    status, _, kept = fixture.keep_candidate(fixture.capture_request())
+    assert status == 201
+    source_id = kept["candidate"]["source_id"]
+    status, _, _ = fixture.json_request(
+        "PUT",
+        f"/api/working-choices?token={fixture.token}",
+        {
+            "expected_revision": 0,
+            "working_source_by_phrase": {"phrase-001": source_id},
+        },
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 200
+
+    status, _, plan = fixture.json_request(
+        "GET",
+        f"/api/working-audition?token={fixture.token}"
+        "&scope=song&phrase_id=phrase-001",
+    )
+
+    assert status == 200
+    assert plan["schema"] == "sunofriend.vocal-working-audition.v2"
+    assert plan["status"] == "planned_browser_audition_only"
+    assert plan["scope"] == "song"
+    assert plan["window"] == {"start_seconds": 0.0, "end_seconds": 2.5}
+    assert plan["original_comparison"]["source_class"] == (
+        "authorised_ai_vocal_reference"
+    )
+    assert plan["original_comparison"]["comparison_kind"] == (
+        "reference_vocal_only"
+    )
+    assert plan["working_mix"]["backing"] is None
+    vocal_segments = plan["working_mix"]["vocal_segments"]
+    assert [row["segment_kind"] for row in vocal_segments] == [
+        "reference_context",
+        "phrase",
+        "reference_context",
+        "phrase",
+        "reference_context",
+    ]
+    assert [row["phrase_id"] for row in vocal_segments] == [
+        None,
+        "phrase-001",
+        None,
+        "phrase-002",
+        None,
+    ]
+    lead_in, candidate, between, fallback, tail = vocal_segments
+    assert lead_in["selection"] == "reference_context_preserved"
+    assert lead_in["source_start_seconds"] == pytest.approx(0.0)
+    assert lead_in["source_end_seconds"] == pytest.approx(0.6)
+    assert between["selection"] == "reference_context_preserved"
+    assert between["source_start_seconds"] == pytest.approx(1.1)
+    assert between["source_end_seconds"] == pytest.approx(1.2)
+    assert tail["selection"] == "reference_context_preserved"
+    assert tail["source_start_seconds"] == pytest.approx(1.7)
+    assert tail["source_end_seconds"] == pytest.approx(2.5)
+    assert candidate["source_id"] == source_id
+    assert candidate["source_class"] == "unreviewed_vocal_candidate"
+    assert candidate["selection"] == "reversible_working_choice"
+    assert candidate["source_start_seconds"] == pytest.approx(PRE_GUARD_SECONDS)
+    assert candidate["destination_start_seconds"] == pytest.approx(0.6)
+    assert fallback["source_id"] == "reference-vocal-001"
+    assert fallback["selection"] == "original_reference_fallback"
+    assert fallback["source_start_seconds"] == pytest.approx(1.2)
+    assert fallback["destination_start_seconds"] == pytest.approx(1.2)
+    assert plan["join"] == {
+        "policy": "browser_scheduled_phrase_boundaries",
+        "edge_fade_seconds": 0.005,
+        "rendered_artifact": False,
+        "join_reviewed": False,
+    }
+    assert plan["authority"] == "none"
+    assert not any(plan["effects"].values())
+    assert plan["network_used"] is False
+    assert fixture.server.store.current_session(fixture.musical_state)["coverage"][
+        "decision_count"
+    ] == 0
+
+
+def test_working_audition_separates_full_mix_backing_and_continuous_vocal(
+    tmp_path: Path,
+) -> None:
+    fixture = _RecordingHTTP(tmp_path, candidate_vault=True, context_audio=True)
+    try:
+        status, _, kept = fixture.keep_candidate(fixture.capture_request())
+        assert status == 201
+        source_id = kept["candidate"]["source_id"]
+        status, _, _ = fixture.json_request(
+            "PUT",
+            f"/api/working-choices?token={fixture.token}",
+            {
+                "expected_revision": 0,
+                "working_source_by_phrase": {"phrase-001": source_id},
+            },
+            headers={"Origin": fixture.origin},
+        )
+        assert status == 200
+
+        state = fixture.browser_state()
+        context = state["context_playback"]
+        assert context["original"]["source_class"] == "authorised_original_mix"
+        assert context["working"]["backing_available"] is True
+        assert context["working"]["reference_context_preserved"] is True
+        assert fixture.request("GET", context["original"]["media_url"])[0] == 200
+        assert fixture.request("GET", context["working"]["backing_media_url"])[0] == 200
+        assert not _keys_named_path(state)
+        assert str(tmp_path) not in json.dumps(state)
+
+        status, _, plan = fixture.json_request(
+            "GET",
+            f"/api/working-audition?token={fixture.token}"
+            "&scope=song&phrase_id=phrase-001",
+        )
+        assert status == 200
+        assert plan["original_comparison"]["source_class"] == (
+            "authorised_original_mix"
+        )
+        assert plan["original_comparison"]["comparison_kind"] == "full_mix"
+        assert plan["working_mix"]["backing"]["source_class"] == (
+            "authorised_instrumental_backing"
+        )
+        assert [
+            row["selection"] for row in plan["working_mix"]["vocal_segments"]
+        ] == [
+            "reference_context_preserved",
+            "reversible_working_choice",
+            "reference_context_preserved",
+            "original_reference_fallback",
+            "reference_context_preserved",
+        ]
+        assert plan["effects"]["audio_rendered"] is False
+        assert plan["authority"] == "none"
+    finally:
+        fixture.close()
+
+
+def test_working_audition_rejects_unknown_scope_without_side_effects(
+    candidate_vault_http: _RecordingHTTP,
+) -> None:
+    fixture = candidate_vault_http
+    before = _tree_snapshot(fixture.candidate_vault_dir)
+
+    status, _, payload = fixture.json_request(
+        "GET",
+        f"/api/working-audition?token={fixture.token}"
+        "&scope=album&phrase_id=phrase-001",
+    )
+
+    assert status == 400
+    assert payload == {"error": "working audition scope is not supported"}
+    assert _tree_snapshot(fixture.candidate_vault_dir) == before
+
+
+def test_working_audition_rejects_a_reference_gap_relabelled_as_a_choice(
+    candidate_vault_http: _RecordingHTTP,
+) -> None:
+    plan = candidate_vault_http.server.working_audition_plan(
+        active_phrase_id="phrase-001", scope="song"
+    )
+    changed = deepcopy(plan)
+    changed["working_mix"]["vocal_segments"][0]["selection"] = (
+        "reversible_working_choice"
+    )
+    changed["document_sha256"] = document_sha256(
+        {key: value for key, value in changed.items() if key != "document_sha256"}
+    )
+
+    with pytest.raises(ValueError, match="selection|reference context"):
+        validate_vocal_working_audition(changed)
+
+
+def test_candidate_keep_and_working_choice_reject_duplicate_stale_or_wrong_binding(
+    candidate_vault_http: _RecordingHTTP,
+) -> None:
+    fixture = candidate_vault_http
+    request = fixture.capture_request()
+    status, _, kept = fixture.keep_candidate(request)
+    assert status == 201
+    source_id = kept["candidate"]["source_id"]
+
+    status, _, duplicate = fixture.keep_candidate(request)
+    assert status == 409
+    assert "already kept" in duplicate["error"]
+
+    status, _, _ = fixture.json_request(
+        "PUT",
+        f"/api/working-choices?token={fixture.token}",
+        {
+            "expected_revision": 0,
+            "working_source_by_phrase": {"phrase-001": source_id},
+        },
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 200
+
+    status, _, stale = fixture.json_request(
+        "PUT",
+        f"/api/working-choices?token={fixture.token}",
+        {
+            "expected_revision": 0,
+            "working_source_by_phrase": {"phrase-001": source_id},
+        },
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 409
+    assert "revision conflict" in stale["error"]
+
+    status, _, wrong_phrase = fixture.json_request(
+        "PUT",
+        f"/api/working-choices?token={fixture.token}",
+        {
+            "expected_revision": 1,
+            "working_source_by_phrase": {"phrase-002": source_id},
+        },
+        headers={"Origin": fixture.origin},
+    )
+    assert status == 400
+    assert "bound elsewhere" in wrong_phrase["error"]
+
+
+@pytest.mark.parametrize("artifact", ("entry", "audio", "working_choices"))
+def test_candidate_vault_revalidates_retained_evidence_before_projection(
+    candidate_vault_http: _RecordingHTTP,
+    artifact: str,
+) -> None:
+    fixture = candidate_vault_http
+    status, _, kept = fixture.keep_candidate(fixture.capture_request())
+    assert status == 201
+    source_id = kept["candidate"]["source_id"]
+    entry_dir = fixture.candidate_vault_dir / "entries" / kept["candidate"]["entry_id"]
+
+    if artifact == "entry":
+        path = entry_dir / "entry.json"
+        document = json.loads(path.read_text(encoding="utf-8"))
+        document["phrase"]["lyrics"] = "changed projection"
+        document.pop("document_sha256")
+        document["document_sha256"] = document_sha256(document)
+        path.write_text(json.dumps(document), encoding="utf-8")
+        expected = "projection changed"
+    elif artifact == "audio":
+        path = entry_dir / "capture.wav"
+        payload = bytearray(path.read_bytes())
+        payload[-1] ^= 1
+        path.write_bytes(payload)
+        expected = "SHA-256 changed"
+    else:
+        saved = fixture.server.candidate_vault.save_working_choices(
+            fixture.server.musical_state,
+            {"phrase-001": source_id},
+            expected_revision=0,
+        )
+        path = fixture.candidate_vault_dir / "working-choices.json"
+        saved["choices"]["phrase-001"]["source_audio_sha256"] = "0" * 64
+        saved.pop("document_sha256")
+        saved["document_sha256"] = document_sha256(saved)
+        path.write_text(json.dumps(saved), encoding="utf-8")
+        expected = "projection changed"
+
+    with pytest.raises(ValueError, match=expected):
+        if artifact == "working_choices":
+            fixture.server.candidate_vault.load_working_choices(
+                fixture.server.musical_state
+            )
+        else:
+            fixture.server.candidate_vault.entries(fixture.server.musical_state)
 
 
 def test_recording_opt_in_requires_the_verified_reference_and_capture_output(
@@ -680,10 +1078,12 @@ def test_browser_records_float32_but_only_explicit_save_posts_pcm24() -> None:
     assert "attemptPlayer.load()" in javascript
     assert "attemptPlayer.onloadedmetadata" in javascript
     assert "attemptPlayer.onerror" in javascript
+    assert "plan.working_mix.vocal_segments" in javascript
+    assert "if (plan.working_mix.backing)" in javascript
     assert "saveButton.disabled = true" in javascript
     assert "saveButton.disabled = false" in javascript
-    assert 'api("/api/capture"' in javascript
-    assert javascript.count('api("/api/capture"') == 1
+    assert 'appState.recording.save_url === "/api/candidate"' in javascript
+    assert "api(appState.recording.save_url" in javascript
     assert 'querySelector("#save-recording")' in javascript
     assert 'querySelector("#record-attempt")' in javascript
     assert 'querySelector("#stop-recording")' in javascript
@@ -770,6 +1170,26 @@ def _capture_wav(
     output = BytesIO()
     soundfile.write(output, audio, sample_rate, format="WAV", subtype=subtype)
     return output.getvalue()
+
+
+def _create_context_audio(root: Path) -> tuple[Path, Path]:
+    seconds = 2.5
+    time = np.arange(round(SAMPLE_RATE * seconds), dtype=np.float64) / SAMPLE_RATE
+    original = root / "original-mix.wav"
+    backing = root / "instrumental-backing.wav"
+    soundfile.write(
+        original,
+        (0.08 * np.sin(2.0 * np.pi * 146.83 * time)).astype(np.float32),
+        SAMPLE_RATE,
+        subtype="PCM_24",
+    )
+    soundfile.write(
+        backing,
+        (0.06 * np.sin(2.0 * np.pi * 130.81 * time)).astype(np.float32),
+        SAMPLE_RATE,
+        subtype="PCM_24",
+    )
+    return original, backing
 
 
 def _tree_snapshot(root: Path) -> dict[str, tuple[int, int, str]]:

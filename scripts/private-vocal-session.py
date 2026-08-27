@@ -27,6 +27,24 @@ def main() -> int:
         type=Path,
         help="Fresh parent directory for owner-only phrase-capture states",
     )
+    parser.add_argument(
+        "--candidate-vault-dir",
+        type=Path,
+        help=(
+            "Owner-only provisional attempt vault; mutually exclusive with "
+            "--capture-output-dir"
+        ),
+    )
+    parser.add_argument(
+        "--original-mix-audio",
+        type=Path,
+        help="Exact complete-mix audio used only for original comparison playback",
+    )
+    parser.add_argument(
+        "--backing-audio",
+        type=Path,
+        help="Exact instrumental backing used only beneath the rough working vocal",
+    )
     args = parser.parse_args()
     run_vocal_session(
         args.musical_state,
@@ -36,6 +54,9 @@ def main() -> int:
         open_browser=args.open,
         recording_cue_source_id=args.recording_cue_source_id,
         capture_output_dir=args.capture_output_dir,
+        candidate_vault_dir=args.candidate_vault_dir,
+        original_mix_audio=args.original_mix_audio,
+        backing_audio=args.backing_audio,
     )
     return 0
 

@@ -23,6 +23,9 @@ let captureOriginContextTime = null;
 let captureStartContextTime = null;
 let recordedAttempt = null;
 let attemptObjectUrl = null;
+let workingAuditionContext = null;
+let workingAuditionNodes = [];
+let workingAuditionTimer = null;
 const player = document.querySelector("#player");
 
 function apiPath(path) {
@@ -53,8 +56,14 @@ function isHumanSourceForPhrase(item, phraseId) {
   if (item.source_class === "human_vocal_take") {
     return !item.eligible_phrase_ids || item.eligible_phrase_ids.includes(phraseId);
   }
-  return item.source_class === "human_vocal_phrase_capture"
+  return ["human_vocal_phrase_capture", "unreviewed_vocal_candidate"].includes(item.source_class)
     && item.bound_phrase_id === phraseId;
+}
+
+function isPhraseLocalSource(item) {
+  return ["human_vocal_phrase_capture", "unreviewed_vocal_candidate"].includes(
+    item?.source_class,
+  );
 }
 
 function formatTime(seconds) {
@@ -121,6 +130,9 @@ function render() {
   chip.classList.toggle("decided", Boolean(row.decision));
 
   const selected = row.decision?.selected_source_id || null;
+  const workingSelected = appState.candidate_vault?.working_choices?.choices?.[
+    row.phrase_id
+  ]?.source_id || null;
   const tray = document.querySelector("#source-tray");
   const availableSources = appState.sources.filter(
     (item) => isHumanSourceForPhrase(item, row.phrase_id),
@@ -128,10 +140,10 @@ function render() {
   tray.replaceChildren(...availableSources.map((item, attemptIndex) => {
     const card = document.createElement("article");
     const activeAudition = item.source_id === activeSourceId;
-    card.className = `source-card${item.source_id === selected ? " selected" : ""}${activeAudition ? " active-audition" : ""}`;
+    card.className = `source-card${item.source_id === selected ? " selected" : ""}${item.source_id === workingSelected ? " working-choice" : ""}${activeAudition ? " active-audition" : ""}`;
     card.dataset.sourceId = item.source_id;
     const label = document.createElement("strong");
-    label.textContent = `Attempt ${attemptIndex + 1}`;
+    label.textContent = item.display_label || `Attempt ${attemptIndex + 1}`;
     const actions = document.createElement("div");
     actions.className = "source-card-actions";
     const play = document.createElement("button");
@@ -143,9 +155,14 @@ function render() {
     const use = document.createElement("button");
     use.type = "button";
     use.className = "quiet-button";
-    use.textContent = item.source_id === selected ? "Saved choice" : "Use this attempt";
+    const provisional = item.source_class === "unreviewed_vocal_candidate";
+    use.textContent = item.source_id === selected
+      ? "Saved choice"
+      : (item.source_id === workingSelected ? "Working choice" : (provisional ? "Use in draft" : "Use this attempt"));
     use.disabled = Boolean(row.decision);
-    use.addEventListener("click", () => decide("human_take", item.source_id));
+    use.addEventListener("click", () => provisional
+      ? useWorkingChoice(item.source_id)
+      : decide("human_take", item.source_id));
     actions.append(play, use);
     card.append(label, actions);
     return card;
@@ -172,7 +189,20 @@ function render() {
     !appState.ai_fallback_available,
   );
   document.querySelector("#use-human").disabled = !isHumanSourceForPhrase(source(activeSourceId), row.phrase_id);
-  document.querySelector("#play-original").disabled = !appState.context_playback.original_source_id;
+  const originalContext = appState.context_playback.original;
+  const workingContext = appState.context_playback.working;
+  const originalButton = document.querySelector("#play-original");
+  originalButton.disabled = !appState.context_playback.original_source_id;
+  originalButton.textContent = originalContext?.comparison_kind === "full_mix"
+    ? "Play original full mix"
+    : "Play reference vocal";
+  document.querySelector("#play-working-audition").textContent = workingContext?.backing_available
+    ? "Play rough working comp"
+    : "Play working vocal only";
+  document.querySelector("#context-help").textContent = workingContext?.backing_available
+    ? "Compare the complete original mix with the instrumental backing plus your reversible working vocal. Unreplaced phrases, breaths, gaps and ad-libs stay on the reference vocal. Playback saves nothing and renders nothing."
+    : "No instrumental backing was supplied, so the working audition is vocal-only. Unreplaced phrases, breaths, gaps and ad-libs stay on the reference vocal. Playback saves nothing and renders nothing.";
+  document.querySelector("#play-working-audition").disabled = !appState.candidate_vault?.working_audition_url;
   document.querySelectorAll("[data-context-scope]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.contextScope === contextScope));
   });
@@ -255,7 +285,7 @@ async function playSource(sourceId) {
     // waitForMetadata resolves only after loadedmetadata, before any currentTime seek.
     await waitForMetadata(player);
     const window = contextWindow();
-    const sourceLocalCapture = item.source_class === "human_vocal_phrase_capture";
+    const sourceLocalCapture = isPhraseLocalSource(item);
     player.currentTime = sourceLocalCapture
       ? (item.playback_start_seconds ?? 0)
       : window.start;
@@ -276,7 +306,64 @@ function stopPlayback() {
   player.removeAttribute("src");
   player.load();
   stopAt = null;
+  window.clearTimeout(workingAuditionTimer);
+  workingAuditionTimer = null;
+  workingAuditionNodes.forEach((node) => {
+    try { node.stop(); } catch (error) { /* already stopped */ }
+  });
+  workingAuditionNodes = [];
+  if (workingAuditionContext) {
+    workingAuditionContext.close().catch(() => {});
+    workingAuditionContext = null;
+  }
   document.querySelectorAll(".source-button.playing").forEach((button) => button.classList.remove("playing"));
+}
+
+async function decodeAuditionSource(context, mediaUrl) {
+  const response = await fetch(mediaUrl, {cache: "no-store"});
+  if (!response.ok) throw new Error("A working-audition source could not be loaded.");
+  return context.decodeAudioData(await response.arrayBuffer());
+}
+
+async function playWorkingAudition() {
+  stopPlayback();
+  try {
+    const plan = await api(`/api/working-audition?scope=${encodeURIComponent(contextScope)}&phrase_id=${encodeURIComponent(activePhraseId)}`);
+    workingAuditionContext = new AudioContext({latencyHint: "playback"});
+    const context = workingAuditionContext;
+    const buffers = new Map();
+    const scheduledSegments = [...plan.working_mix.vocal_segments];
+    if (plan.working_mix.backing) scheduledSegments.unshift(plan.working_mix.backing);
+    await Promise.all([...new Set(scheduledSegments.map((row) => row.media_url))].map(async (url) => {
+      buffers.set(url, await decodeAuditionSource(context, url));
+    }));
+    await context.resume();
+    const clockStart = context.currentTime + 0.05;
+    scheduledSegments.forEach((segment) => {
+      const sourceNode = context.createBufferSource();
+      const gainNode = context.createGain();
+      const duration = segment.source_end_seconds - segment.source_start_seconds;
+      const fade = Math.min(plan.join.edge_fade_seconds, duration / 2);
+      const scheduledStart = clockStart + segment.destination_start_seconds;
+      sourceNode.buffer = buffers.get(segment.media_url);
+      sourceNode.connect(gainNode).connect(context.destination);
+      gainNode.gain.setValueAtTime(0, scheduledStart);
+      gainNode.gain.linearRampToValueAtTime(1, scheduledStart + fade);
+      gainNode.gain.setValueAtTime(1, scheduledStart + duration - fade);
+      gainNode.gain.linearRampToValueAtTime(0, scheduledStart + duration);
+      sourceNode.start(scheduledStart, segment.source_start_seconds, duration);
+      sourceNode.stop(scheduledStart + duration);
+      workingAuditionNodes.push(sourceNode);
+    });
+    workingAuditionTimer = window.setTimeout(
+      stopPlayback,
+      Math.ceil((plan.duration_seconds + 0.1) * 1000),
+    );
+    showNotice("Playing a browser-only rough audition. Nothing is saved, selected or rendered.");
+  } catch (error) {
+    stopPlayback();
+    showNotice(error.message, true);
+  }
 }
 
 player.addEventListener("timeupdate", () => {
@@ -344,7 +431,37 @@ async function decide(outcome, sourceId = null) {
   }
 }
 
-document.querySelector("#use-human").addEventListener("click", () => decide("human_take", activeSourceId));
+async function useWorkingChoice(sourceId) {
+  const current = appState.candidate_vault?.working_choices;
+  const choices = {};
+  Object.entries(current?.choices || {}).forEach(([phraseId, choice]) => {
+    choices[phraseId] = choice.source_id;
+  });
+  choices[activePhraseId] = sourceId;
+  try {
+    const result = await api("/api/working-choices", {
+      method: "PUT",
+      body: JSON.stringify({
+        expected_revision: current?.revision || 0,
+        working_source_by_phrase: choices,
+      }),
+    });
+    appState.candidate_vault.working_choices = result.working_choices;
+    showNotice("Working choice updated. This is reversible and is not a saved phrase decision.");
+    render();
+  } catch (error) {
+    showNotice(error.message, true);
+  }
+}
+
+document.querySelector("#use-human").addEventListener("click", () => {
+  const active = source(activeSourceId);
+  if (active?.source_class === "unreviewed_vocal_candidate") {
+    useWorkingChoice(activeSourceId);
+  } else {
+    decide("human_take", activeSourceId);
+  }
+});
 document.querySelector("#no-candidate").addEventListener("click", () => decide("no_acceptable_candidate"));
 document.querySelector("#ai-fallback").addEventListener("click", () => decide("ai_fallback"));
 
@@ -387,6 +504,7 @@ document.querySelector("#play-original").addEventListener("click", () => {
   const original = appState.context_playback.original_source_id;
   if (original) playSource(original);
 });
+document.querySelector("#play-working-audition").addEventListener("click", playWorkingAudition);
 document.querySelectorAll("[data-context-scope]").forEach((button) => {
   button.addEventListener("click", () => {
     contextScope = button.dataset.contextScope;
@@ -702,10 +820,13 @@ async function blobBase64(blob) {
 
 async function saveRecordedAttempt() {
   if (!recordedAttempt || recordedAttempt.phraseId !== activePhraseId) return;
-  const transitionRequired = Boolean(appState.recording.transition_required);
-  const confirmation = transitionRequired
+  const vaultMode = appState.recording.save_url === "/api/candidate";
+  const transitionRequired = !vaultMode && Boolean(appState.recording.transition_required);
+  const confirmation = vaultMode
+    ? "Keep this recording as an unreviewed local candidate? It will not change the Musical State or choose this take."
+    : (transitionRequired
     ? "Start an explicit new recording round and save this unreviewed source? The target phrase will reopen. Earlier decisions remain immutable; only choices whose phrase and source hashes are unchanged will be revalidated."
-    : "Save this recording as a new unreviewed phrase source? This does not choose or correct it.";
+    : "Save this recording as a new unreviewed phrase source? This does not choose or correct it.");
   if (!window.confirm(confirmation)) return;
   const button = document.querySelector("#save-recording");
   button.disabled = true;
@@ -729,18 +850,20 @@ async function saveRecordedAttempt() {
       actual_processing: recordedAttempt.actualProcessing,
     };
     if (transitionRequired) payload.transition = phrasePlan.transition;
-    const result = await api("/api/capture", {
+    const result = await api(appState.recording.save_url, {
       method: "POST",
       body: JSON.stringify(payload),
     });
     discardRecordedAttempt();
     appState = result.state;
-    activeSourceId = result.admission.source_id;
+    activeSourceId = result.candidate?.source_id || result.admission?.source_id || null;
     draftNotes = {...(appState.draft?.draft?.notes_by_phrase || draftNotes)};
     render();
-    showNotice(result.transition
+    showNotice(result.candidate
+      ? "Candidate kept locally. It is available for the working draft and has not been selected."
+      : (result.transition
       ? "New round saved. The target phrase is open; unchanged earlier decisions were explicitly revalidated. No take was selected."
-      : "Recording saved locally as an unreviewed phrase source. No take was selected.");
+      : "Recording saved locally as an unreviewed phrase source. No take was selected."));
   } catch (error) {
     showNotice(error.message, true);
     setRecorderStatus(`Attempt was not saved: ${error.message}`, true);

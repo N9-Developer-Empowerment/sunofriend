@@ -81,6 +81,7 @@ h2 { margin-bottom: 0.4rem; font-size: 1.12rem; }
 
 .panel { padding: clamp(1.2rem, 2.3vw, 2rem); background: var(--panel); }
 .panel-heading, .listen-heading, .stage-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.context-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.45rem; }
 .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.82rem; }
 .progress-track { height: 4px; margin: 1.2rem 0 1.5rem; overflow: hidden; border-radius: 999px; background: #303532; }
 .progress-track span { display: block; height: 100%; width: 0; background: var(--aqua); transition: width 240ms ease; }
@@ -129,6 +130,7 @@ h2 { margin-bottom: 0.4rem; font-size: 1.12rem; }
 .source-card { display: grid; grid-template-columns: minmax(100px, 1fr) auto; align-items: center; gap: 0.7rem; padding: 0.7rem; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, 0.02); }
 .source-card.active-audition { border-color: var(--aqua); background: var(--aqua-dark); }
 .source-card.selected { box-shadow: inset 4px 0 0 var(--gold); }
+.source-card.working-choice { box-shadow: inset 4px 0 0 var(--aqua); }
 .source-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.45rem; }
 .source-card-actions button { padding: 0.58rem 0.72rem; }
 .source-button[aria-pressed="true"] { color: #06120e; border-color: transparent; background: var(--aqua); }

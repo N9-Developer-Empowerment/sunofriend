@@ -151,6 +151,37 @@ def test_launch_is_loopback_only_uses_a_fresh_token_and_returns_path_free_state(
         second.close()
 
 
+@pytest.mark.parametrize(
+    ("route", "content_type"),
+    (
+        ("/vocal_session.js", "text/javascript"),
+        ("/vocal_session.css", "text/css"),
+    ),
+)
+def test_static_browser_assets_are_loopback_read_only_resources(
+    vocal_http: _VocalSessionHTTP,
+    route: str,
+    content_type: str,
+) -> None:
+    """The two public asset branches must remain explicit, bounded reads."""
+
+    status, headers, body = vocal_http.request("GET", route)
+
+    assert status == 200
+    assert body
+    assert headers["content-type"].startswith(content_type)
+    assert headers["cache-control"] == "no-store"
+
+
+def test_unknown_read_route_fails_closed(vocal_http: _VocalSessionHTTP) -> None:
+    status, _, payload = vocal_http.json_request(
+        "GET", f"/not-a-vocal-route?token={vocal_http.token}"
+    )
+
+    assert status == 404
+    assert payload == {"error": "vocal session route not found"}
+
+
 def test_mutation_requires_token_same_origin_and_an_explicit_decision(
     vocal_http: _VocalSessionHTTP,
 ) -> None:
@@ -206,6 +237,28 @@ def test_mutation_requires_token_same_origin_and_an_explicit_decision(
     assert payload["event"]["decision"]["selected_source_id"] == "take-001"
     assert payload["state"]["session"]["coverage"]["decision_count"] == 1
     assert not _keys_named_path(payload)
+
+
+def test_unknown_post_route_is_rejected_without_recording_an_event(
+    vocal_http: _VocalSessionHTTP,
+) -> None:
+    """A same-origin POST must still target an explicitly supported operation."""
+
+    fixture = vocal_http
+    session_id = fixture.server.store.current_session(fixture.musical_state)[
+        "session_id"
+    ]
+
+    status, _, payload = fixture.json_request(
+        "POST",
+        f"/api/not-a-vocal-operation?token={fixture.token}",
+        {},
+        headers={"Origin": fixture.origin},
+    )
+
+    assert status == 404
+    assert payload == {"error": "vocal session route not found"}
+    assert fixture.server.store.events(session_id) == []
 
 
 def test_explicit_reopen_retains_history_and_allows_a_new_phrase_choice(

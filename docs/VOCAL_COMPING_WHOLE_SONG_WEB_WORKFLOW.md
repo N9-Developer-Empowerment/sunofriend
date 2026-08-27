@@ -11,6 +11,45 @@ Status: product and engineering design with the first reusable phrase-session
 and browser-recording increment implemented. It does not yet select, assemble,
 correct or render a complete vocal comp.
 
+## Implementation checkpoint — 26 August 2026
+
+The first scaling increment is now implemented behind
+`VocalCandidateVault`. A private Vocal Session can opt into candidate-vault
+mode instead of immediate Musical State admission. **Keep** then stores the
+exact PCM24 WAV, its validated capture receipt and a path-free candidate entry
+in an owner-only append-only directory. The current Musical State, phrase
+decisions and source map remain byte-for-byte unchanged.
+
+Kept candidates appear immediately as phrase-bound playback sources. **Use in
+draft** writes a revision-checked working-choice projection for the complete
+phrase map; it is reversible and explicitly has no musical, render, correction
+or training authority. A candidate cannot be used for another phrase, stale
+working-choice writes fail with a conflict, and retained entry, receipt and
+audio identities are revalidated before projection or playback.
+
+Legacy `--capture-output-dir` admission remains available and unchanged.
+Candidate-vault mode is a separate opt-in through `--candidate-vault-dir`; the
+two destinations are mutually exclusive. This keeps the previous immutable
+source-admission contract while allowing a singer to collect and compare many
+attempts without creating one Musical State per audition.
+
+The follow-up working-audition increment now creates a path-free browser
+schedule for the current phrase, surrounding phrase section or complete song
+window. Reversible human choices are placed on the song clock and every open
+phrase falls back to the exact authorised AI vocal reference. Phrase-local
+candidate sources are explicitly distinguished from common-zero sources, so a
+short pickup is never sought using the global song timestamp. The browser
+schedules the sources with five-millisecond safety edges for listening only;
+it creates no audio file, source decision, reviewed join, correction or
+training label.
+
+This is a **vocal-only rough working audition**. It does not yet bind the full
+mix or backing, create section checkpoints, preserve non-phrase reference
+material such as ad-libs, render a composite, review joins, or perform pitch or
+timing correction. The next product slice binds the exact backing/full-mix
+asset to the same audition plan and adds section-level checkpoints after that
+musical-context playback is reviewable.
+
 ## Implementation checkpoint — 20 August 2026
 
 The reusable W1/W2 foundation is now implemented on the current research
@@ -37,13 +76,12 @@ the earlier decision. Reopen events and capture-round transitions preserve the
 append-only history.
 
 This is the immediate two-phrase vertical slice, not yet the complete
-hundred-phrase interface. The next scaling increment is a candidate vault that
-keeps rejected and unsaved-to-comp recordings without creating a fresh Musical
-State for every audition, plus filters, **Next phrase needing me**, keyboard
-shortcuts and section-level checkpoints. A later audition plan must bind the
-backing/full-mix asset so phrase, section and song playback can compare the
-working comp in music context; the current scope controls audition vocal
-sources only.
+hundred-phrase interface. The candidate vault, filters, **Next phrase needing
+me** and vocal-only working audition are now implemented; keyboard shortcuts,
+backing/full-mix playback and section-level checkpoints remain. The next
+audition plan must bind the backing/full-mix asset so phrase, section and song
+playback can compare the working comp in music context; the current scope
+controls audition vocal sources only.
 
 Before guided pickup recording is admitted, the data contract must distinguish
 the immutable bounded microphone capture from its placement on the song clock.
@@ -414,10 +452,14 @@ the page and recover the same working audition without migrated decisions.
 
 ### Stage C — real context playback
 
-- Bind exact full mix/backing assets as non-selectable audition sources.
-- Build one path-free audition plan for the scope/sound matrix.
-- Place phrase captures at exact song destinations while retaining base or AI
-  context outside them.
+- Implemented: build one path-free vocal-only audition plan for phrase,
+  section and song scopes.
+- Implemented: place phrase captures at exact song destinations while using
+  the authorised AI reference for open phrases.
+- Remaining: bind exact full mix/backing assets as non-selectable audition
+  sources.
+- Remaining: retain non-phrase reference material and expose the complete
+  scope/sound matrix.
 - Add Original/Working A-B and vocal-only/backing modes.
 
 Deliverable: hear a new pickup inside the phrase, section and song without
