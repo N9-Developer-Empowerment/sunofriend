@@ -1,4 +1,4 @@
-"""Restricted local MusicFM-FMA loader and synthetic feature extraction.
+"""Restricted local MusicFM-FMA loader and frozen feature extraction.
 
 This private module owns every framework-specific detail: offline process
 guards, the exact pinned architecture, compatibility migrations and the frozen
@@ -63,6 +63,16 @@ class FrozenFeatureExtraction:
     environment: Mapping[str, str]
 
 
+@dataclass(frozen=True)
+class FrozenAudioFeatureExtraction:
+    """Framework-neutral output for an exact set of private audio roles."""
+
+    features: Mapping[str, Any]
+    metrics: Mapping[str, Mapping[str, Any]]
+    loader: Mapping[str, Any]
+    environment: Mapping[str, str]
+
+
 def extract_synthetic_frozen_features(
     runtime_root: Path,
     asset_records: Mapping[str, Mapping[str, Any]],
@@ -103,6 +113,81 @@ def extract_synthetic_frozen_features(
     return FrozenFeatureExtraction(
         first=first.numpy(),
         second=second.numpy(),
+        metrics=metrics,
+        loader=loader_evidence,
+        environment={
+            "torch_version": str(torch.__version__),
+            "cuda_version": str(torch.version.cuda),
+            "device_name": str(torch.cuda.get_device_name(0)),
+            "cublas_workspace_config": ":4096:8",
+        },
+    )
+
+
+def extract_audio_frozen_features(
+    runtime_root: Path,
+    asset_records: Mapping[str, Mapping[str, Any]],
+    waveforms: Mapping[str, Any],
+    sample_rates: Mapping[str, int],
+) -> FrozenAudioFeatureExtraction:
+    """Extract one frozen representation per already-verified mono waveform."""
+
+    roles = tuple(waveforms)
+    if not roles or set(roles) != set(sample_rates):
+        raise ValueError("MusicFM audio roles and sample rates must match")
+    root = Path(runtime_root)
+    features: dict[str, Any] = {}
+    metrics: dict[str, dict[str, Any]] = {}
+    with deny_network() as attempts:
+        model, torch, loader_evidence = _load_restricted_model(root, asset_records)
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA is required for MusicFM feature extraction")
+        torch.use_deterministic_algorithms(True)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        device = torch.device("cuda")
+        model = model.to(device)
+        for role in roles:
+            source_rate = sample_rates[role]
+            if (
+                isinstance(source_rate, bool)
+                or not isinstance(source_rate, int)
+                or source_rate <= 0
+            ):
+                raise ValueError("MusicFM input sample rate must be positive")
+            waveform = torch.as_tensor(waveforms[role], dtype=torch.float32)
+            if waveform.ndim != 1 or waveform.numel() <= 0:
+                raise ValueError("MusicFM input waveform must be non-empty mono audio")
+            if not bool(torch.isfinite(waveform).all()):
+                raise ValueError("MusicFM input waveform must be finite")
+            source_frames = int(waveform.numel())
+            if source_rate != SAMPLE_RATE:
+                torchaudio = importlib.import_module("torchaudio")
+                waveform = torchaudio.functional.resample(
+                    waveform, source_rate, SAMPLE_RATE
+                )
+            waveform = waveform.unsqueeze(0).to(device)
+            with torch.inference_mode():
+                latent = model.get_latent(waveform, layer_ix=LAYER_INDEX).float().cpu()
+            _validate_audio_feature_tensor(latent, torch)
+            duration = source_frames / source_rate
+            features[role] = latent.numpy()
+            metrics[role] = {
+                "source_sample_rate_hz": source_rate,
+                "source_frames": source_frames,
+                "model_sample_rate_hz": SAMPLE_RATE,
+                "model_frames": int(waveform.shape[-1]),
+                "feature_shape": list(latent.shape),
+                "feature_dtype": "float32",
+                "finite": True,
+                "feature_frames": int(latent.shape[1]),
+                "feature_dimension": int(latent.shape[2]),
+                "feature_rate_hz": latent.shape[1] / duration,
+            }
+    if attempts:
+        raise RuntimeError("MusicFM feature extraction attempted network access")
+    return FrozenAudioFeatureExtraction(
+        features=features,
         metrics=metrics,
         loader=loader_evidence,
         environment={
@@ -403,7 +488,21 @@ def _validate_feature_tensor(value: Any, torch: Any) -> None:
         raise RuntimeError("MusicFM synthetic feature geometry changed")
 
 
+def _validate_audio_feature_tensor(value: Any, torch: Any) -> None:
+    if (
+        value.ndim != 3
+        or value.shape[0] != 1
+        or value.shape[1] <= 0
+        or value.shape[2] != FEATURE_DIMENSION
+        or value.dtype != torch.float32
+        or not bool(torch.isfinite(value).all())
+    ):
+        raise RuntimeError("MusicFM private-audio feature geometry changed")
+
+
 __all__ = [
+    "FrozenAudioFeatureExtraction",
     "FrozenFeatureExtraction",
+    "extract_audio_frozen_features",
     "extract_synthetic_frozen_features",
 ]
