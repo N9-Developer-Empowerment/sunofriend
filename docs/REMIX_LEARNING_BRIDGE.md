@@ -668,3 +668,21 @@ review, preference, label, training authority, product selection or model
 change. The existing review-only comparison page can then present original,
 anonymous A and anonymous B on one playhead. A later explicit training label
 remains a separate admission action.
+
+`sunofriend.remix_source_delta_label` implements that separate admission for
+the source-delta evidence family. Its one typed operation re-verifies the exact
+render bytes, reconstructs the hidden A/B mapping from the bound presentation
+seed, requires explicit confirmation that control, A and B were heard, binds
+both identity judgements and one to four controlled reason codes, and writes a
+fresh path-free owner-local label atomically. Label output is rejected inside
+the immutable render package. The first exact background-noise reason is
+represented as `background_noise` rather than silently recast as a separation
+failure.
+
+The admitted label has
+`sunofriend.remix-source-delta-pairwise-preference-label.v0` schema and records
+`training_label_created=true`, but remains `training_eligible=false` until a
+separate composition-disjoint dataset snapshot validates it. It keeps product
+selection, training execution, checkpoint promotion, cloud training, audio
+mutation and model-weight changes false. The interface creates no standing
+training permission.
