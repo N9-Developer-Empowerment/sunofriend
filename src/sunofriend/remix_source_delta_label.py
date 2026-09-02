@@ -111,8 +111,7 @@ def validate_remix_source_delta_pairwise_label(
     """Revalidate a path-free label against the exact local render bytes."""
 
     result, plan = _verified_render(render_root)
-    document = _verified_label(label)
-    _validate_structure(document)
+    document = validate_remix_source_delta_pairwise_label_document(label)
     if document["binding"] != _binding(result, plan):
         raise ValueError("remix source-delta label evidence binding changed")
     seed = document["presentation"].get("seed")
@@ -129,6 +128,16 @@ def validate_remix_source_delta_pairwise_label(
     expected_control = _control_record(result)
     if document["control"] != expected_control:
         raise ValueError("remix source-delta label control evidence changed")
+    return document
+
+
+def validate_remix_source_delta_pairwise_label_document(
+    label: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate the immutable path-free label without claiming audio recheck."""
+
+    document = _verified_label(label)
+    _validate_structure(document)
     _validate_decision(document)
     return document
 
@@ -412,4 +421,5 @@ __all__ = [
     "RemixSourceDeltaReviewDecision",
     "admit_remix_source_delta_pairwise_label",
     "validate_remix_source_delta_pairwise_label",
+    "validate_remix_source_delta_pairwise_label_document",
 ]

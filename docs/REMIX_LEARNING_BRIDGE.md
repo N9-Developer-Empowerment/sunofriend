@@ -686,3 +686,18 @@ separate composition-disjoint dataset snapshot validates it. It keeps product
 selection, training execution, checkpoint promotion, cloud training, audio
 mutation and model-weight changes false. The interface creates no standing
 training permission.
+
+`sunofriend.remix_source_delta_dataset` supplies that next evidence boundary.
+Its one operation reopens every supplied local render, verifies the exact audio
+and label binding, and then emits a path-free
+`sunofriend.remix-source-delta-training-snapshot.v0`. The snapshot assigns an
+entire owner-confirmed composition to one of train, validation or test and
+rejects leakage by composition, group, source state or variant family. It uses
+the existing remix evidence thresholds, so the source-delta route and the
+earlier controlled-variant route do not define competing meanings of “enough
+evidence”.
+
+The snapshot remains `training_ineligible` even when its dataset-sufficiency
+gate is eventually met. It reports observed counts and exact shortfalls, but
+does not extract features, read a checkpoint, start training, admit a model to
+the product or authorize cloud use. Those remain later, separate decisions.
