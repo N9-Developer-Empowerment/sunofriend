@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sunofriend private remix audition</title>
+  <link rel="stylesheet" href="/remix_source_delta_audition.css">
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">Sunofriend · Controlled remix</p>
+      <h1 id="title">Private remix A/B audition</h1>
+    </div>
+    <span class="privacy"><i></i> Private on this computer</span>
+  </header>
+  <main>
+    <section class="intro card">
+      <div>
+        <p class="eyebrow">Audition only</p>
+        <h2>Hear one exact rhythm change at two restrained strengths</h2>
+        <p>Start with the unchanged 15-second control, then compare anonymous Versions A and B.</p>
+      </div>
+      <div class="boundary">
+        <strong>This page cannot save anything</strong>
+        <span>No review, product choice, training label or model change can be created here.</span>
+      </div>
+    </section>
+    <section class="listen-grid" aria-label="Anonymous rhythm-restraint comparison">
+      <article class="player-card control">
+        <p class="eyebrow">Start here</p>
+        <h2>Unchanged control</h2>
+        <p>The exact original comparison window.</p>
+        <button type="button" data-play="control">Play unchanged control</button>
+        <span class="heard" data-heard="control">Not played yet</span>
+      </article>
+      <article class="player-card">
+        <p class="eyebrow">Anonymous version</p>
+        <h2>Version A</h2>
+        <p>The rhythm estimate is restrained by one bounded amount.</p>
+        <button type="button" data-play="a">Play Version A</button>
+        <span class="heard" data-heard="a">Not played yet</span>
+      </article>
+      <article class="player-card">
+        <p class="eyebrow">Anonymous version</p>
+        <h2>Version B</h2>
+        <p>The same change at the other bounded amount.</p>
+        <button type="button" data-play="b">Play Version B</button>
+        <span class="heard" data-heard="b">Not played yet</span>
+      </article>
+    </section>
+    <section class="player-shell card">
+      <audio id="player" controls preload="metadata"></audio>
+      <p id="notice" role="status">Playback alone creates no decision.</p>
+    </section>
+  </main>
+  <script src="/remix_source_delta_audition.js"></script>
+</body>
+</html>

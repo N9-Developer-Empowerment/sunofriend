@@ -139,6 +139,26 @@ def test_large_song_navigation_has_status_filters_and_next_open_phrase() -> None
     assert 'querySelector("#next-open-phrase")' in JAVASCRIPT
 
 
+def test_large_song_navigation_has_adjacent_controls_position_and_shortcuts() -> None:
+    """A singer can move through 100+ phrases without returning to the song map."""
+
+    assert 'id="previous-phrase"' in HTML
+    assert 'id="next-phrase"' in HTML
+    assert 'id="phrase-position"' in HTML
+    assert "function selectAdjacentPhrase" in JAVASCRIPT
+    assert 'event.key.toLowerCase() === "j"' in JAVASCRIPT
+    assert 'event.key.toLowerCase() === "k"' in JAVASCRIPT
+    assert "isContentEditable" in JAVASCRIPT
+
+
+def test_navigation_does_not_discard_an_unsaved_or_active_recording() -> None:
+    """Fast navigation must remain safe when a take has not yet been saved."""
+
+    select_phrase = _function_body("selectPhrase", next_name="selectAdjacentPhrase")
+    assert "recording || recordedAttempt" in select_phrase
+    assert "discardRecordedAttempt()" not in select_phrase
+
+
 def test_phrase_specific_common_zero_take_is_not_shown_on_other_phrases() -> None:
     """A padded pickup must not masquerade as a complete-song candidate."""
 

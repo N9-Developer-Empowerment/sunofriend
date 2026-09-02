@@ -123,6 +123,12 @@ function render() {
   document.querySelector("#next-open-phrase").disabled = coverage.remaining_phrase_count === 0;
 
   const row = phrase();
+  const phraseIndex = appState.session.phrases.findIndex(
+    (item) => item.phrase_id === row.phrase_id,
+  );
+  document.querySelector("#phrase-position").textContent = `Phrase ${phraseIndex + 1} of ${coverage.phrase_count}`;
+  document.querySelector("#previous-phrase").disabled = phraseIndex <= 0 || recording || Boolean(recordedAttempt);
+  document.querySelector("#next-phrase").disabled = phraseIndex >= coverage.phrase_count - 1 || recording || Boolean(recordedAttempt);
   document.querySelector("#phrase-lyrics").textContent = row.lyrics;
   document.querySelector("#phrase-time").textContent = `${formatTime(row.start_seconds)} – ${formatTime(row.end_seconds)}`;
   const chip = document.querySelector("#phrase-state");
@@ -218,13 +224,23 @@ function render() {
 }
 
 function selectPhrase(phraseId) {
+  if (recording || recordedAttempt) {
+    showNotice("Finish, save or discard the current recording before changing phrase.", true);
+    return;
+  }
+  if (phraseId === activePhraseId) return;
   stopPlayback();
-  if (recording) stopRecording(true);
-  discardRecordedAttempt();
   activePhraseId = phraseId;
   activeSourceId = null;
   render();
   saveDraftSoon();
+}
+
+function selectAdjacentPhrase(direction) {
+  const rows = appState.session.phrases;
+  const currentIndex = rows.findIndex((row) => row.phrase_id === activePhraseId);
+  const target = rows[currentIndex + direction];
+  if (target) selectPhrase(target.phrase_id);
 }
 
 function selectNextOpenPhrase() {
@@ -519,6 +535,23 @@ document.querySelectorAll("[data-phrase-filter]").forEach((button) => {
   });
 });
 document.querySelector("#next-open-phrase").addEventListener("click", selectNextOpenPhrase);
+document.querySelector("#previous-phrase").addEventListener("click", () => selectAdjacentPhrase(-1));
+document.querySelector("#next-phrase").addEventListener("click", () => selectAdjacentPhrase(1));
+document.addEventListener("keydown", (event) => {
+  const target = event.target;
+  if (target instanceof HTMLElement && (
+    target.isContentEditable
+    || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
+  )) return;
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key.toLowerCase() === "j") {
+    event.preventDefault();
+    selectAdjacentPhrase(1);
+  } else if (event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    selectAdjacentPhrase(-1);
+  }
+});
 
 function dbfs(value) {
   return value > 0 ? 20 * Math.log10(value) : -Infinity;
