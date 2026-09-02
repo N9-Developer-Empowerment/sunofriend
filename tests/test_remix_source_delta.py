@@ -215,6 +215,14 @@ def test_render_opens_as_hidden_playback_only_ab_without_writes(
         assert "Audition only" in html
         assert "cannot save" in html
         assert 'data-play="a"' in html and 'data-play="b"' in html
+        assert (
+            'href="/remix_source_delta_audition.css?token=' + server.token + '"'
+            in html
+        )
+        assert (
+            'src="/remix_source_delta_audition.js?token=' + server.token + '"'
+            in html
+        )
         assert "/api/label" not in html + script
 
         request = Request(

@@ -17,10 +17,13 @@ from pathlib import Path
 import secrets
 import tempfile
 from typing import Any, Mapping
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 import webbrowser
 
 from .remix_source_delta import verify_remix_source_delta_result
+from .remix_source_delta_presentation import (
+    resolve_remix_source_delta_display_variants,
+)
 from .separation_review_transport import parse_file_range
 from .source_receipt import canonical_json_bytes
 
@@ -56,20 +59,16 @@ class RemixSourceDeltaAuditionServer(ThreadingHTTPServer):
         self.presentation_seed = presentation_seed
 
         candidates = self.verified_result["artifacts"]["candidates"]
-        ordered_ids = sorted(row["variant_id"] for row in candidates)
-        digest = hashlib.sha256(
-            f"{presentation_seed}:{self.verified_result['document_sha256']}".encode()
-        ).digest()
-        if digest[0] & 1:
-            ordered_ids.reverse()
-        self.display_variant_ids = {"a": ordered_ids[0], "b": ordered_ids[1]}
+        self.display_variant_ids = resolve_remix_source_delta_display_variants(
+            self.verified_result, presentation_seed
+        )
 
         rows = {row["variant_id"]: row for row in candidates}
         original = self.verified_result["artifacts"]["original"]
         records = {
             "control": original,
-            "a": rows[ordered_ids[0]],
-            "b": rows[ordered_ids[1]],
+            "a": rows[self.display_variant_ids["a"]],
+            "b": rows[self.display_variant_ids["b"]],
         }
         self.media_capabilities: dict[str, Mapping[str, Any]] = {}
         self.media_urls: dict[str, str] = {}
@@ -135,8 +134,10 @@ class _RemixSourceDeltaAuditionHandler(BaseHTTPRequestHandler):
                 return
             self._media(record, head_only=head_only)
             return
+        if parsed.path == "/":
+            self._html(head_only=head_only)
+            return
         assets = {
-            "/": ("remix_source_delta_audition.html", "text/html; charset=utf-8"),
             "/remix_source_delta_audition.js": (
                 "remix_source_delta_audition.js",
                 "text/javascript; charset=utf-8",
@@ -153,6 +154,27 @@ class _RemixSourceDeltaAuditionHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, self.server.browser_state(), head_only=head_only)
             return
         self._error(HTTPStatus.NOT_FOUND, "remix audition route not found")
+
+    def _html(self, *, head_only: bool) -> None:
+        payload = (
+            Path(__file__)
+            .with_name("remix_source_delta_audition.html")
+            .read_text(encoding="utf-8")
+        )
+        token = quote(self.server.token, safe="")
+        payload = payload.replace(
+            'href="/remix_source_delta_audition.css"',
+            f'href="/remix_source_delta_audition.css?token={token}"',
+        ).replace(
+            'src="/remix_source_delta_audition.js"',
+            f'src="/remix_source_delta_audition.js?token={token}"',
+        )
+        self._bytes(
+            HTTPStatus.OK,
+            payload.encode("utf-8"),
+            "text/html; charset=utf-8",
+            head_only=head_only,
+        )
 
     def _authorised(self, parsed: Any) -> bool:
         host = (self.headers.get("Host") or "").rsplit(":", 1)[0].lower()

@@ -9,7 +9,6 @@ selects a product remix.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -17,6 +16,9 @@ import tempfile
 from typing import Any, Literal, Mapping
 
 from .remix_source_delta import verify_remix_source_delta_result
+from .remix_source_delta_presentation import (
+    resolve_remix_source_delta_display_variants,
+)
 from .source_receipt import canonical_json_bytes, document_sha256
 
 
@@ -114,7 +116,7 @@ def validate_remix_source_delta_pairwise_label(
     if document["binding"] != _binding(result, plan):
         raise ValueError("remix source-delta label evidence binding changed")
     seed = document["presentation"].get("seed")
-    mapping = _display_variant_ids(result, seed)
+    mapping = resolve_remix_source_delta_display_variants(result, seed)
     if document["presentation"] != {
         "seed": seed,
         "reviewed_at": document["presentation"].get("reviewed_at"),
@@ -137,7 +139,9 @@ def _create_label(
     decision: RemixSourceDeltaReviewDecision,
 ) -> dict[str, Any]:
     _validate_requested_decision(decision)
-    mapping = _display_variant_ids(result, decision.presentation_seed)
+    mapping = resolve_remix_source_delta_display_variants(
+        result, decision.presentation_seed
+    )
     left, right = _variant_sides(result, plan, mapping)
     document: dict[str, Any] = {
         "schema": REMIX_SOURCE_DELTA_PAIRWISE_LABEL_SCHEMA,
@@ -226,22 +230,6 @@ def _binding(result: Mapping[str, Any], plan: Mapping[str, Any]) -> dict[str, An
         "anchor_confirmation_sha256": source["anchor_confirmation_sha256"],
         "variant_family_sha256": document_sha256(plan["variant_family"]),
     }
-
-
-def _display_variant_ids(
-    result: Mapping[str, Any], presentation_seed: Any
-) -> dict[str, str]:
-    if isinstance(presentation_seed, bool) or not isinstance(presentation_seed, int):
-        raise ValueError("presentation seed must be an integer")
-    ordered = sorted(
-        row["variant_id"] for row in result["artifacts"]["candidates"]
-    )
-    digest = hashlib.sha256(
-        f"{presentation_seed}:{result['document_sha256']}".encode()
-    ).digest()
-    if digest[0] & 1:
-        ordered.reverse()
-    return {"a": ordered[0], "b": ordered[1]}
 
 
 def _variant_sides(
